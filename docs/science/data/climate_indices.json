@@ -1,0 +1,1248 @@
+{
+ "source": "NASA POWER Daily API (MERRA-2), grid-cell values at the grid cell's elevation",
+ "k_huglin_rule": "1.00 below 40°, 1.02 at 40° rising linearly to 1.06 at 50°",
+ "gfv_fstar": {
+  "Chardonnay": [
+   1217,
+   2547
+  ],
+  "Pinot noir": [
+   1219,
+   2511
+  ],
+  "Riesling": [
+   1249,
+   2590
+  ],
+  "Cabernet Sauvignon": [
+   1299,
+   2689
+  ]
+ },
+ "sites": {
+  "Bernkastel (Mosel)": {
+   "lat": 49.916,
+   "lon": 7.07,
+   "k_huglin": 1.06,
+   "grid_cell_elevation_m": 387.25,
+   "1981-2000": {
+    "winkler_gdd10_apr_oct": {
+     "mean": 808.0,
+     "min": 596.0,
+     "max": 947.0,
+     "n": 20
+    },
+    "huglin_hi": {
+     "mean": 1244.0,
+     "min": 974.0,
+     "max": 1447.0,
+     "n": 20
+    },
+    "cool_night_index_sep_tmin": {
+     "mean": 8.6,
+     "min": 6.1,
+     "max": 11.8,
+     "n": 20
+    },
+    "gst_apr_oct_mean": {
+     "mean": 12.8,
+     "min": 11.7,
+     "max": 13.7,
+     "n": 20
+    },
+    "dtr_apr_oct": {
+     "mean": 9.9,
+     "min": 8.6,
+     "max": 11.0,
+     "n": 20
+    },
+    "continentality_warmest_minus_coldest_month": {
+     "mean": 20.4,
+     "min": 16.4,
+     "max": 25.1,
+     "n": 20
+    },
+    "rain_apr_oct_mm": {
+     "mean": 496.0,
+     "min": 304.0,
+     "max": 664.0,
+     "n": 20
+    },
+    "gsr_thermal_sum_from_1_apr": {
+     "15 Sep": {
+      "mean": 2294.0,
+      "min": 2063.0,
+      "max": 2469.0,
+      "n": 20
+     },
+     "1 Oct": {
+      "mean": 2495.0,
+      "min": 2232.0,
+      "max": 2700.0,
+      "n": 20
+     },
+     "15 Oct": {
+      "mean": 2634.0,
+      "min": 2370.0,
+      "max": 2825.0,
+      "n": 20
+     }
+    },
+    "gfv": {
+     "Chardonnay": {
+      "flowering_doy": {
+       "mean": 187.0,
+       "min": 176.0,
+       "max": 203.0,
+       "n": 20,
+       "mean_date": "06 Jul"
+      },
+      "veraison_doy": {
+       "mean": 270.0,
+       "min": 256.0,
+       "max": 303.0,
+       "n": 20,
+       "mean_date": "27 Sep"
+      },
+      "years_without_veraison": 0
+     },
+     "Pinot noir": {
+      "flowering_doy": {
+       "mean": 188.0,
+       "min": 177.0,
+       "max": 203.0,
+       "n": 20,
+       "mean_date": "07 Jul"
+      },
+      "veraison_doy": {
+       "mean": 267.0,
+       "min": 253.0,
+       "max": 299.0,
+       "n": 20,
+       "mean_date": "24 Sep"
+      },
+      "years_without_veraison": 0
+     },
+     "Riesling": {
+      "flowering_doy": {
+       "mean": 189.0,
+       "min": 179.0,
+       "max": 205.0,
+       "n": 20,
+       "mean_date": "08 Jul"
+      },
+      "veraison_doy": {
+       "mean": 274.0,
+       "min": 258.0,
+       "max": 310.0,
+       "n": 20,
+       "mean_date": "01 Oct"
+      },
+      "years_without_veraison": 0
+     },
+     "Cabernet Sauvignon": {
+      "flowering_doy": {
+       "mean": 192.0,
+       "min": 183.0,
+       "max": 208.0,
+       "n": 20,
+       "mean_date": "11 Jul"
+      },
+      "veraison_doy": {
+       "mean": 284.0,
+       "min": 264.0,
+       "max": 330.0,
+       "n": 20,
+       "mean_date": "11 Oct"
+      },
+      "years_without_veraison": 0
+     }
+    }
+   },
+   "2001-2020": {
+    "winkler_gdd10_apr_oct": {
+     "mean": 947.0,
+     "min": 810.0,
+     "max": 1310.0,
+     "n": 20
+    },
+    "huglin_hi": {
+     "mean": 1420.0,
+     "min": 1217.0,
+     "max": 1841.0,
+     "n": 20
+    },
+    "cool_night_index_sep_tmin": {
+     "mean": 8.7,
+     "min": 6.6,
+     "max": 11.3,
+     "n": 20
+    },
+    "gst_apr_oct_mean": {
+     "mean": 13.7,
+     "min": 12.7,
+     "max": 15.7,
+     "n": 20
+    },
+    "dtr_apr_oct": {
+     "mean": 10.3,
+     "min": 9.5,
+     "max": 11.4,
+     "n": 20
+    },
+    "continentality_warmest_minus_coldest_month": {
+     "mean": 20.6,
+     "min": 15.9,
+     "max": 26.0,
+     "n": 20
+    },
+    "rain_apr_oct_mm": {
+     "mean": 449.0,
+     "min": 314.0,
+     "max": 561.0,
+     "n": 20
+    },
+    "gsr_thermal_sum_from_1_apr": {
+     "15 Sep": {
+      "mean": 2464.0,
+      "min": 2296.0,
+      "max": 2842.0,
+      "n": 20
+     },
+     "1 Oct": {
+      "mean": 2663.0,
+      "min": 2468.0,
+      "max": 3052.0,
+      "n": 20
+     },
+     "15 Oct": {
+      "mean": 2806.0,
+      "min": 2607.0,
+      "max": 3235.0,
+      "n": 20
+     }
+    },
+    "gfv": {
+     "Chardonnay": {
+      "flowering_doy": {
+       "mean": 180.0,
+       "min": 170.0,
+       "max": 195.0,
+       "n": 20,
+       "mean_date": "29 Jun"
+      },
+      "veraison_doy": {
+       "mean": 257.0,
+       "min": 235.0,
+       "max": 278.0,
+       "n": 20,
+       "mean_date": "14 Sep"
+      },
+      "years_without_veraison": 0
+     },
+     "Pinot noir": {
+      "flowering_doy": {
+       "mean": 180.0,
+       "min": 170.0,
+       "max": 195.0,
+       "n": 20,
+       "mean_date": "29 Jun"
+      },
+      "veraison_doy": {
+       "mean": 254.0,
+       "min": 233.0,
+       "max": 274.0,
+       "n": 20,
+       "mean_date": "11 Sep"
+      },
+      "years_without_veraison": 0
+     },
+     "Riesling": {
+      "flowering_doy": {
+       "mean": 182.0,
+       "min": 172.0,
+       "max": 197.0,
+       "n": 20,
+       "mean_date": "01 Jul"
+      },
+      "veraison_doy": {
+       "mean": 260.0,
+       "min": 237.0,
+       "max": 281.0,
+       "n": 20,
+       "mean_date": "17 Sep"
+      },
+      "years_without_veraison": 0
+     },
+     "Cabernet Sauvignon": {
+      "flowering_doy": {
+       "mean": 185.0,
+       "min": 175.0,
+       "max": 200.0,
+       "n": 20,
+       "mean_date": "04 Jul"
+      },
+      "veraison_doy": {
+       "mean": 268.0,
+       "min": 244.0,
+       "max": 293.0,
+       "n": 20,
+       "mean_date": "25 Sep"
+      },
+      "years_without_veraison": 0
+     }
+    }
+   },
+   "1991-2020": {
+    "winkler_gdd10_apr_oct": {
+     "mean": 915.0,
+     "min": 693.0,
+     "max": 1310.0,
+     "n": 30
+    },
+    "huglin_hi": {
+     "mean": 1384.0,
+     "min": 1188.0,
+     "max": 1841.0,
+     "n": 30
+    },
+    "cool_night_index_sep_tmin": {
+     "mean": 8.6,
+     "min": 6.1,
+     "max": 11.8,
+     "n": 30
+    },
+    "gst_apr_oct_mean": {
+     "mean": 13.5,
+     "min": 12.3,
+     "max": 15.7,
+     "n": 30
+    },
+    "dtr_apr_oct": {
+     "mean": 10.2,
+     "min": 9.1,
+     "max": 11.4,
+     "n": 30
+    },
+    "continentality_warmest_minus_coldest_month": {
+     "mean": 20.6,
+     "min": 15.9,
+     "max": 26.0,
+     "n": 30
+    },
+    "rain_apr_oct_mm": {
+     "mean": 452.0,
+     "min": 304.0,
+     "max": 664.0,
+     "n": 30
+    },
+    "gsr_thermal_sum_from_1_apr": {
+     "15 Sep": {
+      "mean": 2427.0,
+      "min": 2228.0,
+      "max": 2842.0,
+      "n": 30
+     },
+     "1 Oct": {
+      "mean": 2626.0,
+      "min": 2390.0,
+      "max": 3052.0,
+      "n": 30
+     },
+     "15 Oct": {
+      "mean": 2766.0,
+      "min": 2513.0,
+      "max": 3235.0,
+      "n": 30
+     }
+    },
+    "gfv": {
+     "Chardonnay": {
+      "flowering_doy": {
+       "mean": 182.0,
+       "min": 170.0,
+       "max": 195.0,
+       "n": 30,
+       "mean_date": "01 Jul"
+      },
+      "veraison_doy": {
+       "mean": 259.0,
+       "min": 235.0,
+       "max": 288.0,
+       "n": 30,
+       "mean_date": "16 Sep"
+      },
+      "years_without_veraison": 0
+     },
+     "Pinot noir": {
+      "flowering_doy": {
+       "mean": 182.0,
+       "min": 170.0,
+       "max": 195.0,
+       "n": 30,
+       "mean_date": "01 Jul"
+      },
+      "veraison_doy": {
+       "mean": 257.0,
+       "min": 233.0,
+       "max": 284.0,
+       "n": 30,
+       "mean_date": "14 Sep"
+      },
+      "years_without_veraison": 0
+     },
+     "Riesling": {
+      "flowering_doy": {
+       "mean": 184.0,
+       "min": 172.0,
+       "max": 197.0,
+       "n": 30,
+       "mean_date": "03 Jul"
+      },
+      "veraison_doy": {
+       "mean": 263.0,
+       "min": 237.0,
+       "max": 293.0,
+       "n": 30,
+       "mean_date": "20 Sep"
+      },
+      "years_without_veraison": 0
+     },
+     "Cabernet Sauvignon": {
+      "flowering_doy": {
+       "mean": 187.0,
+       "min": 175.0,
+       "max": 200.0,
+       "n": 30,
+       "mean_date": "06 Jul"
+      },
+      "veraison_doy": {
+       "mean": 271.0,
+       "min": 244.0,
+       "max": 306.0,
+       "n": 30,
+       "mean_date": "28 Sep"
+      },
+      "years_without_veraison": 0
+     }
+    }
+   }
+  },
+  "Beaune (Côte d'Or)": {
+   "lat": 47.025,
+   "lon": 4.84,
+   "k_huglin": 1.048,
+   "grid_cell_elevation_m": 282.65,
+   "1981-2000": {
+    "winkler_gdd10_apr_oct": {
+     "mean": 1138.0,
+     "min": 891.0,
+     "max": 1351.0,
+     "n": 20
+    },
+    "huglin_hi": {
+     "mean": 1602.0,
+     "min": 1325.0,
+     "max": 1882.0,
+     "n": 20
+    },
+    "cool_night_index_sep_tmin": {
+     "mean": 10.3,
+     "min": 6.9,
+     "max": 13.1,
+     "n": 20
+    },
+    "gst_apr_oct_mean": {
+     "mean": 14.8,
+     "min": 13.5,
+     "max": 16.0,
+     "n": 20
+    },
+    "dtr_apr_oct": {
+     "mean": 10.5,
+     "min": 9.3,
+     "max": 12.0,
+     "n": 20
+    },
+    "continentality_warmest_minus_coldest_month": {
+     "mean": 20.2,
+     "min": 16.7,
+     "max": 24.5,
+     "n": 20
+    },
+    "rain_apr_oct_mm": {
+     "mean": 542.0,
+     "min": 359.0,
+     "max": 778.0,
+     "n": 20
+    },
+    "gsr_thermal_sum_from_1_apr": {
+     "15 Sep": {
+      "mean": 2621.0,
+      "min": 2396.0,
+      "max": 2791.0,
+      "n": 20
+     },
+     "1 Oct": {
+      "mean": 2858.0,
+      "min": 2595.0,
+      "max": 3033.0,
+      "n": 20
+     },
+     "15 Oct": {
+      "mean": 3025.0,
+      "min": 2742.0,
+      "max": 3226.0,
+      "n": 20
+     }
+    },
+    "gfv": {
+     "Chardonnay": {
+      "flowering_doy": {
+       "mean": 174.0,
+       "min": 168.0,
+       "max": 188.0,
+       "n": 20,
+       "mean_date": "23 Jun"
+      },
+      "veraison_doy": {
+       "mean": 244.0,
+       "min": 232.0,
+       "max": 263.0,
+       "n": 20,
+       "mean_date": "01 Sep"
+      },
+      "years_without_veraison": 0
+     },
+     "Pinot noir": {
+      "flowering_doy": {
+       "mean": 174.0,
+       "min": 168.0,
+       "max": 188.0,
+       "n": 20,
+       "mean_date": "23 Jun"
+      },
+      "veraison_doy": {
+       "mean": 242.0,
+       "min": 231.0,
+       "max": 260.0,
+       "n": 20,
+       "mean_date": "30 Aug"
+      },
+      "years_without_veraison": 0
+     },
+     "Riesling": {
+      "flowering_doy": {
+       "mean": 176.0,
+       "min": 170.0,
+       "max": 190.0,
+       "n": 20,
+       "mean_date": "25 Jun"
+      },
+      "veraison_doy": {
+       "mean": 247.0,
+       "min": 235.0,
+       "max": 267.0,
+       "n": 20,
+       "mean_date": "04 Sep"
+      },
+      "years_without_veraison": 0
+     },
+     "Cabernet Sauvignon": {
+      "flowering_doy": {
+       "mean": 179.0,
+       "min": 172.0,
+       "max": 192.0,
+       "n": 20,
+       "mean_date": "28 Jun"
+      },
+      "veraison_doy": {
+       "mean": 253.0,
+       "min": 239.0,
+       "max": 275.0,
+       "n": 20,
+       "mean_date": "10 Sep"
+      },
+      "years_without_veraison": 0
+     }
+    }
+   },
+   "2001-2020": {
+    "winkler_gdd10_apr_oct": {
+     "mean": 1286.0,
+     "min": 1067.0,
+     "max": 1716.0,
+     "n": 20
+    },
+    "huglin_hi": {
+     "mean": 1768.0,
+     "min": 1459.0,
+     "max": 2355.0,
+     "n": 20
+    },
+    "cool_night_index_sep_tmin": {
+     "mean": 10.3,
+     "min": 8.0,
+     "max": 13.0,
+     "n": 20
+    },
+    "gst_apr_oct_mean": {
+     "mean": 15.7,
+     "min": 14.4,
+     "max": 17.4,
+     "n": 20
+    },
+    "dtr_apr_oct": {
+     "mean": 10.9,
+     "min": 9.6,
+     "max": 12.6,
+     "n": 20
+    },
+    "continentality_warmest_minus_coldest_month": {
+     "mean": 20.6,
+     "min": 16.1,
+     "max": 25.8,
+     "n": 20
+    },
+    "rain_apr_oct_mm": {
+     "mean": 509.0,
+     "min": 317.0,
+     "max": 709.0,
+     "n": 20
+    },
+    "gsr_thermal_sum_from_1_apr": {
+     "15 Sep": {
+      "mean": 2783.0,
+      "min": 2527.0,
+      "max": 3201.0,
+      "n": 20
+     },
+     "1 Oct": {
+      "mean": 3014.0,
+      "min": 2768.0,
+      "max": 3465.0,
+      "n": 20
+     },
+     "15 Oct": {
+      "mean": 3191.0,
+      "min": 2939.0,
+      "max": 3633.0,
+      "n": 20
+     }
+    },
+    "gfv": {
+     "Chardonnay": {
+      "flowering_doy": {
+       "mean": 169.0,
+       "min": 160.0,
+       "max": 182.0,
+       "n": 20,
+       "mean_date": "18 Jun"
+      },
+      "veraison_doy": {
+       "mean": 235.0,
+       "min": 218.0,
+       "max": 252.0,
+       "n": 20,
+       "mean_date": "23 Aug"
+      },
+      "years_without_veraison": 0
+     },
+     "Pinot noir": {
+      "flowering_doy": {
+       "mean": 169.0,
+       "min": 160.0,
+       "max": 182.0,
+       "n": 20,
+       "mean_date": "18 Jun"
+      },
+      "veraison_doy": {
+       "mean": 233.0,
+       "min": 217.0,
+       "max": 249.0,
+       "n": 20,
+       "mean_date": "21 Aug"
+      },
+      "years_without_veraison": 0
+     },
+     "Riesling": {
+      "flowering_doy": {
+       "mean": 170.0,
+       "min": 162.0,
+       "max": 184.0,
+       "n": 20,
+       "mean_date": "19 Jun"
+      },
+      "veraison_doy": {
+       "mean": 238.0,
+       "min": 220.0,
+       "max": 255.0,
+       "n": 20,
+       "mean_date": "26 Aug"
+      },
+      "years_without_veraison": 0
+     },
+     "Cabernet Sauvignon": {
+      "flowering_doy": {
+       "mean": 173.0,
+       "min": 164.0,
+       "max": 187.0,
+       "n": 20,
+       "mean_date": "22 Jun"
+      },
+      "veraison_doy": {
+       "mean": 243.0,
+       "min": 223.0,
+       "max": 262.0,
+       "n": 20,
+       "mean_date": "31 Aug"
+      },
+      "years_without_veraison": 0
+     }
+    }
+   },
+   "1991-2020": {
+    "winkler_gdd10_apr_oct": {
+     "mean": 1248.0,
+     "min": 939.0,
+     "max": 1716.0,
+     "n": 30
+    },
+    "huglin_hi": {
+     "mean": 1734.0,
+     "min": 1452.0,
+     "max": 2355.0,
+     "n": 30
+    },
+    "cool_night_index_sep_tmin": {
+     "mean": 10.3,
+     "min": 6.9,
+     "max": 13.1,
+     "n": 30
+    },
+    "gst_apr_oct_mean": {
+     "mean": 15.4,
+     "min": 14.0,
+     "max": 17.4,
+     "n": 30
+    },
+    "dtr_apr_oct": {
+     "mean": 10.9,
+     "min": 9.6,
+     "max": 12.6,
+     "n": 30
+    },
+    "continentality_warmest_minus_coldest_month": {
+     "mean": 20.4,
+     "min": 16.1,
+     "max": 25.8,
+     "n": 30
+    },
+    "rain_apr_oct_mm": {
+     "mean": 511.0,
+     "min": 317.0,
+     "max": 709.0,
+     "n": 30
+    },
+    "gsr_thermal_sum_from_1_apr": {
+     "15 Sep": {
+      "mean": 2746.0,
+      "min": 2493.0,
+      "max": 3201.0,
+      "n": 30
+     },
+     "1 Oct": {
+      "mean": 2977.0,
+      "min": 2690.0,
+      "max": 3465.0,
+      "n": 30
+     },
+     "15 Oct": {
+      "mean": 3149.0,
+      "min": 2839.0,
+      "max": 3633.0,
+      "n": 30
+     }
+    },
+    "gfv": {
+     "Chardonnay": {
+      "flowering_doy": {
+       "mean": 170.0,
+       "min": 160.0,
+       "max": 182.0,
+       "n": 30,
+       "mean_date": "19 Jun"
+      },
+      "veraison_doy": {
+       "mean": 237.0,
+       "min": 218.0,
+       "max": 253.0,
+       "n": 30,
+       "mean_date": "25 Aug"
+      },
+      "years_without_veraison": 0
+     },
+     "Pinot noir": {
+      "flowering_doy": {
+       "mean": 170.0,
+       "min": 160.0,
+       "max": 182.0,
+       "n": 30,
+       "mean_date": "19 Jun"
+      },
+      "veraison_doy": {
+       "mean": 235.0,
+       "min": 217.0,
+       "max": 250.0,
+       "n": 30,
+       "mean_date": "23 Aug"
+      },
+      "years_without_veraison": 0
+     },
+     "Riesling": {
+      "flowering_doy": {
+       "mean": 172.0,
+       "min": 162.0,
+       "max": 184.0,
+       "n": 30,
+       "mean_date": "21 Jun"
+      },
+      "veraison_doy": {
+       "mean": 239.0,
+       "min": 220.0,
+       "max": 257.0,
+       "n": 30,
+       "mean_date": "27 Aug"
+      },
+      "years_without_veraison": 0
+     },
+     "Cabernet Sauvignon": {
+      "flowering_doy": {
+       "mean": 174.0,
+       "min": 164.0,
+       "max": 187.0,
+       "n": 30,
+       "mean_date": "23 Jun"
+      },
+      "veraison_doy": {
+       "mean": 245.0,
+       "min": 223.0,
+       "max": 265.0,
+       "n": 30,
+       "mean_date": "02 Sep"
+      },
+      "years_without_veraison": 0
+     }
+    }
+   }
+  },
+  "Oakville (Napa)": {
+   "lat": 38.437,
+   "lon": -122.4,
+   "k_huglin": 1.0,
+   "grid_cell_elevation_m": 266.16,
+   "1981-2000": {
+    "winkler_gdd10_apr_oct": {
+     "mean": 1833.0,
+     "min": 1606.0,
+     "max": 2053.0,
+     "n": 20
+    },
+    "huglin_hi": {
+     "mean": 2431.0,
+     "min": 2118.0,
+     "max": 2730.0,
+     "n": 20
+    },
+    "cool_night_index_sep_tmin": {
+     "mean": 13.0,
+     "min": 10.4,
+     "max": 15.0,
+     "n": 20
+    },
+    "gst_apr_oct_mean": {
+     "mean": 18.5,
+     "min": 17.3,
+     "max": 19.6,
+     "n": 20
+    },
+    "dtr_apr_oct": {
+     "mean": 16.2,
+     "min": 14.5,
+     "max": 17.5,
+     "n": 20
+    },
+    "continentality_warmest_minus_coldest_month": {
+     "mean": 16.5,
+     "min": 13.9,
+     "max": 19.0,
+     "n": 20
+    },
+    "rain_apr_oct_mm": {
+     "mean": 128.0,
+     "min": 44.0,
+     "max": 245.0,
+     "n": 20
+    },
+    "gsr_thermal_sum_from_1_apr": {
+     "15 Sep": {
+      "mean": 3159.0,
+      "min": 2930.0,
+      "max": 3402.0,
+      "n": 20
+     },
+     "1 Oct": {
+      "mean": 3476.0,
+      "min": 3236.0,
+      "max": 3701.0,
+      "n": 20
+     },
+     "15 Oct": {
+      "mean": 3723.0,
+      "min": 3475.0,
+      "max": 3942.0,
+      "n": 20
+     }
+    },
+    "gfv": {
+     "Chardonnay": {
+      "flowering_doy": {
+       "mean": 156.0,
+       "min": 147.0,
+       "max": 166.0,
+       "n": 20,
+       "mean_date": "05 Jun"
+      },
+      "veraison_doy": {
+       "mean": 217.0,
+       "min": 208.0,
+       "max": 228.0,
+       "n": 20,
+       "mean_date": "05 Aug"
+      },
+      "years_without_veraison": 0
+     },
+     "Pinot noir": {
+      "flowering_doy": {
+       "mean": 156.0,
+       "min": 147.0,
+       "max": 166.0,
+       "n": 20,
+       "mean_date": "05 Jun"
+      },
+      "veraison_doy": {
+       "mean": 216.0,
+       "min": 206.0,
+       "max": 227.0,
+       "n": 20,
+       "mean_date": "04 Aug"
+      },
+      "years_without_veraison": 0
+     },
+     "Riesling": {
+      "flowering_doy": {
+       "mean": 158.0,
+       "min": 148.0,
+       "max": 167.0,
+       "n": 20,
+       "mean_date": "07 Jun"
+      },
+      "veraison_doy": {
+       "mean": 219.0,
+       "min": 210.0,
+       "max": 231.0,
+       "n": 20,
+       "mean_date": "07 Aug"
+      },
+      "years_without_veraison": 0
+     },
+     "Cabernet Sauvignon": {
+      "flowering_doy": {
+       "mean": 160.0,
+       "min": 150.0,
+       "max": 170.0,
+       "n": 20,
+       "mean_date": "09 Jun"
+      },
+      "veraison_doy": {
+       "mean": 224.0,
+       "min": 214.0,
+       "max": 235.0,
+       "n": 20,
+       "mean_date": "12 Aug"
+      },
+      "years_without_veraison": 0
+     }
+    }
+   },
+   "2001-2020": {
+    "winkler_gdd10_apr_oct": {
+     "mean": 1847.0,
+     "min": 1537.0,
+     "max": 2225.0,
+     "n": 20
+    },
+    "huglin_hi": {
+     "mean": 2425.0,
+     "min": 2078.0,
+     "max": 2750.0,
+     "n": 20
+    },
+    "cool_night_index_sep_tmin": {
+     "mean": 13.5,
+     "min": 11.5,
+     "max": 15.3,
+     "n": 20
+    },
+    "gst_apr_oct_mean": {
+     "mean": 18.6,
+     "min": 17.0,
+     "max": 20.4,
+     "n": 20
+    },
+    "dtr_apr_oct": {
+     "mean": 16.0,
+     "min": 14.9,
+     "max": 17.0,
+     "n": 20
+    },
+    "continentality_warmest_minus_coldest_month": {
+     "mean": 16.0,
+     "min": 13.3,
+     "max": 17.5,
+     "n": 20
+    },
+    "rain_apr_oct_mm": {
+     "mean": 114.0,
+     "min": 36.0,
+     "max": 243.0,
+     "n": 20
+    },
+    "gsr_thermal_sum_from_1_apr": {
+     "15 Sep": {
+      "mean": 3151.0,
+      "min": 2822.0,
+      "max": 3420.0,
+      "n": 20
+     },
+     "1 Oct": {
+      "mean": 3474.0,
+      "min": 3163.0,
+      "max": 3778.0,
+      "n": 20
+     },
+     "15 Oct": {
+      "mean": 3723.0,
+      "min": 3400.0,
+      "max": 4074.0,
+      "n": 20
+     }
+    },
+    "gfv": {
+     "Chardonnay": {
+      "flowering_doy": {
+       "mean": 155.0,
+       "min": 146.0,
+       "max": 168.0,
+       "n": 20,
+       "mean_date": "04 Jun"
+      },
+      "veraison_doy": {
+       "mean": 217.0,
+       "min": 208.0,
+       "max": 234.0,
+       "n": 20,
+       "mean_date": "05 Aug"
+      },
+      "years_without_veraison": 0
+     },
+     "Pinot noir": {
+      "flowering_doy": {
+       "mean": 155.0,
+       "min": 146.0,
+       "max": 168.0,
+       "n": 20,
+       "mean_date": "04 Jun"
+      },
+      "veraison_doy": {
+       "mean": 215.0,
+       "min": 207.0,
+       "max": 232.0,
+       "n": 20,
+       "mean_date": "03 Aug"
+      },
+      "years_without_veraison": 0
+     },
+     "Riesling": {
+      "flowering_doy": {
+       "mean": 156.0,
+       "min": 148.0,
+       "max": 170.0,
+       "n": 20,
+       "mean_date": "05 Jun"
+      },
+      "veraison_doy": {
+       "mean": 219.0,
+       "min": 210.0,
+       "max": 236.0,
+       "n": 20,
+       "mean_date": "07 Aug"
+      },
+      "years_without_veraison": 0
+     },
+     "Cabernet Sauvignon": {
+      "flowering_doy": {
+       "mean": 159.0,
+       "min": 150.0,
+       "max": 172.0,
+       "n": 20,
+       "mean_date": "08 Jun"
+      },
+      "veraison_doy": {
+       "mean": 223.0,
+       "min": 213.0,
+       "max": 240.0,
+       "n": 20,
+       "mean_date": "11 Aug"
+      },
+      "years_without_veraison": 0
+     }
+    }
+   },
+   "1991-2020": {
+    "winkler_gdd10_apr_oct": {
+     "mean": 1839.0,
+     "min": 1537.0,
+     "max": 2225.0,
+     "n": 30
+    },
+    "huglin_hi": {
+     "mean": 2416.0,
+     "min": 2078.0,
+     "max": 2750.0,
+     "n": 30
+    },
+    "cool_night_index_sep_tmin": {
+     "mean": 13.5,
+     "min": 11.5,
+     "max": 15.3,
+     "n": 30
+    },
+    "gst_apr_oct_mean": {
+     "mean": 18.5,
+     "min": 17.0,
+     "max": 20.4,
+     "n": 30
+    },
+    "dtr_apr_oct": {
+     "mean": 16.0,
+     "min": 14.5,
+     "max": 17.1,
+     "n": 30
+    },
+    "continentality_warmest_minus_coldest_month": {
+     "mean": 16.0,
+     "min": 13.3,
+     "max": 18.5,
+     "n": 30
+    },
+    "rain_apr_oct_mm": {
+     "mean": 121.0,
+     "min": 36.0,
+     "max": 243.0,
+     "n": 30
+    },
+    "gsr_thermal_sum_from_1_apr": {
+     "15 Sep": {
+      "mean": 3142.0,
+      "min": 2822.0,
+      "max": 3420.0,
+      "n": 30
+     },
+     "1 Oct": {
+      "mean": 3468.0,
+      "min": 3163.0,
+      "max": 3778.0,
+      "n": 30
+     },
+     "15 Oct": {
+      "mean": 3719.0,
+      "min": 3400.0,
+      "max": 4074.0,
+      "n": 30
+     }
+    },
+    "gfv": {
+     "Chardonnay": {
+      "flowering_doy": {
+       "mean": 155.0,
+       "min": 146.0,
+       "max": 168.0,
+       "n": 30,
+       "mean_date": "04 Jun"
+      },
+      "veraison_doy": {
+       "mean": 218.0,
+       "min": 208.0,
+       "max": 234.0,
+       "n": 30,
+       "mean_date": "06 Aug"
+      },
+      "years_without_veraison": 0
+     },
+     "Pinot noir": {
+      "flowering_doy": {
+       "mean": 155.0,
+       "min": 146.0,
+       "max": 168.0,
+       "n": 30,
+       "mean_date": "04 Jun"
+      },
+      "veraison_doy": {
+       "mean": 216.0,
+       "min": 206.0,
+       "max": 232.0,
+       "n": 30,
+       "mean_date": "04 Aug"
+      },
+      "years_without_veraison": 0
+     },
+     "Riesling": {
+      "flowering_doy": {
+       "mean": 157.0,
+       "min": 148.0,
+       "max": 170.0,
+       "n": 30,
+       "mean_date": "06 Jun"
+      },
+      "veraison_doy": {
+       "mean": 220.0,
+       "min": 210.0,
+       "max": 236.0,
+       "n": 30,
+       "mean_date": "08 Aug"
+      },
+      "years_without_veraison": 0
+     },
+     "Cabernet Sauvignon": {
+      "flowering_doy": {
+       "mean": 160.0,
+       "min": 150.0,
+       "max": 172.0,
+       "n": 30,
+       "mean_date": "09 Jun"
+      },
+      "veraison_doy": {
+       "mean": 224.0,
+       "min": 213.0,
+       "max": 240.0,
+       "n": 30,
+       "mean_date": "12 Aug"
+      },
+      "years_without_veraison": 0
+     }
+    }
+   }
+  }
+ }
+}
