@@ -1,0 +1,47 @@
+{
+  "info": {
+    "backend": "WebGPU",
+    "calls": 59,
+    "frameCalls": 59,
+    "drawCalls": 440,
+    "triangles": 172391328,
+    "points": 0,
+    "lines": 0,
+    "timestamp": 0
+  },
+  "row_downhill": {
+    "avgFps": 96.1,
+    "low1Fps": 81.3,
+    "frames": 481
+  },
+  "uphill": {
+    "avgFps": 100.5,
+    "low1Fps": 81.3,
+    "frames": 503
+  },
+  "valley_view": {
+    "avgFps": 113.4,
+    "low1Fps": 90.1,
+    "frames": 537
+  },
+  "drone": {
+    "avgFps": 121.7,
+    "low1Fps": 91.7,
+    "frames": 609
+  },
+  "vine_close": {
+    "avgFps": 91.9,
+    "low1Fps": 77.5,
+    "frames": 460
+  },
+  "drawInfo": {
+    "backend": "WebGPU",
+    "calls": 82379,
+    "frameCalls": 24,
+    "drawCalls": 261,
+    "triangles": 140427692,
+    "points": 0,
+    "lines": 0,
+    "timestamp": 0
+  }
+}

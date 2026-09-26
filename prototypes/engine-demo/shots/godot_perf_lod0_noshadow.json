@@ -1,0 +1,30 @@
+{
+  "drone": {
+    "avg_fps": 96.0,
+    "frames": 481,
+    "low1_fps": 94.3
+  },
+  "experiment": "lod0_noshadow",
+  "renderer": "NVIDIA GeForce RTX 5080 / vulkan",
+  "resolution": "(1920.0, 1080.0)",
+  "row_downhill": {
+    "avg_fps": 106.9,
+    "frames": 535,
+    "low1_fps": 105.0
+  },
+  "uphill": {
+    "avg_fps": 107.5,
+    "frames": 538,
+    "low1_fps": 99.1
+  },
+  "valley_view": {
+    "avg_fps": 107.3,
+    "frames": 537,
+    "low1_fps": 100.0
+  },
+  "vine_close": {
+    "avg_fps": 91.8,
+    "frames": 460,
+    "low1_fps": 85.7
+  }
+}

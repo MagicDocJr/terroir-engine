@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Engine demo — Three.js</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    canvas { display: block; }
+    #hud { position: fixed; left: 12px; top: 10px; color: #fff; font: 13px/1.4 ui-monospace, monospace;
+           text-shadow: 0 1px 2px #000; pointer-events: none; white-space: pre; }
+    #help { position: fixed; left: 12px; bottom: 10px; color: #fffc; font: 12px system-ui; text-shadow: 0 1px 2px #000; }
+  </style>
+</head>
+<body>
+  <div id="hud"></div>
+  <div id="help">Click to look · WASD walk · Shift run · 1–5 presets · F fps</div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

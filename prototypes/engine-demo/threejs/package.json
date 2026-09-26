@@ -1,0 +1,14 @@
+{
+  "name": "engine-demo-threejs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
+    "shot": "node shot.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "^1.63.0",
+    "three": "^0.186.1",
+    "vite": "^8.3.1"
+  }
+}

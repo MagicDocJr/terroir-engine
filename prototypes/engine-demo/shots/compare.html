@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Engine demo comparison</title>
+<style>
+  :root { --bg:#f6f4ef; --fg:#1d1c1a; --muted:#6b675f; --card:#fff; --line:#e2ddd2; --accent:#5b6b2e; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#161614; --fg:#ecebe6; --muted:#a19d93; --card:#20201d; --line:#34332e; --accent:#a9bd6b; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, sans-serif; }
+  main { max-width:1500px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:26px; margin:0 0 4px; } h2 { font-size:18px; margin:36px 0 10px; }
+  .sub { color:var(--muted); margin:0 0 20px; }
+  .pair { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:900px) { .pair { grid-template-columns:1fr; } }
+  figure { margin:0; background:var(--card); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  figure img { width:100%; display:block; cursor:zoom-in; }
+  figcaption { padding:8px 12px; display:flex; justify-content:space-between; font-size:13px; }
+  figcaption b { color:var(--accent); } .fps { color:var(--muted); font-variant-numeric:tabular-nums; }
+  table { border-collapse:collapse; width:100%; background:var(--card); border:1px solid var(--line); border-radius:8px; overflow:hidden; font-variant-numeric:tabular-nums; }
+  th, td { text-align:left; padding:8px 12px; border-bottom:1px solid var(--line); vertical-align:top; } th { font-weight:600; }
+  .notes { display:grid; grid-template-columns:1fr 1fr; gap:12px; } @media (max-width:900px){ .notes{grid-template-columns:1fr;} }
+  .notes div { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 16px; }
+  .notes h3 { margin:0 0 6px; font-size:15px; } ul { margin:0; padding-left:18px; }
+  dialog { padding:0; border:0; background:transparent; max-width:98vw; } dialog img { max-width:98vw; max-height:96vh; display:block; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Engine demo: Three.js vs Godot</h1>
+  <p class="sub">The same Mosel steep slate slope in both engines: identical Blender-made vines, terrain, layout, sky and sun (late afternoon, September). 1920×1080 on the RTX 5080, vsync off. Click an image to enlarge it.</p>
+  <div id="pairs"></div>
+
+  <h2>Frame rate (average / 1% low)</h2>
+  <table id="perf"><tr><th>View</th><th>Three.js (WebGPU)</th><th>Godot 4.7 (Vulkan)</th></tr></table>
+
+  <h2>How each was to build for an AI</h2>
+  <div class="notes">
+    <div><h3>Three.js (WebGPU)</h3><ul>
+      <li>All plain text. I can verify it myself by driving Chrome on your real GPU and taking screenshots.</li>
+      <li>You build the renderer yourself: shadows, reflections and post-processing are assembled by hand, and I hit two engine-specific traps along the way (the order of instancing vs. custom shader code, and reflections re-rendering all shadows).</li>
+      <li>Reflections come from a real mirror render. Lighting has no built-in indirect bounce, so it looks moodier and flatter in the shade.</li>
+      <li>The headless browser sometimes throttles during long capture runs, so automated tests need care.</li>
+      <li>Big plus for the MVP: the Football Manager-style dashboard is plain web UI (React), which is by far the easiest place to build dense tables and charts.</li>
+    </ul></div>
+    <div><h3>Godot 4.7</h3><ul>
+      <li>Also all text (<code>.tscn</code>, <code>.gd</code>, <code>.gdshader</code>). It never needed the editor: the whole scene is built by script, and screenshots and FPS come from a command-line flag.</li>
+      <li>More "free" realism out of the box: indirect bounce light (SSIL), screen-space reflections, MSAA. That's why it looks brighter and more sunlit.</li>
+      <li>One colour-space mistake (vertex colours) took a debug detour. Capture runs open a window on your desktop.</li>
+      <li>A dense data dashboard would have to be built from Godot's UI toolkit, which is much weaker than the web for tables and charts, or run as a separate web app next to it.</li>
+    </ul></div>
+  </div>
+</main>
+<dialog id="zoom"><img alt=""></dialog>
+<script>
+  const presets = [
+    ['row_downhill', 'Standing in the aisle, looking downhill to the river'],
+    ['uphill', 'Looking up the slope'],
+    ['valley_view', 'View across the Mosel valley'],
+    ['drone', 'Drone view of the plot and the neighbouring parcels'],
+    ['vine_close', 'Close-up of one vine and the slate soil'],
+  ];
+  Promise.all([Promise.resolve({"info": {"backend": "WebGPU", "calls": 59, "frameCalls": 59, "drawCalls": 440, "triangles": 172391328, "points": 0, "lines": 0, "timestamp": 0}, "row_downhill": {"avgFps": 96.1, "low1Fps": 81.3, "frames": 481}, "uphill": {"avgFps": 100.5, "low1Fps": 81.3, "frames": 503}, "valley_view": {"avgFps": 113.4, "low1Fps": 90.1, "frames": 537}, "drone": {"avgFps": 121.7, "low1Fps": 91.7, "frames": 609}, "vine_close": {"avgFps": 91.9, "low1Fps": 77.5, "frames": 460}, "drawInfo": {"backend": "WebGPU", "calls": 82379, "frameCalls": 24, "drawCalls": 261, "triangles": 140427692, "points": 0, "lines": 0, "timestamp": 0}}), Promise.resolve({"drone": {"avg_fps": 88.2, "frames": 442, "low1_fps": 84.5}, "experiment": "", "renderer": "NVIDIA GeForce RTX 5080 / vulkan", "resolution": "(1920.0, 1080.0)", "row_downhill": {"avg_fps": 81.7, "frames": 409, "low1_fps": 77.1}, "uphill": {"avg_fps": 82.5, "frames": 413, "low1_fps": 81.1}, "valley_view": {"avg_fps": 97.1, "frames": 486, "low1_fps": 90.0}, "vine_close": {"avg_fps": 81.7, "frames": 409, "low1_fps": 74.9}})]).then(([t, g]) => {
+    const gp = (k) => g[k] || (g.presets || {})[k] || {};
+    const fmt = (a, l) => (a == null ? '—' : `${Math.round(a)} / ${Math.round(l)} fps`);
+    const pairs = document.getElementById('pairs'), perf = document.getElementById('perf');
+    for (const [k, label] of presets) {
+      const tp = t[k] || {}, gq = gp(k);
+      pairs.insertAdjacentHTML('beforeend', `<h2>${label}</h2><div class="pair">
+        <figure><img src="threejs_${k}.png" alt="Three.js: ${label}"><figcaption><b>Three.js</b><span class="fps">${fmt(tp.avgFps, tp.low1Fps)}</span></figcaption></figure>
+        <figure><img src="godot_${k}.png" alt="Godot: ${label}"><figcaption><b>Godot</b><span class="fps">${fmt(gq.avg_fps ?? gq.avgFps, gq.low1_fps ?? gq.low1Fps)}</span></figcaption></figure></div>`);
+      perf.insertAdjacentHTML('beforeend', `<tr><td>${label}</td><td>${fmt(tp.avgFps, tp.low1Fps)}</td><td>${fmt(gq.avg_fps ?? gq.avgFps, gq.low1_fps ?? gq.low1Fps)}</td></tr>`);
+    }
+    const dlg = document.getElementById('zoom');
+    document.querySelectorAll('figure img').forEach((i) => i.onclick = () => { dlg.querySelector('img').src = i.src; dlg.showModal(); });
+    dlg.onclick = () => dlg.close();
+  });
+</script>
+</body>
+</html>
