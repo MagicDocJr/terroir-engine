@@ -1,5 +1,7 @@
 # Terroir Engine MVP: morning report (27 Sep 2026)
 
+Web version with screenshots: <https://claude.ai/artifact/VxeTyxxwhKkzcqwFwTMSQJ> (private until you share it).
+
 ## TL;DR
 
 You can play the MVP from start to finish. Pick a Region, compare its Plots, plant every Block, then play the fourth-leaf Vintage day by day on the real Historical weather. Harvest each Block when you choose, make every cellar decision, blend and bottle, and read a Tasting sheet that explains each descriptor. The Mentor retires once everything is in bottle.
