@@ -361,6 +361,7 @@ func _build_profile() -> void:
 
 
 func _prof(z: float) -> float:
+	if prof.size() < 2: return 0.0   # world not built yet (a camera can ask before the first snapshot)
 	var f := (z - PZ0) / PSTEP
 	var i := clampi(int(f), 0, PN - 2)
 	var t := clampf(f - i, 0.0, 1.0)
@@ -368,6 +369,7 @@ func _prof(z: float) -> float:
 
 
 func _delta(x: float) -> float:
+	if block_delta.is_empty(): return 0.0
 	var i := clampi(int(x - bd_x0), 0, block_delta.size() - 1)
 	return block_delta[i]
 

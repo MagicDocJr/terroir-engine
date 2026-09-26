@@ -13,7 +13,8 @@ static func build(D: Dictionary, shell) -> Control:
 		if b["id"] == sel_id: B = b
 	var P: Dictionary = D["plot"]
 	var v := UI.vbox(16)
-	v.add_child(UI.page_header("Plot & Blocks", "%s · %.1f ha · %s · %d %% slope facing %s · %d m" % [P["name"], float(P["ha"]), P["classification"], int(P["slope"]), P["aspect"], int(P["elevation"])]))
+	var b3 := UI.button("Walk the vineyard in 3D"); b3.pressed.connect(func(): shell.toggle_3d("vineyard"))
+	v.add_child(UI.page_header("Plot & Blocks", "%s · %.1f ha · %s · %d %% slope facing %s · %d m" % [P["name"], float(P["ha"]), P["classification"], int(P["slope"]), P["aspect"], int(P["elevation"])], [b3]))
 	# table
 	var tp: Array = UI.panel("", "", 2)
 	var cols := ["Block", "Variety", "Stage", "Health", "Water", "Downy", "Powdery", "Botrytis", "Crop est.", "Must", "Yield"]

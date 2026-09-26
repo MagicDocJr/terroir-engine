@@ -193,8 +193,16 @@ func toggle_3d(kind := "vineyard") -> void:
 	if view3d.visible: _hide_3d(); return
 	root_box.visible = false
 	view3d.visible = true
-	if view3d.has_method("set_view"): view3d.set_view(kind)
 	if view3d.has_method("apply_snapshot"): view3d.apply_snapshot(D)
+	if view3d.has_method("set_view"): view3d.set_view(kind)
+
+func _shot3d(name: String, kind: String) -> void:
+	if not ResourceLoader.exists("res://src/view3d/view3d.tscn"): return
+	if view3d == null or not view3d.visible: toggle_3d(kind)
+	elif view3d.has_method("set_view"): view3d.set_view(kind)
+	await get_tree().create_timer(5.0).timeout
+	await _shot(name)
+	_hide_3d()
 
 func _hide_3d() -> void:
 	if view3d: view3d.visible = false
@@ -413,6 +421,7 @@ func _run_capture() -> void:
 				in_window[b["id"]] = int(in_window.get(b["id"], 0)) + 1
 				if not ripeness_shot:
 					_build_chrome(); show_screen("ripeness"); await _shot("%s_08_ripeness" % prefix)
+					await _shot3d("%s_08b_3d_vineyard" % prefix, "vineyard")
 					show_screen("inbox"); await _shot("%s_09_inbox_ripening" % prefix)
 					ripeness_shot = true
 				if in_window[b["id"]] >= 3 or String(b.get("stage", "")) == "Leaf fall":
@@ -420,6 +429,7 @@ func _run_capture() -> void:
 		if all_in: break
 	_build_chrome()
 	show_screen("winery"); await _shot("%s_10_winery_ferment" % prefix)
+	await _shot3d("%s_10b_3d_hall" % prefix, "hall")
 	Sim.Advance(20, false); D = JSON.parse_string(Sim.Snapshot()); _build_chrome()
 	show_screen("winery"); await _shot("%s_11_winery_later" % prefix)
 	show_screen("estate"); await _shot("%s_12_estate" % prefix)
@@ -467,7 +477,7 @@ func _fuzz_screen(id: String) -> int:
 		if b is OptionButton:
 			var o := b as OptionButton
 			if o.item_count > 1: o.select(o.item_count - 1); o.item_selected.emit(o.item_count - 1)
-		elif (b as Button).text.begins_with("Bottle") or (b as Button).text.begins_with("Harvest Block"):
+		elif (b as Button).text.begins_with("Bottle") or (b as Button).text.begins_with("Harvest Block") or "3D" in (b as Button).text:
 			continue   # exercised by the capture run; pressing them here would change the game too early
 		else:
 			b.pressed.emit()
