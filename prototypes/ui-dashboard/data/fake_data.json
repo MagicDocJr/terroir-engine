@@ -1,0 +1,2544 @@
+{
+ "note": "PROTOTYPE fake data: plausible Mosel values, not simulated and not yet checked against docs/science.",
+ "estate": "Weingut Kellermann (prototype)",
+ "date": "Mon 20 Oct 2025",
+ "stage": "Harvest, Block E still hanging",
+ "cash": 171850,
+ "plot": {
+  "name": "Schieferhang Südwest",
+  "region": "Mosel",
+  "ha": 1.4,
+  "blocks": 5,
+  "classification": "Mosel (Prädikat eligible)",
+  "varieties": "Riesling, Spätburgunder",
+  "leaf": "4th leaf (planted 2022)",
+  "training": "Einzelpfahl"
+ },
+ "modes": {
+  "mode": "Normal mode",
+  "weather": "Historical weather: Mosel 2025"
+ },
+ "weeks": [
+  "18 Aug",
+  "25 Aug",
+  "1 Sep",
+  "8 Sep",
+  "15 Sep",
+  "22 Sep",
+  "29 Sep",
+  "6 Oct",
+  "13 Oct",
+  "20 Oct"
+ ],
+ "blocks": [
+  {
+   "id": "A",
+   "name": "Steillage Süd",
+   "area": 0.4,
+   "soil": "Blue Devonian slate, shallow",
+   "slope": 35,
+   "aspect": "S",
+   "elevation": 165,
+   "variety": "Riesling",
+   "rootstock": "SO4",
+   "clone": "Gm 198-30",
+   "training": "Einzelpfahl",
+   "density": 7800,
+   "planted": 2022,
+   "leaf": 4,
+   "awc": 70,
+   "health": 0.93,
+   "water": -0.95,
+   "downy": 12,
+   "powdery": 8,
+   "botrytis": 18,
+   "yieldKgHa": 6400,
+   "harvested": "2025-10-08",
+   "oe": [
+    52.0,
+    60.2,
+    66.3,
+    71.8,
+    76.9,
+    81.8,
+    86.5,
+    91.0
+   ],
+   "ta": [
+    19.5,
+    16.7,
+    15.0,
+    13.5,
+    12.1,
+    10.9,
+    9.7,
+    8.6
+   ],
+   "ph": [
+    2.78,
+    2.82,
+    2.87,
+    2.91,
+    2.95,
+    2.99,
+    3.04,
+    3.08
+   ],
+   "target": {
+    "style": "Spätlese trocken",
+    "oe": 88
+   },
+   "soilProfile": {
+    "phTopsoil": 6.1,
+    "caco3": 0,
+    "awcMm": 70,
+    "rootDepthCm": 160,
+    "horizons": [
+     {
+      "from": 0,
+      "to": 25,
+      "name": "Ah",
+      "texture": "Stony silt loam, humic",
+      "stones": 55,
+      "color": "#4a4038"
+     },
+     {
+      "from": 25,
+      "to": 70,
+      "name": "Cv",
+      "texture": "Weathered slate scree",
+      "stones": 80,
+      "color": "#3e4651"
+     },
+     {
+      "from": 70,
+      "to": 180,
+      "name": "R",
+      "texture": "Fissured Devonian slate",
+      "stones": 97,
+      "color": "#2e353e"
+     }
+    ]
+   }
+  },
+  {
+   "id": "B",
+   "name": "Mittelhang",
+   "area": 0.35,
+   "soil": "Slate with loess patches",
+   "slope": 28,
+   "aspect": "SSW",
+   "elevation": 140,
+   "variety": "Riesling",
+   "rootstock": "5BB",
+   "clone": "Gm 239-17",
+   "training": "Einzelpfahl",
+   "density": 7800,
+   "planted": 2022,
+   "leaf": 4,
+   "awc": 95,
+   "health": 0.88,
+   "water": -0.78,
+   "downy": 15,
+   "powdery": 7,
+   "botrytis": 24,
+   "yieldKgHa": 7900,
+   "harvested": "2025-10-03",
+   "oe": [
+    49.0,
+    57.3,
+    63.5,
+    69.1,
+    74.3,
+    79.2,
+    84.0
+   ],
+   "ta": [
+    20.4,
+    17.2,
+    15.3,
+    13.6,
+    12.0,
+    10.6,
+    9.3
+   ],
+   "ph": [
+    2.76,
+    2.8,
+    2.85,
+    2.89,
+    2.93,
+    2.98,
+    3.02
+   ],
+   "target": {
+    "style": "Kabinett feinherb",
+    "oe": 80
+   },
+   "soilProfile": {
+    "phTopsoil": 6.4,
+    "caco3": 0,
+    "awcMm": 95,
+    "rootDepthCm": 160,
+    "horizons": [
+     {
+      "from": 0,
+      "to": 30,
+      "name": "Ah",
+      "texture": "Loamy silt with slate chips",
+      "stones": 35,
+      "color": "#57493c"
+     },
+     {
+      "from": 30,
+      "to": 60,
+      "name": "Bv",
+      "texture": "Loess loam, slate fragments",
+      "stones": 30,
+      "color": "#6b5a44"
+     },
+     {
+      "from": 60,
+      "to": 170,
+      "name": "Cv",
+      "texture": "Weathered slate",
+      "stones": 85,
+      "color": "#3e4651"
+     }
+    ]
+   }
+  },
+  {
+   "id": "C",
+   "name": "Hangfuß",
+   "area": 0.25,
+   "soil": "Colluvial slate loam, deeper",
+   "slope": 18,
+   "aspect": "S",
+   "elevation": 118,
+   "variety": "Riesling",
+   "rootstock": "SO4",
+   "clone": "Gm 198-30",
+   "training": "Einzelpfahl",
+   "density": 7800,
+   "planted": 2022,
+   "leaf": 4,
+   "awc": 140,
+   "health": 0.82,
+   "water": -0.52,
+   "downy": 20,
+   "powdery": 6,
+   "botrytis": 38,
+   "yieldKgHa": 9400,
+   "harvested": "2025-09-27",
+   "oe": [
+    46.0,
+    54.6,
+    60.9,
+    66.6,
+    71.9,
+    77.0
+   ],
+   "ta": [
+    21.2,
+    17.7,
+    15.5,
+    13.6,
+    12.0,
+    10.4
+   ],
+   "ph": [
+    2.74,
+    2.78,
+    2.83,
+    2.87,
+    2.92,
+    2.96
+   ],
+   "target": {
+    "style": "Kabinett",
+    "oe": 74
+   },
+   "soilProfile": {
+    "phTopsoil": 6.6,
+    "caco3": 0,
+    "awcMm": 140,
+    "rootDepthCm": 120,
+    "horizons": [
+     {
+      "from": 0,
+      "to": 40,
+      "name": "Ap",
+      "texture": "Colluvial loam, slate chips",
+      "stones": 25,
+      "color": "#5a4a3b"
+     },
+     {
+      "from": 40,
+      "to": 110,
+      "name": "M",
+      "texture": "Colluvium, silty clay loam",
+      "stones": 20,
+      "color": "#6a5641"
+     },
+     {
+      "from": 110,
+      "to": 180,
+      "name": "Cv",
+      "texture": "Weathered slate",
+      "stones": 80,
+      "color": "#3e4651"
+     }
+    ]
+   }
+  },
+  {
+   "id": "D",
+   "name": "Kuppe",
+   "area": 0.2,
+   "soil": "Red slate, very stony",
+   "slope": 31,
+   "aspect": "SW",
+   "elevation": 182,
+   "variety": "Spätburgunder",
+   "rootstock": "3309C",
+   "clone": "Mariafeld",
+   "training": "Einzelpfahl",
+   "density": 7800,
+   "planted": 2022,
+   "leaf": 4,
+   "awc": 60,
+   "health": 0.9,
+   "water": -1.05,
+   "downy": 10,
+   "powdery": 14,
+   "botrytis": 16,
+   "yieldKgHa": 5600,
+   "harvested": "2025-10-10",
+   "oe": [
+    55.0,
+    63.9,
+    70.4,
+    76.3,
+    81.8,
+    87.1,
+    92.1,
+    97.0
+   ],
+   "ta": [
+    17.1,
+    14.5,
+    12.9,
+    11.6,
+    10.3,
+    9.2,
+    8.1,
+    7.1
+   ],
+   "ph": [
+    2.95,
+    3.01,
+    3.06,
+    3.12,
+    3.18,
+    3.24,
+    3.29,
+    3.35
+   ],
+   "target": {
+    "style": "Spätburgunder trocken",
+    "oe": 95
+   },
+   "soilProfile": {
+    "phTopsoil": 6.0,
+    "caco3": 0,
+    "awcMm": 60,
+    "rootDepthCm": 160,
+    "horizons": [
+     {
+      "from": 0,
+      "to": 20,
+      "name": "Ah",
+      "texture": "Red stony loam",
+      "stones": 65,
+      "color": "#6b3f35"
+     },
+     {
+      "from": 20,
+      "to": 60,
+      "name": "Cv",
+      "texture": "Red slate scree",
+      "stones": 85,
+      "color": "#5a3530"
+     },
+     {
+      "from": 60,
+      "to": 180,
+      "name": "R",
+      "texture": "Red slate bedrock",
+      "stones": 98,
+      "color": "#44292a"
+     }
+    ]
+   }
+  },
+  {
+   "id": "E",
+   "name": "Waldrand",
+   "area": 0.2,
+   "soil": "Slate under the forest edge, cool",
+   "slope": 24,
+   "aspect": "SE",
+   "elevation": 205,
+   "variety": "Riesling",
+   "rootstock": "101-14",
+   "clone": "Gm 239-17",
+   "training": "Einzelpfahl",
+   "density": 7800,
+   "planted": 2022,
+   "leaf": 4,
+   "awc": 85,
+   "health": 0.86,
+   "water": -0.6,
+   "downy": 18,
+   "powdery": 11,
+   "botrytis": 32,
+   "yieldKgHa": 6900,
+   "harvested": null,
+   "oe": [
+    44.0,
+    50.4,
+    55.1,
+    59.4,
+    63.3,
+    67.1,
+    70.8,
+    74.3,
+    77.7,
+    81.0
+   ],
+   "ta": [
+    21.8,
+    19.2,
+    17.6,
+    16.2,
+    15.0,
+    13.8,
+    12.8,
+    11.7,
+    10.7,
+    9.8
+   ],
+   "ph": [
+    2.72,
+    2.75,
+    2.78,
+    2.81,
+    2.84,
+    2.88,
+    2.91,
+    2.94,
+    2.97,
+    3.0
+   ],
+   "target": {
+    "style": "Auslese",
+    "oe": 83
+   },
+   "soilProfile": {
+    "phTopsoil": 5.8,
+    "caco3": 0,
+    "awcMm": 85,
+    "rootDepthCm": 160,
+    "horizons": [
+     {
+      "from": 0,
+      "to": 35,
+      "name": "Ah",
+      "texture": "Humic slate loam, leaf litter",
+      "stones": 40,
+      "color": "#473d33"
+     },
+     {
+      "from": 35,
+      "to": 80,
+      "name": "Cv",
+      "texture": "Weathered slate",
+      "stones": 80,
+      "color": "#3e4651"
+     },
+     {
+      "from": 80,
+      "to": 180,
+      "name": "R",
+      "texture": "Fissured slate",
+      "stones": 96,
+      "color": "#2e353e"
+     }
+    ]
+   }
+  }
+ ],
+ "weather": {
+  "station": "Bernkastel (historical weather, Mosel 2025)",
+  "weekly": [
+   {
+    "date": "7 Apr",
+    "tmean": 10.5,
+    "tmeanNormal": 8.7,
+    "gdd": 3,
+    "gddNormal": 0
+   },
+   {
+    "date": "14 Apr",
+    "tmean": 9.6,
+    "tmeanNormal": 9.7,
+    "gdd": 8,
+    "gddNormal": 0
+   },
+   {
+    "date": "21 Apr",
+    "tmean": 15.1,
+    "tmeanNormal": 10.7,
+    "gdd": 25,
+    "gddNormal": 2
+   },
+   {
+    "date": "28 Apr",
+    "tmean": 14.4,
+    "tmeanNormal": 11.6,
+    "gdd": 57,
+    "gddNormal": 10
+   },
+   {
+    "date": "5 May",
+    "tmean": 17.4,
+    "tmeanNormal": 12.6,
+    "gdd": 89,
+    "gddNormal": 26
+   },
+   {
+    "date": "12 May",
+    "tmean": 15.9,
+    "tmeanNormal": 13.5,
+    "gdd": 131,
+    "gddNormal": 48
+   },
+   {
+    "date": "19 May",
+    "tmean": 17.3,
+    "tmeanNormal": 14.4,
+    "gdd": 182,
+    "gddNormal": 76
+   },
+   {
+    "date": "26 May",
+    "tmean": 15.9,
+    "tmeanNormal": 15.2,
+    "gdd": 235,
+    "gddNormal": 110
+   },
+   {
+    "date": "2 Jun",
+    "tmean": 16.7,
+    "tmeanNormal": 15.9,
+    "gdd": 284,
+    "gddNormal": 149
+   },
+   {
+    "date": "9 Jun",
+    "tmean": 18.0,
+    "tmeanNormal": 16.5,
+    "gdd": 340,
+    "gddNormal": 193
+   },
+   {
+    "date": "16 Jun",
+    "tmean": 17.9,
+    "tmeanNormal": 17.1,
+    "gdd": 394,
+    "gddNormal": 241
+   },
+   {
+    "date": "23 Jun",
+    "tmean": 18.2,
+    "tmeanNormal": 17.5,
+    "gdd": 446,
+    "gddNormal": 292
+   },
+   {
+    "date": "30 Jun",
+    "tmean": 16.4,
+    "tmeanNormal": 17.8,
+    "gdd": 495,
+    "gddNormal": 346
+   },
+   {
+    "date": "7 Jul",
+    "tmean": 18.8,
+    "tmeanNormal": 18.0,
+    "gdd": 552,
+    "gddNormal": 401
+   },
+   {
+    "date": "14 Jul",
+    "tmean": 17.7,
+    "tmeanNormal": 18.1,
+    "gdd": 605,
+    "gddNormal": 458
+   },
+   {
+    "date": "21 Jul",
+    "tmean": 16.4,
+    "tmeanNormal": 18.1,
+    "gdd": 660,
+    "gddNormal": 515
+   },
+   {
+    "date": "28 Jul",
+    "tmean": 16.5,
+    "tmeanNormal": 17.9,
+    "gdd": 713,
+    "gddNormal": 570
+   },
+   {
+    "date": "4 Aug",
+    "tmean": 17.2,
+    "tmeanNormal": 17.6,
+    "gdd": 765,
+    "gddNormal": 625
+   },
+   {
+    "date": "11 Aug",
+    "tmean": 19.1,
+    "tmeanNormal": 17.2,
+    "gdd": 824,
+    "gddNormal": 677
+   },
+   {
+    "date": "18 Aug",
+    "tmean": 16.1,
+    "tmeanNormal": 16.7,
+    "gdd": 873,
+    "gddNormal": 725
+   },
+   {
+    "date": "25 Aug",
+    "tmean": 18.2,
+    "tmeanNormal": 16.1,
+    "gdd": 926,
+    "gddNormal": 770
+   },
+   {
+    "date": "1 Sep",
+    "tmean": 15.2,
+    "tmeanNormal": 15.5,
+    "gdd": 973,
+    "gddNormal": 810
+   },
+   {
+    "date": "8 Sep",
+    "tmean": 18.5,
+    "tmeanNormal": 14.7,
+    "gdd": 1021,
+    "gddNormal": 846
+   },
+   {
+    "date": "15 Sep",
+    "tmean": 17.7,
+    "tmeanNormal": 13.8,
+    "gdd": 1068,
+    "gddNormal": 875
+   },
+   {
+    "date": "22 Sep",
+    "tmean": 17.0,
+    "tmeanNormal": 12.9,
+    "gdd": 1114,
+    "gddNormal": 898
+   },
+   {
+    "date": "29 Sep",
+    "tmean": 16.1,
+    "tmeanNormal": 12.0,
+    "gdd": 1146,
+    "gddNormal": 915
+   },
+   {
+    "date": "6 Oct",
+    "tmean": 12.9,
+    "tmeanNormal": 11.0,
+    "gdd": 1178,
+    "gddNormal": 925
+   },
+   {
+    "date": "13 Oct",
+    "tmean": 11.6,
+    "tmeanNormal": 10.0,
+    "gdd": 1198,
+    "gddNormal": 928
+   },
+   {
+    "date": "20 Oct",
+    "tmean": 11.7,
+    "tmeanNormal": 9.0,
+    "gdd": 1208,
+    "gddNormal": 928
+   }
+  ],
+  "months": [
+   "Apr",
+   "May",
+   "Jun",
+   "Jul",
+   "Aug",
+   "Sep",
+   "Oct"
+  ],
+  "rain": [
+   48,
+   51,
+   38,
+   44,
+   36,
+   71,
+   29
+  ],
+  "rainNormal": [
+   45,
+   62,
+   65,
+   70,
+   62,
+   55,
+   58
+  ],
+  "risk": [
+   {
+    "date": "22 Aug",
+    "downy": 12,
+    "powdery": 30,
+    "botrytis": 14
+   },
+   {
+    "date": "23 Aug",
+    "downy": 12,
+    "powdery": 30,
+    "botrytis": 14
+   },
+   {
+    "date": "24 Aug",
+    "downy": 16,
+    "powdery": 30,
+    "botrytis": 16
+   },
+   {
+    "date": "25 Aug",
+    "downy": 20,
+    "powdery": 30,
+    "botrytis": 19
+   },
+   {
+    "date": "26 Aug",
+    "downy": 21,
+    "powdery": 30,
+    "botrytis": 19
+   },
+   {
+    "date": "27 Aug",
+    "downy": 22,
+    "powdery": 30,
+    "botrytis": 20
+   },
+   {
+    "date": "28 Aug",
+    "downy": 22,
+    "powdery": 30,
+    "botrytis": 20
+   },
+   {
+    "date": "29 Aug",
+    "downy": 25,
+    "powdery": 30,
+    "botrytis": 23
+   },
+   {
+    "date": "30 Aug",
+    "downy": 25,
+    "powdery": 29,
+    "botrytis": 24
+   },
+   {
+    "date": "31 Aug",
+    "downy": 22,
+    "powdery": 28,
+    "botrytis": 23
+   },
+   {
+    "date": "1 Sep",
+    "downy": 18,
+    "powdery": 27,
+    "botrytis": 20
+   },
+   {
+    "date": "2 Sep",
+    "downy": 17,
+    "powdery": 25,
+    "botrytis": 20
+   },
+   {
+    "date": "3 Sep",
+    "downy": 17,
+    "powdery": 24,
+    "botrytis": 21
+   },
+   {
+    "date": "4 Sep",
+    "downy": 16,
+    "powdery": 22,
+    "botrytis": 21
+   },
+   {
+    "date": "5 Sep",
+    "downy": 12,
+    "powdery": 21,
+    "botrytis": 19
+   },
+   {
+    "date": "6 Sep",
+    "downy": 15,
+    "powdery": 20,
+    "botrytis": 21
+   },
+   {
+    "date": "7 Sep",
+    "downy": 17,
+    "powdery": 19,
+    "botrytis": 23
+   },
+   {
+    "date": "8 Sep",
+    "downy": 16,
+    "powdery": 18,
+    "botrytis": 24
+   },
+   {
+    "date": "9 Sep",
+    "downy": 15,
+    "powdery": 17,
+    "botrytis": 25
+   },
+   {
+    "date": "10 Sep",
+    "downy": 14,
+    "powdery": 17,
+    "botrytis": 25
+   },
+   {
+    "date": "11 Sep",
+    "downy": 13,
+    "powdery": 17,
+    "botrytis": 26
+   },
+   {
+    "date": "12 Sep",
+    "downy": 12,
+    "powdery": 17,
+    "botrytis": 26
+   },
+   {
+    "date": "13 Sep",
+    "downy": 8,
+    "powdery": 18,
+    "botrytis": 25
+   },
+   {
+    "date": "14 Sep",
+    "downy": 5,
+    "powdery": 18,
+    "botrytis": 24
+   },
+   {
+    "date": "15 Sep",
+    "downy": 8,
+    "powdery": 19,
+    "botrytis": 27
+   },
+   {
+    "date": "16 Sep",
+    "downy": 11,
+    "powdery": 20,
+    "botrytis": 29
+   },
+   {
+    "date": "17 Sep",
+    "downy": 12,
+    "powdery": 21,
+    "botrytis": 29
+   },
+   {
+    "date": "18 Sep",
+    "downy": 13,
+    "powdery": 22,
+    "botrytis": 29
+   },
+   {
+    "date": "19 Sep",
+    "downy": 14,
+    "powdery": 22,
+    "botrytis": 29
+   },
+   {
+    "date": "20 Sep",
+    "downy": 14,
+    "powdery": 22,
+    "botrytis": 29
+   },
+   {
+    "date": "21 Sep",
+    "downy": 15,
+    "powdery": 22,
+    "botrytis": 29
+   },
+   {
+    "date": "22 Sep",
+    "downy": 13,
+    "powdery": 22,
+    "botrytis": 28
+   },
+   {
+    "date": "23 Sep",
+    "downy": 11,
+    "powdery": 21,
+    "botrytis": 27
+   },
+   {
+    "date": "24 Sep",
+    "downy": 16,
+    "powdery": 21,
+    "botrytis": 29
+   },
+   {
+    "date": "25 Sep",
+    "downy": 20,
+    "powdery": 19,
+    "botrytis": 32
+   },
+   {
+    "date": "26 Sep",
+    "downy": 27,
+    "powdery": 18,
+    "botrytis": 37
+   },
+   {
+    "date": "27 Sep",
+    "downy": 35,
+    "powdery": 17,
+    "botrytis": 41
+   },
+   {
+    "date": "28 Sep",
+    "downy": 42,
+    "powdery": 16,
+    "botrytis": 46
+   },
+   {
+    "date": "29 Sep",
+    "downy": 43,
+    "powdery": 14,
+    "botrytis": 47
+   },
+   {
+    "date": "30 Sep",
+    "downy": 42,
+    "powdery": 12,
+    "botrytis": 47
+   },
+   {
+    "date": "1 Oct",
+    "downy": 39,
+    "powdery": 11,
+    "botrytis": 46
+   },
+   {
+    "date": "2 Oct",
+    "downy": 36,
+    "powdery": 10,
+    "botrytis": 45
+   },
+   {
+    "date": "3 Oct",
+    "downy": 29,
+    "powdery": 9,
+    "botrytis": 41
+   },
+   {
+    "date": "4 Oct",
+    "downy": 21,
+    "powdery": 8,
+    "botrytis": 38
+   },
+   {
+    "date": "5 Oct",
+    "downy": 14,
+    "powdery": 8,
+    "botrytis": 33
+   },
+   {
+    "date": "6 Oct",
+    "downy": 16,
+    "powdery": 8,
+    "botrytis": 36
+   },
+   {
+    "date": "7 Oct",
+    "downy": 18,
+    "powdery": 8,
+    "botrytis": 38
+   },
+   {
+    "date": "8 Oct",
+    "downy": 17,
+    "powdery": 8,
+    "botrytis": 38
+   },
+   {
+    "date": "9 Oct",
+    "downy": 16,
+    "powdery": 9,
+    "botrytis": 39
+   },
+   {
+    "date": "10 Oct",
+    "downy": 14,
+    "powdery": 9,
+    "botrytis": 38
+   },
+   {
+    "date": "11 Oct",
+    "downy": 13,
+    "powdery": 10,
+    "botrytis": 39
+   },
+   {
+    "date": "12 Oct",
+    "downy": 12,
+    "powdery": 11,
+    "botrytis": 39
+   },
+   {
+    "date": "13 Oct",
+    "downy": 8,
+    "powdery": 11,
+    "botrytis": 38
+   },
+   {
+    "date": "14 Oct",
+    "downy": 4,
+    "powdery": 12,
+    "botrytis": 37
+   },
+   {
+    "date": "15 Oct",
+    "downy": 8,
+    "powdery": 12,
+    "botrytis": 39
+   },
+   {
+    "date": "16 Oct",
+    "downy": 11,
+    "powdery": 13,
+    "botrytis": 42
+   },
+   {
+    "date": "17 Oct",
+    "downy": 11,
+    "powdery": 13,
+    "botrytis": 42
+   },
+   {
+    "date": "18 Oct",
+    "downy": 12,
+    "powdery": 13,
+    "botrytis": 43
+   },
+   {
+    "date": "19 Oct",
+    "downy": 14,
+    "powdery": 13,
+    "botrytis": 44
+   },
+   {
+    "date": "20 Oct",
+    "downy": 17,
+    "powdery": 13,
+    "botrytis": 46
+   }
+  ],
+  "forecast": [
+   {
+    "day": "Tue 21",
+    "icon": "fog",
+    "tmin": 6,
+    "tmax": 15,
+    "rain": 0.0,
+    "rh": 88,
+    "note": "Morning fog until 11:00"
+   },
+   {
+    "day": "Wed 22",
+    "icon": "fog",
+    "tmin": 7,
+    "tmax": 16,
+    "rain": 0.0,
+    "rh": 86,
+    "note": "Morning fog"
+   },
+   {
+    "day": "Thu 23",
+    "icon": "sun",
+    "tmin": 5,
+    "tmax": 17,
+    "rain": 0.0,
+    "rh": 72,
+    "note": ""
+   },
+   {
+    "day": "Fri 24",
+    "icon": "cloud",
+    "tmin": 8,
+    "tmax": 15,
+    "rain": 0.6,
+    "rh": 80,
+    "note": ""
+   },
+   {
+    "day": "Sat 25",
+    "icon": "rain",
+    "tmin": 9,
+    "tmax": 13,
+    "rain": 11.4,
+    "rh": 94,
+    "note": "Front arrives in the afternoon"
+   },
+   {
+    "day": "Sun 26",
+    "icon": "rain",
+    "tmin": 8,
+    "tmax": 12,
+    "rain": 6.2,
+    "rh": 93,
+    "note": ""
+   },
+   {
+    "day": "Mon 27",
+    "icon": "cloud",
+    "tmin": 6,
+    "tmax": 13,
+    "rain": 0.8,
+    "rh": 84,
+    "note": ""
+   }
+  ],
+  "indices": {
+   "winkler": 1208,
+   "winklerNormal": 928,
+   "huglin": 1740,
+   "huglinNormal": 1590,
+   "seasonTmean": 15.9,
+   "seasonTmeanNormal": 14.6,
+   "rainSeason": 317,
+   "rainSeasonNormal": 417
+  },
+  "phenology": [
+   {
+    "stage": "Budburst",
+    "date": "14 Apr"
+   },
+   {
+    "stage": "Flowering",
+    "date": "9 Jun"
+   },
+   {
+    "stage": "Bunch closure",
+    "date": "6 Jul"
+   },
+   {
+    "stage": "Veraison",
+    "date": "11 Aug"
+   },
+   {
+    "stage": "Harvest A–D",
+    "date": "27 Sep–10 Oct"
+   }
+  ]
+ },
+ "programmes": [
+  {
+   "id": "spray",
+   "name": "Spray programme",
+   "current": "Medium",
+   "notes": "Contact + systemic fungicides, timed by the Vineyard manager",
+   "tiers": {
+    "Low": {
+     "cost": 1300,
+     "hours": 38,
+     "effect": "5 applications, contact products only. Infections get through in wet spells.",
+     "risk": 18
+    },
+    "Medium": {
+     "cost": 2600,
+     "hours": 64,
+     "effect": "8 applications timed to model alerts. Good protection in a normal year.",
+     "risk": 0
+    },
+    "High": {
+     "cost": 4100,
+     "hours": 92,
+     "effect": "11 applications at tight intervals, systemic before rain. Best protection, most cost.",
+     "risk": -12
+    }
+   }
+  },
+  {
+   "id": "canopy",
+   "name": "Canopy work",
+   "current": "Medium",
+   "notes": "Shoot tying, leaf removal in the fruit zone, topping",
+   "tiers": {
+    "Low": {
+     "cost": 900,
+     "hours": 60,
+     "effect": "Tying and topping only. Dense canopy: more rot, greener flavours.",
+     "risk": 10
+    },
+    "Medium": {
+     "cost": 2200,
+     "hours": 150,
+     "effect": "Adds leaf removal on the morning side after flowering. Airier bunches.",
+     "risk": 0
+    },
+    "High": {
+     "cost": 3900,
+     "hours": 260,
+     "effect": "Two leaf-removal passes and bunch thinning. Riper fruit, sunburn risk in heat.",
+     "risk": -8
+    }
+   }
+  },
+  {
+   "id": "floor",
+   "name": "Floor management",
+   "current": "Low",
+   "notes": "Steep slope: strimming only, no herbicide",
+   "tiers": {
+    "Low": {
+     "cost": 600,
+     "hours": 45,
+     "effect": "Strim twice. Some water competition from weeds in dry spells.",
+     "risk": 0
+    },
+    "Medium": {
+     "cost": 1100,
+     "hours": 80,
+     "effect": "Strim four times. Less competition, more labour.",
+     "risk": 0
+    },
+    "High": {
+     "cost": 1900,
+     "hours": 120,
+     "effect": "Sown cover crop plus mowing. Better soil structure and erosion control.",
+     "risk": 0
+    }
+   }
+  },
+  {
+   "id": "labour",
+   "name": "Labour crew",
+   "current": "Medium",
+   "notes": "Seasonal workers on top of your staff",
+   "tiers": {
+    "Low": {
+     "cost": 14000,
+     "hours": 1200,
+     "effect": "2 seasonal workers. Tasks run late; harvest takes longer.",
+     "risk": 0
+    },
+    "Medium": {
+     "cost": 26000,
+     "hours": 2300,
+     "effect": "4 seasonal workers. Enough for a normal season on 1.4 ha of steep slope.",
+     "risk": 0
+    },
+    "High": {
+     "cost": 38000,
+     "hours": 3400,
+     "effect": "6 seasonal workers. Every task on time, fast selective picking.",
+     "risk": 0
+    }
+   }
+  },
+  {
+   "id": "frost",
+   "name": "Frost protection",
+   "current": "Low",
+   "notes": "Only matters from budburst to mid-May",
+   "tiers": {
+    "Low": {
+     "cost": 0,
+     "hours": 0,
+     "effect": "None. This slope drains cold air well.",
+     "risk": 0
+    },
+    "Medium": {
+     "cost": 1500,
+     "hours": 20,
+     "effect": "Frost candles in the lower Blocks on alert nights.",
+     "risk": 0
+    },
+    "High": {
+     "cost": 4800,
+     "hours": 30,
+     "effect": "Rented wind machine for the lower Blocks.",
+     "risk": 0
+    }
+   }
+  },
+  {
+   "id": "irrigation",
+   "name": "Irrigation",
+   "current": "Unavailable",
+   "notes": "No water connection on this Plot",
+   "tiers": {}
+  }
+ ],
+ "labourHours": {
+  "available": 5500,
+  "planned": 5100,
+  "weekly": [
+   120,
+   140,
+   160,
+   150,
+   140,
+   110,
+   180,
+   220,
+   260,
+   310,
+   240,
+   90
+  ]
+ },
+ "lots": [
+  {
+   "id": "A",
+   "block": "A",
+   "vessel": "Fuder 1 + 2 (old oak, 2 × 1 000 L)",
+   "volume": 1790,
+   "picked": "8 Oct",
+   "must": {
+    "oe": 91,
+    "ta": 8.6,
+    "ph": 3.08,
+    "yan": 168
+   },
+   "phase": "Spontaneous fermentation",
+   "day": 12,
+   "tempC": 17.4,
+   "setC": null,
+   "status": "ok",
+   "oe": [
+    91.0,
+    90.5,
+    90.0,
+    89.5,
+    80.8,
+    71.1,
+    62.0,
+    53.4,
+    45.5,
+    38.4,
+    32.2,
+    27.1,
+    24.0
+   ],
+   "temp": [
+    12,
+    12.5,
+    13,
+    14.5,
+    16,
+    17,
+    17.8,
+    18.2,
+    18.0,
+    17.8,
+    17.6,
+    17.5,
+    17.4
+   ],
+   "choices": {
+    "Pressing": "Whole bunch, slow press",
+    "Settling": "Natural, 18 h",
+    "Yeast": "Ambient (spontaneous)",
+    "Temperature": "Cellar ambient (~17 °C)",
+    "MLF": "Not planned",
+    "Vessel": "Old Fuder (neutral oak)",
+    "Lees": "Keep on fine lees until spring",
+    "Sweetness": "Ferment to dry"
+   }
+  },
+  {
+   "id": "B",
+   "block": "B",
+   "vessel": "Tank T2 (stainless, 5 000 L)",
+   "volume": 1935,
+   "picked": "3 Oct",
+   "must": {
+    "oe": 84,
+    "ta": 9.3,
+    "ph": 3.02,
+    "yan": 131
+   },
+   "phase": "Spontaneous fermentation (slow)",
+   "day": 17,
+   "tempC": 16.8,
+   "setC": 17.0,
+   "status": "warn",
+   "oe": [
+    84.0,
+    83.5,
+    83.0,
+    82.5,
+    79.9,
+    75.7,
+    71.7,
+    67.6,
+    63.6,
+    59.6,
+    55.7,
+    51.9,
+    48.1,
+    44.4,
+    40.7,
+    37.2,
+    33.9,
+    31.0
+   ],
+   "temp": [
+    11,
+    11.5,
+    12,
+    13,
+    14.5,
+    15.5,
+    16.4,
+    16.8,
+    17,
+    17,
+    16.9,
+    16.9,
+    16.8,
+    16.8,
+    16.8,
+    16.8,
+    16.8,
+    16.8
+   ],
+   "choices": {
+    "Pressing": "Whole bunch",
+    "Settling": "Cold settling, 24 h",
+    "Yeast": "Ambient (spontaneous)",
+    "Temperature": "17 °C",
+    "MLF": "Block (chill + SO₂ after fermentation)",
+    "Vessel": "Stainless steel",
+    "Lees": "Rack off gross lees",
+    "Sweetness": "Decide later"
+   }
+  },
+  {
+   "id": "C",
+   "block": "C",
+   "vessel": "Tank T3 (stainless, 5 000 L)",
+   "volume": 1645,
+   "picked": "27 Sep",
+   "must": {
+    "oe": 77,
+    "ta": 10.4,
+    "ph": 2.96,
+    "yan": 182
+   },
+   "phase": "Stopped: chilled, SO₂ added",
+   "day": 21,
+   "tempC": 8.2,
+   "setC": 8.0,
+   "status": "ok",
+   "oe": [
+    77.0,
+    76.5,
+    69.7,
+    62.6,
+    55.9,
+    49.3,
+    43.1,
+    37.3,
+    31.9,
+    27.0,
+    22.9,
+    20.0,
+    20.0,
+    20.0,
+    20.0,
+    20.0,
+    20.0,
+    20.0,
+    20.0,
+    20.0,
+    20.0,
+    20.0
+   ],
+   "temp": [
+    12,
+    13,
+    14.5,
+    15.8,
+    16,
+    16,
+    16.1,
+    16,
+    16,
+    15.8,
+    14,
+    10,
+    8.5,
+    8.3,
+    8.2,
+    8.2,
+    8.2,
+    8.2,
+    8.2,
+    8.2,
+    8.2,
+    8.2
+   ],
+   "analysis": {
+    "abv": 8.9,
+    "rs": 38,
+    "ta": 9.1,
+    "ph": 3.01
+   },
+   "choices": {
+    "Pressing": "Whole bunch",
+    "Settling": "Cold settling, 24 h",
+    "Yeast": "Cultured S. cerevisiae (neutral)",
+    "Temperature": "16 °C",
+    "MLF": "Block (chill + SO₂)",
+    "Vessel": "Stainless steel",
+    "Lees": "Rack off gross lees",
+    "Sweetness": "Stop at 38 g/L residual sugar"
+   }
+  },
+  {
+   "id": "D",
+   "block": "D",
+   "vessel": "Tank T4 (open-top, on skins)",
+   "volume": 980,
+   "picked": "10 Oct",
+   "must": {
+    "oe": 97,
+    "ta": 7.1,
+    "ph": 3.35,
+    "yan": 205
+   },
+   "phase": "Maceration day 10, press tomorrow",
+   "day": 10,
+   "tempC": 26.1,
+   "setC": 27.0,
+   "status": "ok",
+   "oe": [
+    97.0,
+    96.5,
+    96.0,
+    83.2,
+    69.9,
+    56.9,
+    44.5,
+    32.7,
+    21.6,
+    11.7,
+    4.0
+   ],
+   "temp": [
+    14,
+    14,
+    18,
+    23,
+    27,
+    29,
+    28.5,
+    28,
+    27.4,
+    26.8,
+    26.1
+   ],
+   "choices": {
+    "Destemming": "100 % destemmed",
+    "Cold soak": "3 days at 10 °C",
+    "Yeast": "Cultured S. cerevisiae",
+    "Temperature": "27 °C (cap to 30 °C)",
+    "Cap management": "Punch-down 2×/day",
+    "Maceration": "10 days, then press",
+    "MLF": "Yes, in barrel",
+    "Vessel": "Barriques: 1 new, 3 used (French)"
+   }
+  },
+  {
+   "id": "E",
+   "block": "E",
+   "vessel": "Tank T5 (reserved)",
+   "volume": 0,
+   "picked": null,
+   "must": {
+    "oe": 81,
+    "ta": 9.8,
+    "ph": 3.0,
+    "yan": null
+   },
+   "phase": "Still in the vineyard",
+   "day": 0,
+   "tempC": null,
+   "setC": null,
+   "status": "idle",
+   "oe": [],
+   "temp": [],
+   "choices": {}
+  }
+ ],
+ "choiceOptions": {
+  "Pressing": [
+   "Whole bunch, slow press",
+   "Whole bunch",
+   "Destemmed + 6 h skin contact"
+  ],
+  "Settling": [
+   "Cold settling, 24 h",
+   "Natural, 18 h",
+   "No settling (cloudy must)"
+  ],
+  "Yeast": [
+   "Ambient (spontaneous)",
+   "Cultured S. cerevisiae (neutral)",
+   "Cultured S. cerevisiae"
+  ],
+  "Temperature": [
+   "14 °C",
+   "16 °C",
+   "17 °C",
+   "Cellar ambient (~17 °C)",
+   "20 °C",
+   "27 °C (cap to 30 °C)"
+  ],
+  "MLF": [
+   "Block (chill + SO₂)",
+   "Block (chill + SO₂ after fermentation)",
+   "Allow",
+   "Not planned",
+   "Yes, in barrel"
+  ],
+  "Vessel": [
+   "Stainless steel",
+   "Old Fuder (neutral oak)",
+   "Barriques: 1 new, 3 used (French)"
+  ],
+  "Lees": [
+   "Rack off gross lees",
+   "Keep on fine lees until spring",
+   "Lees stirring weekly"
+  ],
+  "Sweetness": [
+   "Ferment to dry",
+   "Stop at 38 g/L residual sugar",
+   "Stop at 60 g/L residual sugar",
+   "Decide later"
+  ],
+  "Destemming": [
+   "100 % destemmed",
+   "20 % whole bunch",
+   "50 % whole bunch"
+  ],
+  "Cold soak": [
+   "None",
+   "3 days at 10 °C",
+   "5 days at 8 °C"
+  ],
+  "Cap management": [
+   "Pump-over 2×/day",
+   "Punch-down 2×/day",
+   "Délestage once"
+  ],
+  "Maceration": [
+   "7 days, then press",
+   "10 days, then press",
+   "18 days extended maceration"
+  ]
+ },
+ "choiceWhy": {
+  "Pressing": "Whole-bunch pressing is gentle: fewer phenolics, cleaner juice, the classic choice for Mosel Riesling.",
+  "Settling": "Settling removes solids before fermentation; clearer must gives a cleaner, more reductive style.",
+  "Yeast": "Ambient yeasts can add complexity but ferment slowly and less predictably; cultured yeast is reliable.",
+  "Temperature": "Cool fermentation keeps fruity esters; warm fermentation extracts colour and tannin in reds.",
+  "MLF": "Malolactic conversion turns malic into lactic acid: softer acidity, buttery notes. Usually blocked for Riesling.",
+  "Vessel": "Stainless steel keeps fruit pure; old oak Fuder adds texture without oak flavour; new oak adds vanilla and spice.",
+  "Lees": "Time on fine lees adds texture and protects against oxidation.",
+  "Sweetness": "Stopping fermentation (chilling + SO₂) keeps natural grape sugar: off-dry or sweet styles at lower alcohol.",
+  "Destemming": "Whole bunches add structure and fresh, herbal notes when stems are ripe; green stems add harsh tannin.",
+  "Cold soak": "A cool pre-fermentation soak extracts colour and fruit before alcohol forms.",
+  "Cap management": "Moving the cap of skins extracts colour and tannin and keeps it from drying out.",
+  "Maceration": "Longer skin contact extracts more tannin; too long can make the wine harsh."
+ },
+ "blendLots": [
+  {
+   "lot": "A",
+   "name": "Riesling A (Steillage)",
+   "volume": 1790,
+   "abv": 12.4,
+   "rs": 6.0,
+   "ta": 7.9,
+   "ph": 3.12,
+   "oe": 91,
+   "level": "Auslese"
+  },
+  {
+   "lot": "B",
+   "name": "Riesling B (Mittelhang)",
+   "volume": 1935,
+   "abv": 11.3,
+   "rs": 9.0,
+   "ta": 8.4,
+   "ph": 3.08,
+   "oe": 84,
+   "level": "Auslese"
+  },
+  {
+   "lot": "C",
+   "name": "Riesling C (Hangfuß)",
+   "volume": 1645,
+   "abv": 8.9,
+   "rs": 38.0,
+   "ta": 9.1,
+   "ph": 3.01,
+   "oe": 77,
+   "level": "Spätlese"
+  },
+  {
+   "lot": "D",
+   "name": "Spätburgunder D (Kuppe)",
+   "volume": 980,
+   "abv": 13.4,
+   "rs": 1.5,
+   "ta": 5.6,
+   "ph": 3.52,
+   "oe": 97,
+   "level": "UNVERIFIED (red Prädikat minimums)"
+  }
+ ],
+ "wines": [
+  {
+   "id": 1,
+   "name": "2025 Riesling Spätlese trocken",
+   "assign": {
+    "A": 100
+   }
+  },
+  {
+   "id": 2,
+   "name": "2025 Riesling Kabinett feinherb",
+   "assign": {
+    "C": 100,
+    "B": 40
+   }
+  },
+  {
+   "id": 3,
+   "name": "2025 Spätburgunder trocken",
+   "assign": {
+    "D": 100
+   }
+  }
+ ],
+ "tasting": {
+  "wine": "2025 Riesling Kabinett feinherb",
+  "status": "Projected at bottling (April 2026)",
+  "analysis": {
+   "abv": 9.7,
+   "rs": 29.0,
+   "ta": 8.9,
+   "ph": 3.04,
+   "freeSO2": 38
+  },
+  "legal": {
+   "category": "Qualitätswein mit Prädikat: Kabinett, Mosel",
+   "qualifies": "Spätlese (lowest level of its Lots); declared one level lower as Kabinett, which is allowed",
+   "labelTerm": "feinherb (label term, not legally defined)",
+   "note": "Game simplification (rulebook v0): a blend takes the lowest Prädikat level of its Lots."
+  },
+  "price": {
+   "exCellar": 13.5,
+   "bottles": 3130,
+   "revenue": 42255
+  },
+  "sections": [
+   {
+    "title": "Appearance",
+    "rows": [
+     {
+      "k": "Clarity",
+      "v": "Clear",
+      "why": "Cold settling and a clean fermentation; will be filtered before bottling."
+     },
+     {
+      "k": "Intensity",
+      "v": "Pale",
+      "why": "White grape, whole-bunch pressing with no skin contact."
+     },
+     {
+      "k": "Colour",
+      "v": "Lemon-green",
+      "why": "Young, reductively handled Riesling in stainless steel."
+     }
+    ]
+   },
+   {
+    "title": "Nose",
+    "rows": [
+     {
+      "k": "Condition",
+      "v": "Clean",
+      "why": "No faults detected: free SO₂ 38 mg/L protected the wine after the stop."
+     },
+     {
+      "k": "Intensity",
+      "v": "Medium(+)",
+      "why": "Aromatic variety; cool 16 °C fermentation kept fruity esters."
+     },
+     {
+      "k": "Aromas",
+      "v": "Green apple, lemon, lime, white peach, white blossom",
+      "why": "Cool-climate ripening in Block C, picked at 77 °Oe before the rain; the riper Block B share adds peach."
+     },
+     {
+      "k": "Development",
+      "v": "Youthful",
+      "why": "Months from harvest. Petrol notes (TDN) typically appear only with bottle age."
+     }
+    ]
+   },
+   {
+    "title": "Palate",
+    "rows": [
+     {
+      "k": "Sweetness",
+      "v": "Off-dry",
+      "why": "Fermentation stopped by chilling and SO₂ at 38 g/L in Lot C; blending with drier Lot B brings it to 29 g/L."
+     },
+     {
+      "k": "Acidity",
+      "v": "High",
+      "why": "Early pick (TA 10.4 g/L in the must) and malolactic conversion blocked."
+     },
+     {
+      "k": "Alcohol",
+      "v": "Low (9.7 % vol)",
+      "why": "Modest must weight and a stopped fermentation leave sugar unfermented."
+     },
+     {
+      "k": "Body",
+      "v": "Light",
+      "why": "Low alcohol and no oak or lees ageing."
+     },
+     {
+      "k": "Flavour intensity",
+      "v": "Medium(+)",
+      "why": "Moderate yield in Block B concentrates flavour; Block C's high yield dilutes it slightly."
+     },
+     {
+      "k": "Finish",
+      "v": "Medium(+)",
+      "why": "High acidity and fruit concentration carry the finish."
+     }
+    ]
+   },
+   {
+    "title": "Conclusions",
+    "rows": [
+     {
+      "k": "Quality",
+      "v": "Very good",
+      "why": "Balance: sugar offsets the high acidity. Length medium(+), intensity medium(+). Complexity limited while young."
+     },
+     {
+      "k": "Readiness",
+      "v": "Can drink now, but has potential for ageing",
+      "why": "High acidity and sugar let it develop honey and petrol notes over 5–10 years."
+     }
+    ]
+   }
+  ]
+ },
+ "pnl": [
+  {
+   "line": "Wine sales",
+   "actual": 0,
+   "budget": 0,
+   "kind": "income",
+   "note": "First Vintage: nothing sold until bottling"
+  },
+  {
+   "line": "Seasonal labour",
+   "actual": -24800,
+   "budget": -26000,
+   "kind": "cost"
+  },
+  {
+   "line": "Staff salaries",
+   "actual": -62300,
+   "budget": -63000,
+   "kind": "cost"
+  },
+  {
+   "line": "Sprays and canopy",
+   "actual": -4800,
+   "budget": -4800,
+   "kind": "cost"
+  },
+  {
+   "line": "Harvest crew",
+   "actual": -6840,
+   "budget": -6000,
+   "kind": "cost"
+  },
+  {
+   "line": "Winery consumables",
+   "actual": -1920,
+   "budget": -2500,
+   "kind": "cost",
+   "note": "Yeast, SO₂, nutrients, cleaning"
+  },
+  {
+   "line": "Barrels and Fuder",
+   "actual": -4150,
+   "budget": -4000,
+   "kind": "cost",
+   "note": "1 new barrique (French), 3 used, Fuder repair"
+  },
+  {
+   "line": "Insurance and fees",
+   "actual": -2100,
+   "budget": -2100,
+   "kind": "cost"
+  }
+ ],
+ "staff": [
+  {
+   "role": "Vineyard manager",
+   "name": "Jonas Becker",
+   "level": "Junior",
+   "salary": 2650,
+   "attrs": {
+    "Spray timing": 9,
+    "Canopy work": 11,
+    "Crew efficiency": 10,
+    "Forecast reading": 8,
+    "Explanations": 9
+   }
+  },
+  {
+   "role": "Cellar master",
+   "name": "Mira Hoffmann",
+   "level": "Experienced",
+   "salary": 3900,
+   "attrs": {
+    "Fermentation control": 14,
+    "Hygiene": 15,
+    "Sensory skill": 13,
+    "Blending": 12,
+    "Explanations": 12
+   }
+  },
+  {
+   "role": "Mentor",
+   "name": "Klaus Weber",
+   "level": "Senior (retires after bottling)",
+   "salary": 0,
+   "attrs": {
+    "Spray timing": 18,
+    "Fermentation control": 17,
+    "Forecast reading": 19,
+    "Blending": 17,
+    "Explanations": 20
+   }
+  }
+ ],
+ "inbox": [
+  {
+   "id": 1,
+   "from": "Mentor: Klaus Weber",
+   "role": "mentor",
+   "time": "07:05",
+   "priority": "high",
+   "alert": true,
+   "subject": "Block E: noble rot is starting. Pick a Spätlese now, or wait for Auslese?",
+   "body": "The fog mornings this week are ideal for Botrytis cinerea to turn noble on healthy, ripe berries. Block E is at 81 °Oe, already a Spätlese. If the dry spell holds until Friday, a selective pass of the botrytised bunches could reach Auslese (≥ 83 °Oe): noble rot shrivels the berries and concentrates the sugar. But rain on Saturday turns noble rot grey within days.",
+   "why": "Noble rot needs humid mornings and dry afternoons on ripe, intact berries. Rain splits berries and spreads grey rot, which ruins flavour. The forecast gives you about four good days.",
+   "actions": [
+    "Wait, check again Thursday",
+    "Selective pass Friday (two passes)",
+    "Pick everything now as Spätlese"
+   ]
+  },
+  {
+   "id": 2,
+   "from": "Cellar master",
+   "role": "cellar",
+   "time": "06:50",
+   "priority": "high",
+   "alert": true,
+   "subject": "Lot B (T2) has slowed at 31 °Oe",
+   "body": "Spontaneous fermentation is losing pace: −1 °Oe per day now, down from −4. Must YAN was only 131 mg N/L.",
+   "why": "Yeast need nitrogen to multiply and finish. Below about 140 mg N/L fermentations often slow or stick, and stressed yeast can produce hydrogen sulfide (a rotten-egg smell).",
+   "actions": [
+    "Add yeast nutrient",
+    "Warm to 18 °C",
+    "Leave it and watch"
+   ]
+  },
+  {
+   "id": 3,
+   "from": "Cellar master",
+   "role": "cellar",
+   "time": "Yesterday",
+   "priority": "normal",
+   "alert": true,
+   "subject": "Lot D Spätburgunder: press tomorrow?",
+   "body": "Ten days on skins, the cap is falling and tannins taste ripe. Pressing tomorrow and moving to barrique for MLF.",
+   "why": "Extraction slows once fermentation ends. Longer maceration adds tannin, but past a point it gets harsh and dry.",
+   "actions": [
+    "Press tomorrow",
+    "Extend 4 days"
+   ]
+  },
+  {
+   "id": 4,
+   "from": "Vineyard manager",
+   "role": "vineyard",
+   "time": "Yesterday",
+   "priority": "normal",
+   "alert": false,
+   "subject": "Blocks A–D cleared, leaf fall starting",
+   "body": "Picking crates washed and stored. Block E is checked every morning.",
+   "why": "",
+   "actions": []
+  },
+  {
+   "id": 5,
+   "from": "Weather service",
+   "role": "weather",
+   "time": "Yesterday",
+   "priority": "low",
+   "alert": false,
+   "subject": "Fog mornings until Wednesday, front on Saturday",
+   "body": "",
+   "why": "",
+   "actions": []
+  },
+  {
+   "id": 6,
+   "from": "Estate",
+   "role": "estate",
+   "time": "17 Oct",
+   "priority": "low",
+   "alert": false,
+   "subject": "Harvest crew paid: €6,840",
+   "body": "",
+   "why": "",
+   "actions": []
+  }
+ ],
+ "regions": [
+  {
+   "id": "mosel",
+   "name": "Mosel",
+   "country": "Germany",
+   "lat": "50° N",
+   "climate": "Cool, marginal continental",
+   "winkler": "Region I",
+   "rain": "≈ 700 mm/year",
+   "soils": "Devonian slate on steep river slopes; alluvium on the valley floor",
+   "hazards": [
+    "Spring frost on the valley floor",
+    "Rot in wet autumns",
+    "Very high labour on steep slopes"
+   ],
+   "law": "Prädikat system: must weight at harvest sets Kabinett, Spätlese, Auslese and above",
+   "land": "€15,000–90,000 per ha",
+   "plots": 4,
+   "styles": [
+    "Riesling from dry to lusciously sweet",
+    "Light, high-acid, low-alcohol Kabinett",
+    "Some Spätburgunder (Pinot Noir)"
+   ],
+   "tmean": [
+    1.5,
+    2.5,
+    6.0,
+    9.5,
+    13.5,
+    16.5,
+    18.5,
+    18.0,
+    14.5,
+    10.0,
+    5.5,
+    2.5
+   ],
+   "rainMonthly": [
+    60,
+    55,
+    55,
+    45,
+    60,
+    65,
+    70,
+    60,
+    55,
+    60,
+    65,
+    70
+   ],
+   "suit": {
+    "Riesling": 5,
+    "Chardonnay": 3,
+    "Pinot Noir": 3,
+    "Cabernet Sauvignon": 1
+   },
+   "blurb": "Riesling on slate at the cool edge of ripening. Sun on the steep slopes makes the difference."
+  },
+  {
+   "id": "cotedor",
+   "name": "Côte d'Or",
+   "country": "France",
+   "lat": "47° N",
+   "climate": "Cool continental",
+   "winkler": "Region I–II",
+   "rain": "≈ 750 mm/year",
+   "soils": "Limestone and marl on an east-facing escarpment",
+   "hazards": [
+    "Hail",
+    "Spring frost",
+    "Mildew in wet years"
+   ],
+   "law": "AOC hierarchy: Bourgogne, Village, Premier Cru, Grand Cru; Pinot Noir and Chardonnay",
+   "land": "€150,000 to several million per ha",
+   "plots": 4,
+   "styles": [
+    "Pinot Noir: red fruit, silky tannins",
+    "Chardonnay, often fermented and aged in oak",
+    "Wines named after the site, not the grape"
+   ],
+   "tmean": [
+    2.0,
+    3.0,
+    7.0,
+    10.0,
+    14.5,
+    18.0,
+    20.5,
+    20.0,
+    16.0,
+    11.5,
+    6.0,
+    3.0
+   ],
+   "rainMonthly": [
+    55,
+    50,
+    50,
+    60,
+    80,
+    65,
+    60,
+    60,
+    60,
+    70,
+    70,
+    65
+   ],
+   "suit": {
+    "Riesling": 3,
+    "Chardonnay": 5,
+    "Pinot Noir": 5,
+    "Cabernet Sauvignon": 1
+   },
+   "blurb": "The home of Pinot Noir and Chardonnay, where a few metres of slope change the Classification."
+  },
+  {
+   "id": "napa",
+   "name": "Napa Valley",
+   "country": "USA",
+   "lat": "38.5° N",
+   "climate": "Warm Mediterranean",
+   "winkler": "Region II–IV",
+   "rain": "≈ 600 mm, almost all in winter",
+   "soils": "Alluvial fans, volcanic hillsides, clay in Carneros",
+   "hazards": [
+    "Heat spikes at harvest",
+    "Drought",
+    "Frost in low spots"
+   ],
+   "law": "AVA rules: 85 % from the AVA, 75 % of the named Variety",
+   "land": "€250,000–1,000,000+ per ha",
+   "plots": 4,
+   "styles": [
+    "Full-bodied Cabernet Sauvignon, often in new oak",
+    "Ripe Chardonnay",
+    "Pinot Noir and Chardonnay from cool Carneros"
+   ],
+   "tmean": [
+    9.0,
+    10.5,
+    12.0,
+    13.5,
+    17.0,
+    20.0,
+    22.0,
+    21.5,
+    20.5,
+    17.0,
+    12.0,
+    9.0
+   ],
+   "rainMonthly": [
+    125,
+    115,
+    85,
+    35,
+    15,
+    4,
+    0,
+    1,
+    4,
+    30,
+    75,
+    110
+   ],
+   "suit": {
+    "Riesling": 1,
+    "Chardonnay": 4,
+    "Pinot Noir": 3,
+    "Cabernet Sauvignon": 5
+   },
+   "blurb": "Sun is never short. The craft is keeping acidity and freshness in the heat."
+  }
+ ],
+ "plots": [
+  {
+   "id": 1,
+   "name": "Moselufer",
+   "kind": "Flat riverbank alluvium",
+   "price": 38000,
+   "ha": 1.6,
+   "elevation": 108,
+   "slope": 3,
+   "aspect": "S",
+   "soil": "Deep sandy-loam alluvium",
+   "classification": "Mosel (Prädikat possible)",
+   "attrs": {
+    "Sun exposure": 9,
+    "Heat accumulation": 10,
+    "Frost safety": 4,
+    "Drainage": 8,
+    "Water holding": 16,
+    "Low vigour": 5,
+    "Rot safety": 7,
+    "Mechanisation": 18,
+    "Labour ease": 17
+   },
+   "hoursPerHa": 450,
+   "suit": {
+    "Riesling": 2,
+    "Chardonnay": 2,
+    "Pinot Noir": 2,
+    "Cabernet Sauvignon": 1
+   },
+   "mentor": "Cheap and easy to work, but it's a frost pocket and too fertile. You'll fight vigour and rot every year."
+  },
+  {
+   "id": 2,
+   "name": "Seitental Ost",
+   "kind": "Gentle east-facing side valley",
+   "price": 52000,
+   "ha": 1.3,
+   "elevation": 170,
+   "slope": 14,
+   "aspect": "E",
+   "soil": "Loess over slate",
+   "classification": "Mosel (Prädikat possible)",
+   "attrs": {
+    "Sun exposure": 11,
+    "Heat accumulation": 9,
+    "Frost safety": 11,
+    "Drainage": 12,
+    "Water holding": 13,
+    "Low vigour": 10,
+    "Rot safety": 11,
+    "Mechanisation": 13,
+    "Labour ease": 13
+   },
+   "hoursPerHa": 650,
+   "suit": {
+    "Riesling": 3,
+    "Chardonnay": 3,
+    "Pinot Noir": 3,
+    "Cabernet Sauvignon": 1
+   },
+   "mentor": "Morning sun only, so it ripens late. Fine for a fresh Kabinett in warm years, a struggle in cool ones."
+  },
+  {
+   "id": 3,
+   "name": "Schieferhang Südwest",
+   "kind": "Steep south-west blue slate",
+   "price": 96000,
+   "ha": 1.4,
+   "elevation": 150,
+   "slope": 55,
+   "aspect": "SW",
+   "soil": "Blue Devonian slate, shallow",
+   "classification": "Mosel (Prädikat possible)",
+   "attrs": {
+    "Sun exposure": 17,
+    "Heat accumulation": 15,
+    "Frost safety": 16,
+    "Drainage": 18,
+    "Water holding": 7,
+    "Low vigour": 16,
+    "Rot safety": 15,
+    "Mechanisation": 5,
+    "Labour ease": 5
+   },
+   "hoursPerHa": 1300,
+   "suit": {
+    "Riesling": 5,
+    "Chardonnay": 3,
+    "Pinot Noir": 4,
+    "Cabernet Sauvignon": 1
+   },
+   "mentor": "This is the classic. Slate stores the day's heat and the slope catches the afternoon sun. Hard work, and worth it."
+  },
+  {
+   "id": 4,
+   "name": "Terrassen Süd",
+   "kind": "Very steep south-facing terraces",
+   "price": 158000,
+   "ha": 1.1,
+   "elevation": 190,
+   "slope": 68,
+   "aspect": "S",
+   "soil": "Slate terraces with dry-stone walls",
+   "classification": "Mosel (Prädikat possible)",
+   "attrs": {
+    "Sun exposure": 20,
+    "Heat accumulation": 18,
+    "Frost safety": 18,
+    "Drainage": 19,
+    "Water holding": 5,
+    "Low vigour": 18,
+    "Rot safety": 17,
+    "Mechanisation": 1,
+    "Labour ease": 2
+   },
+   "hoursPerHa": 1600,
+   "suit": {
+    "Riesling": 5,
+    "Chardonnay": 3,
+    "Pinot Noir": 4,
+    "Cabernet Sauvignon": 2
+   },
+   "mentor": "The best heat on the river. Everything is done by hand and the walls need care. Can you afford the labour?"
+  }
+ ],
+ "glossary": [
+  {
+   "term": "Estate",
+   "text": "Your wine business. It owns Plots and makes Wine from them."
+  },
+  {
+   "term": "Region",
+   "text": "A real wine region with its own climate, soils, hazards and wine law, such as the Mosel."
+  },
+  {
+   "term": "Plot",
+   "text": "A piece of land in a Region that the Estate can buy. It is divided into Blocks."
+  },
+  {
+   "term": "Block",
+   "text": "A zone within a Plot with its own soil and microclimate. It is planted, managed and harvested as a unit."
+  },
+  {
+   "term": "Classification",
+   "text": "A Plot's legal standing in its Region's appellation system. It caps the Legal category of its wine."
+  },
+  {
+   "term": "Variety",
+   "text": "A grape cultivar you can plant, such as Riesling. Any Variety can go anywhere; a poor match shows in the results."
+  },
+  {
+   "term": "Planting",
+   "text": "The one-off choices when vines go into bare land: Variety, clone, rootstock, density, row orientation, training system."
+  },
+  {
+   "term": "Establishment",
+   "text": "The young-vine years before the first full crop, about three. The game fast-forwards through them."
+  },
+  {
+   "term": "Vintage",
+   "text": "One growing season and the wine made from it, named by harvest year."
+  },
+  {
+   "term": "Programme",
+   "text": "A standing instruction for one area of work, set to Low, Medium or High. Staff carry it out daily."
+  },
+  {
+   "term": "Alert",
+   "text": "Something in the simulation that stops time and needs your attention."
+  },
+  {
+   "term": "Staff level",
+   "text": "Junior, Experienced or Senior. Higher levels work better and explain more; advice is correct at every level."
+  },
+  {
+   "term": "Mentor",
+   "text": "An expert about to retire who guides you through your first Vintage."
+  },
+  {
+   "term": "Lot",
+   "text": "The fruit of one Block in one Vintage, fermented and aged as its own batch."
+  },
+  {
+   "term": "Wine",
+   "text": "A finished, bottled product made from one Lot or a blend of Lots."
+  },
+  {
+   "term": "Legal category",
+   "text": "The designation a Wine qualifies for under its Region's rules, such as Mosel Kabinett. The main driver of price."
+  },
+  {
+   "term": "Tasting sheet",
+   "text": "The structured assessment of a Wine. Every descriptor is linked to the decision or condition that caused it."
+  },
+  {
+   "term": "°Oechsle (°Oe)",
+   "text": "German measure of must weight: how much denser than water the juice is. 1.084 g/mL = 84 °Oe."
+  },
+  {
+   "term": "°Brix",
+   "text": "Sugar content of juice as a percentage by weight. Roughly °Oe divided by 4.2 at typical must weights."
+  },
+  {
+   "term": "Titratable acidity (TA)",
+   "text": "Total acid in must or wine, reported here in g/L as tartaric acid."
+  },
+  {
+   "term": "pH",
+   "text": "How strong the acidity is. Lower pH means sharper acidity, better colour stability and more effective SO₂."
+  },
+  {
+   "term": "Stem water potential (Ψstem)",
+   "text": "How hard the vine has to pull water, in megapascals. More negative means more water stress."
+  },
+  {
+   "term": "YAN",
+   "text": "Yeast assimilable nitrogen, in mg N/L. Too little slows fermentation and can cause off-smells."
+  },
+  {
+   "term": "Malolactic conversion (MLF)",
+   "text": "Bacteria turn sharp malic acid into softer lactic acid. Lowers acidity, raises pH."
+  },
+  {
+   "term": "Botrytis cinerea",
+   "text": "A fungus. On healthy, ripe grapes in misty-then-dry weather it becomes noble rot; in wet weather it is grey rot."
+  },
+  {
+   "term": "Downy mildew",
+   "text": "A disease (Plasmopara viticola) spread by rain on warm days. Attacks leaves and young bunches."
+  },
+  {
+   "term": "Powdery mildew",
+   "text": "A fungal disease (Erysiphe necator) favoured by warm, shaded, humid conditions without rain."
+  },
+  {
+   "term": "Veraison",
+   "text": "The stage when berries soften and change colour. Sugar builds up and acidity falls from here on."
+  },
+  {
+   "term": "Prädikat",
+   "text": "German quality levels set by must weight at harvest: Kabinett, Spätlese, Auslese, Beerenauslese, Trockenbeerenauslese, Eiswein."
+  },
+  {
+   "term": "Feinherb",
+   "text": "A German label term for off-dry wines. It has no legal definition."
+  },
+  {
+   "term": "Einzelpfahl",
+   "text": "Single-stake training traditional on steep Mosel slopes: each vine tied to its own stake, with two canes bent into a heart shape."
+  },
+  {
+   "term": "Fuder",
+   "text": "The traditional Mosel oak cask, 1 000 litres."
+  },
+  {
+   "term": "Barrique",
+   "text": "A 225-litre oak barrel."
+  },
+  {
+   "term": "Growing degree days (GDD)",
+   "text": "Daily mean temperature above 10 °C, added up over the season. A measure of heat available for ripening."
+  },
+  {
+   "term": "Winkler index",
+   "text": "Growing degree days from April to October (Northern Hemisphere), grouped into Regions I–V."
+  },
+  {
+   "term": "Huglin index",
+   "text": "A heat index that weights daytime maximum temperatures and day length, often used in Europe."
+  },
+  {
+   "term": "Rootstock",
+   "text": "The root part of a grafted vine. Chosen for phylloxera resistance, vigour, and tolerance of drought or lime."
+  }
+ ],
+ "cashflow": [
+  212000,
+  208500,
+  203900,
+  199300,
+  196400,
+  192800,
+  188100,
+  184300,
+  178200,
+  171850
+ ],
+ "cashflowLabels": [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct"
+ ]
+}
