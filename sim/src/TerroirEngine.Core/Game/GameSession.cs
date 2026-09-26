@@ -350,7 +350,7 @@ public sealed partial class GameSession
         else if (b.Variety.Id == VarietyId.Chardonnay)
         {
             Set("MLF", Region.Id == "mosel" ? 0 : 1);
-            if (Region.Id != "mosel") { Set("Vessel", Region.Id == "napa" ? 4 : 3); Set("Lees", 2); Set("Ageing", 2); }
+            if (Region.Id != "mosel") { Set("Vessel", Region.Id == "napa" ? 4 : 3); Set("Lees", 2); Set("Ageing", 2); Set("Temperature", 2); }   // barrel-fermented Chardonnay runs warmer (18 °C)
         }
         else { Set("MLF", 0); Set("Vessel", Region.Id == "mosel" ? 0 : 0); }   // Riesling: steel, no MLF
     }

@@ -300,7 +300,9 @@ public static class VineyardModel
             b.MalicPerBerry *= Math.Exp(-0.021 * v.MalicRetention * Math.Pow(2.0, (tBerry - 20) / 10.0));
             // potassium
             double warmth = M.Clamp((SeasonMeanTemp(b) - 15) / 6.0, 0, 1);
-            b.PotassiumGL = (0.85 + 1.6 * Math.Pow(warmth, 1.5)) * b.Rootstock.PotassiumFactor * (0.8 + 0.2 * vigour) * (0.75 + 0.25 * b.LoadingFraction);
+            // Napa's alluvial and volcanic soils are potassium-rich (ripening.md §4.4: high soil K → high must pH); factor is UNVERIFIED calibration to the 3.6–3.9 target
+            double soilK = b.Data.Soil.SoilPotassiumFactor;
+            b.PotassiumGL = (0.85 + 1.6 * Math.Pow(warmth, 1.5)) * b.Rootstock.PotassiumFactor * soilK * (0.8 + 0.2 * vigour) * (0.75 + 0.25 * b.LoadingFraction);
             // phenolics
             b.SeedMaturity = 1 - 1 / (1 + 0.0044 * b.TtSinceVeraison);
             b.SkinExtractability = 0.4 + 0.6 * b.LoadingFraction;

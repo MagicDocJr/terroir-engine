@@ -68,6 +68,8 @@ public sealed class SoilData
     public double ActiveLimePct { get; set; }
     public double OrganicMatterPct { get; set; }
     public string Drainage { get; set; } = "";
+    /// <summary>Relative potassium supply of the soil (1 = average). Set per Region at load (UNVERIFIED calibration).</summary>
+    public double SoilPotassiumFactor { get; set; } = 1.0;
 }
 public sealed class TopoData { public double AspectDeg { get; set; } public double SlopePct { get; set; } public double ElevationM { get; set; } }
 public sealed class MicroData
@@ -132,6 +134,7 @@ public sealed class GameData
 {
     public string DataRoot { get; }
     public PlotsFile Plots { get; }
+    public static double NapaSoilK = 1.3;
     public double StartingCapital => Plots.StartingCapitalEur;
 
     public GameData(string dataRoot)
@@ -140,7 +143,11 @@ public sealed class GameData
         var json = File.ReadAllText(Path.Combine(dataRoot, "plots.json"));
         Plots = JsonSerializer.Deserialize<PlotsFile>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
                 ?? throw new InvalidDataException("plots.json");
-        foreach (var r in Plots.Regions) foreach (var p in r.Plots) p.Region = r;
+        foreach (var r in Plots.Regions) foreach (var p in r.Plots)
+        {
+            p.Region = r;
+            foreach (var bd in p.Blocks) bd.Soil.SoilPotassiumFactor = r.Id == "napa" ? NapaSoilK : 1.0;
+        }
     }
     public RegionData Region(string id) => Plots.Regions.First(r => r.Id == id);
     public PlotData Plot(string id) => Plots.Regions.SelectMany(r => r.Plots).First(p => p.Id == id);
