@@ -197,8 +197,9 @@ static func _planting(shell) -> Control:
 	var P := _plot_data(shell, shell.setup.get("plot", "mosel-blauschiefer"))
 	var R := _region_data(shell, shell.setup.get("region", "mosel"))
 	var S: Dictionary = shell.setup
-	if not S.has("planting"):
+	if not S.has("planting") or S.get("planting_plot", "") != P["id"]:
 		S["planting"] = {}
+		S["planting_plot"] = P["id"]
 		for b in P["blocks"]: S["planting"][b["id"]] = (b["default"] as Dictionary).duplicate()
 	if not S.has("year"): S["year"] = 2015
 	if not S.has("vineyardManager"): S["vineyardManager"] = "Junior"

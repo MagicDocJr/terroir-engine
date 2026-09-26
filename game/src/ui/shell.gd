@@ -62,7 +62,8 @@ func _ready() -> void:
 	body.add_child(host)
 	statusbar = PanelContainer.new(); root_box.add_child(statusbar)
 	_make_toast()
-	if capture: _run_capture.call_deferred()
+	if "--fuzz" in args: capture = true; _run_fuzz.call_deferred()
+	elif capture: _run_capture.call_deferred()
 	else: show_screen("title")
 
 # ------------------------------------------------------------------ data & commands
@@ -409,4 +410,52 @@ func _run_capture() -> void:
 	DirAccess.remove_absolute(String(Sim.SaveDir()).path_join("capture_test.json"))
 	print("SAVE/LOAD ", "ok" if loaded and D2["cash"] == cash_before and D2["wines"].size() == D["wines"].size() else "MISMATCH", " cash ", cash_before, " → ", D2["cash"])
 	print("CAPTURE DONE phase=", D.get("phase", ""), " wines=", D.get("wines", []).size())
+	get_tree().quit()
+
+# ------------------------------------------------------------------ fuzz: press every button on every screen (UI smoke test)
+func _collect_buttons(n: Node, out: Array) -> void:
+	for c in n.get_children():
+		if c is BaseButton and (c as Control).is_visible_in_tree() and not (c as BaseButton).disabled: out.append(c)
+		_collect_buttons(c, out)
+
+func _fuzz_screen(id: String) -> int:
+	var pressed := 0
+	for i in 40:
+		show_screen(id)
+		for f in 2: await get_tree().process_frame
+		var btns := []
+		_collect_buttons(host, btns)
+		if i >= btns.size(): break
+		var b: BaseButton = btns[i]
+		if b is OptionButton:
+			var o := b as OptionButton
+			if o.item_count > 1: o.select(o.item_count - 1); o.item_selected.emit(o.item_count - 1)
+		elif (b as Button).text.begins_with("Bottle") or (b as Button).text.begins_with("Harvest Block"):
+			continue   # exercised by the capture run; pressing them here would change the game too early
+		else:
+			b.pressed.emit()
+		pressed += 1
+		for f in 2: await get_tree().process_frame
+	print("FUZZ ", id, " pressed ", pressed)
+	return pressed
+
+func _run_fuzz() -> void:
+	setup = {}
+	for id in ["region", "plots", "planting"]:
+		if id == "plots": setup["region"] = "cote-dor"
+		if id == "planting": setup["plot"] = "cotedor-village"
+		await _fuzz_screen(id)
+	setup = {}; setup["region"] = "cote-dor"; setup["plot"] = "cotedor-village"
+	show_screen("planting"); await get_tree().process_frame
+	await start_game(load("res://src/ui/screens/pregame.gd").setup_json(self))
+	for stop_at in [0, 200, 60, 200]:
+		if stop_at > 0: Sim.Advance(stop_at, false); D = JSON.parse_string(Sim.Snapshot()); _build_chrome()
+		for id in NAV: await _fuzz_screen(id)
+		print("FUZZ round done at ", D["date"])
+	# time controls and keys
+	for k in [KEY_SPACE, KEY_ENTER, KEY_2, KEY_0]:
+		var e := InputEventKey.new(); e.pressed = true; e.physical_keycode = k; e.keycode = k
+		capture = false; _unhandled_input(e); capture = true
+		await get_tree().process_frame
+	print("FUZZ DONE date=", D["date"], " phase=", D["phase"])
 	get_tree().quit()
