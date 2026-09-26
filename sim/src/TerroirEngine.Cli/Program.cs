@@ -102,7 +102,7 @@ if (cmd == "play")
     {
         int days = g.Advance(30);
         stops++;
-        foreach (var m in g.Inbox.Where(m => !m.Read)) { if (verbose) Console.WriteLine($"  [{Dates.Short(m.Date)}] {m.From}: {m.Subject}"); m.Read = true; }
+        foreach (var m in g.Inbox.Where(m => !m.Read).OrderBy(m => m.Id)) { if (verbose) Console.WriteLine($"  [{Dates.Short(m.Date)}] {m.From}: {m.Subject}" + (args[4] == "full" ? $"\n      {m.Body.Replace("\n", "\n      ")}\n      WHY: {m.Why}" : "")); m.Read = true; }
         foreach (var b in g.Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null))
         {
             var must = Chemistry.MustFromBlock(b);

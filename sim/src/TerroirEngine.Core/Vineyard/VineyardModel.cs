@@ -253,7 +253,7 @@ public static class VineyardModel
                 b.BerryWeight = v.BerryWeightG * 0.12;
                 string set = setRatio < 0.75 ? "poor" : setRatio < 0.92 ? "below average" : "good";
                 if (b.BerriesPerVine > 0)
-                    ctx.Events.Add(new VineEvent(date, b.Data.Id, "fruitset", $"Fruit set in Block {b.Data.Id} was {set} ({setRatio * 100:0}% of normal){(b.MillerandageShare > 0.15 ? ", with millerandage (mixed small and normal berries)" : "")}. Crop estimate: {b.YieldKgHa / 1000:0.0} t/ha.", set == "poor" ? 2 : 1, setRatio));
+                    ctx.Events.Add(new VineEvent(date, b.Data.Id, "fruitset", $"Fruit set in Block {b.Data.Id} was {set} ({setRatio * 100:0}% of normal){(b.MillerandageShare > 0.15 ? ", with millerandage (mixed small and normal berries)" : "")}. Crop estimate at full berry size: {b.BerriesPerVine * v.BerryWeightG * b.Planting.DensityVinesHa * b.VineSurvival / 1e6:0.0} t/ha.", set == "poor" ? 2 : 1, setRatio));
             }
         }
 

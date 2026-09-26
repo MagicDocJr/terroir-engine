@@ -47,7 +47,7 @@ public sealed partial class GameSession
             switch (e.Kind)
             {
                 case "budburst":
-                    if (Gate("budburst")) Post("mentor", "Budburst — the season has started", $"The first buds have burst ({blocks}). From now until the shoots are ~15 cm long, a radiation frost below about −2 °C can kill the young shoots. {FrostAdvice()}",
+                    if (Gate("budburst")) Post("mentor", "Budburst — the season has started", $"The first buds have burst in Block {blocks}. From now until the shoots are ~15 cm long, a radiation frost below about −2 °C can kill the young shoots. {FrostAdvice()}",
                         "Critical temperatures rise from about −2.2 °C at budburst to about −1 °C at four leaves (UMD Extension; Gardea 1987).", "high", "budburst", stop: true);
                     break;
                 case "frost":
@@ -57,10 +57,12 @@ public sealed partial class GameSession
                     break;
                 case "flowering":
                     if (Gate("flowering")) Post("mentor", "Flowering", e.Text + " Rain and cold now mean a small, uneven crop. There's nothing to spray against the weather — but it tells you what to expect at harvest.",
-                        "Fruit set is best at ≥ 15–17 °C and dry weather; Chardonnay is prone to millerandage.", "normal", "flowering", stop: true);
+                        "Fruit set is best at ≥ 15–17 °C and dry weather" + (Blocks.Any(b => b.Variety.Id == VarietyId.Chardonnay) ? "; Chardonnay is prone to millerandage." : Blocks.Any(b => b.Variety.Id == VarietyId.PinotNoir) ? "; Pinot Noir is moderately prone to coulure and millerandage." : "."), "normal", "flowering", stop: true);
                     break;
                 case "fruitset":
-                    foreach (var x in list) Post("vineyard", $"Fruit set in Block {x.BlockId}", Detail(VineyardManager, "Fruit set finished.", x.Text), "Coulure and millerandage follow cold, wet flowering weather.", x.Severity >= 2 ? "high" : "normal", "fruitset", stop: false, blockId: x.BlockId);
+                    // one report for all Blocks; set and crop numbers are observations, so every Staff level reports them
+                    Post("vineyard", $"Fruit set finished in Block {blocks}", string.Join("\n", list.Select(x => "• " + x.Text)), "Coulure and millerandage follow cold, wet flowering weather.",
+                        list.Any(x => x.Severity >= 2) ? "high" : "normal", "fruitset", stop: false);
                     break;
                 case "veraison":
                     if (Gate("veraison")) Post("mentor", "Véraison: ripening has begun", $"Véraison in {blocks}. From now on your Vineyard manager takes weekly berry samples. Watch three things: sugar (°Oe), acidity (malic acid falls fast in warm weather) and {(Blocks.Any(b => b.Variety.Red) ? "the seeds — they must turn brown before the tannins taste ripe" : "flavour")}. Grey rot risk rises as sugar rises.",
@@ -218,7 +220,7 @@ public sealed partial class GameSession
                 ? (rain > 20 ? $"\n\nMy advice: {rain:0} mm of rain is likely in the next {horizon} days. The Blocks already in the window and prone to rot should be picked before it." : "\n\nMy advice: the forecast is settled — the Blocks in the window can hang for more ripeness.")
                 : VineyardManager == StaffLevel.Experienced && rain > 20 ? $"\n\nRain likely ({rain:0} mm in the next {horizon} days)." : "";
             Post("vineyard", $"Weekly berry samples — {Dates.Short(Date)}", "200-berry samples, analysed today:\n" + string.Join("\n", lines) + advice,
-                "Lab values are exact in Normal mode (spec §7).", inWindow ? "high" : "normal", "lab", stop: inWindow).Actions.Add(("Open Ripeness", "goto", "ripeness"));
+                "In Normal mode lab values are exact and free. Weekly samples are how growers decide when to pick: sugar up, acid down, seeds browning, rot creeping in.", inWindow ? "high" : "normal", "lab", stop: inWindow).Actions.Add(("Open Ripeness", "goto", "ripeness"));
         }
         // late season: force a decision
         foreach (var b in Blocks.Where(b => !b.Harvested && !b.Picking && Date >= new DateOnly(Vintage, 12, 1)))
