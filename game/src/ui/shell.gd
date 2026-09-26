@@ -212,9 +212,8 @@ func _build_chrome() -> void:
 func _topbar() -> void:
 	topbar.add_theme_stylebox_override("panel", UI.sb(Color("161c22"), 0, UI.LINE, 0, 20))
 	topbar.custom_minimum_size = Vector2(0, 64)
-	var h := UI.hbox(14); topbar.add_child(h)
-	h.add_child(UI.head("Terroir", 26, UI.INK))
-	var est := UI.label(String(D.get("estate", "")), 15, UI.INK2); est.size_flags_vertical = Control.SIZE_SHRINK_CENTER; h.add_child(est)
+	var h := UI.hbox(10); topbar.add_child(h)
+	var est := UI.head(String(D.get("estate", "")), 20, UI.INK); est.size_flags_vertical = Control.SIZE_SHRINK_CENTER; h.add_child(est)
 	h.add_child(UI.spacer())
 	var dv := UI.vbox(0)
 	var dl := UI.head(String(D.get("dateLabel", "")), 22, UI.INK); dl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; dv.add_child(dl)
@@ -227,6 +226,19 @@ func _topbar() -> void:
 	var wl := UI.num("%s°" % str(roundi(float(today.get("tmax", 0)))), 20, UI.INK); wl.size_flags_vertical = Control.SIZE_SHRINK_CENTER; wx.add_child(wl)
 	wx.mouse_filter = Control.MOUSE_FILTER_PASS
 	h.add_child(wx)
+	# the staff forecast, compact (spec §8.1: weather now + 7-day forecast in the top bar)
+	var fc: Array = D.get("weather", {}).get("forecast", [])
+	var fh := UI.hbox(0); fh.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for f in fc.slice(1, 7):
+		var cell := UI.vbox(0); cell.custom_minimum_size = Vector2(30, 0)
+		var holder := Control.new(); holder.custom_minimum_size = Vector2(30, 24)
+		var mi = Charts.WeatherIcon.new(); mi.kind = String(f["icon"]); mi.scale = Vector2(0.55, 0.55); mi.size = Vector2(54, 40); mi.position = Vector2(0, 0)
+		holder.add_child(mi); cell.add_child(holder)
+		var tl := UI.num("%d°" % int(f["tmax"]), 12, UI.INK2); tl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; cell.add_child(tl)
+		cell.tooltip_text = "%s: %d° / %d°, %d %% chance of rain" % [f["day"], int(f["tmax"]), int(f["tmin"]), int(f["prob"])]
+		cell.mouse_filter = Control.MOUSE_FILTER_PASS
+		fh.add_child(cell)
+	h.add_child(fh)
 	h.add_child(UI.spacer())
 	var cash := UI.num(UI.euro(int(D.get("cash", 0))), 22, UI.INK if float(D.get("cash", 0)) >= 0 else UI.CRIT)
 	cash.size_flags_vertical = Control.SIZE_SHRINK_CENTER; cash.tooltip_text = "Cash. Open Estate for the P&L."; cash.mouse_filter = Control.MOUSE_FILTER_PASS
