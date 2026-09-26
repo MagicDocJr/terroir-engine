@@ -247,6 +247,11 @@ public static class WineryModel
             double kd = 0.00003 * Math.Exp(0.15 * (T - 20)) * (T > 32 ? 4 : 1);
             double uptake = 0.42 * tf * lot.Biomass * lot.Sugar / (10 + lot.Sugar) * (1 - 0.3 * Math.Min(1, lot.GreyRotShare * 4));
             if (ambient) uptake *= 0.85;
+            // ethanol shuts down hexose transport near the strain's tolerance (Bisson 1999 mechanism; fermentation.md "very high sugar" stuck cause).
+            // Tolerance 16.8 % cultured / 15.5 % ambient and the exponent are UNVERIFIED calibration.
+            // A restart culture (acclimatised, alcohol-tolerant strain of the EC-1118 type) tolerates ≈18 % (UNVERIFIED).
+            double tolerance = lot.Restarted ? 18.0 : ambient ? 15.5 : 16.8;
+            uptake *= Math.Max(0, 1 - Math.Pow(lot.Ethanol / 7.89 / tolerance, 6));
             double dX = mu * lot.Biomass - kd * lot.Ethanol * lot.Biomass;
             double dN = -mu * lot.Biomass / 12.0 * 1000;                 // mg/L N used
             double dS = -Math.Min(lot.Sugar, uptake);
@@ -303,6 +308,14 @@ public static class WineryModel
         lot.Biomass = 0.3; lot.YanMgL += 60; lot.TempC = Math.Min(lot.TempC, 20); lot.Restarted = true;
         lot.Phase = LotPhase.Fermenting;
         lot.Log.Add($"{Dates.Short(date)}: re-inoculated with an alcohol-tolerant yeast and nutrients to restart the fermentation.");
+    }
+
+    /// <summary>The player gives up on a stuck fermentation: chill, add SO₂ and carry on with the sugar that is left.</summary>
+    public static void AcceptStuck(Lot lot, DateOnly date)
+    {
+        if (lot.Phase != LotPhase.Stuck) return;
+        lot.Log.Add($"{Dates.Short(date)}: decided to stop the stuck fermentation and keep the {lot.Rs:0} g/L of sugar.");
+        StopFermentation(lot, date, new List<VineEvent>());
     }
 
     private static void StopFermentation(Lot lot, DateOnly date, List<VineEvent> events)

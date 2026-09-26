@@ -237,6 +237,10 @@ public sealed partial class GameSession
                 var sl = Lots.FirstOrDefault(x => x.Id == c.A);
                 if (sl != null) WineryModel.Restart(sl, Date);
                 break;
+            case "acceptstuck":
+                var al = Lots.FirstOrDefault(x => x.Id == c.A);
+                if (al != null) WineryModel.AcceptStuck(al, Date);
+                break;
             case "staff":
                 var lvl = Enum.Parse<StaffLevel>(c.B);
                 if (c.A == "vineyard") { VineyardManager = lvl; Ctx.VineyardManager = lvl; } else CellarMaster = lvl;

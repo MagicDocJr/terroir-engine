@@ -17,7 +17,7 @@ static func build(D: Dictionary, shell) -> Control:
 	# table
 	var tp: Array = UI.panel("", "", 2)
 	var cols := ["Block", "Variety", "Stage", "Health", "Water", "Downy", "Powdery", "Botrytis", "Crop est.", "Must", "Yield"]
-	var widths := [250, 190, 150, 100, 150, 96, 100, 100, 140, 180, 140]
+	var widths := [220, 240, 130, 90, 190, 84, 90, 90, 120, 180, 130]
 	var tips := {"Health": "Canopy health: disease on leaves, rot, chlorosis and frost damage.", "Water": "Midday stem water potential (Ψstem). Weak stress helps quality; severe stress stops ripening.",
 		"Downy": "Downy mildew infection risk today (0–100).", "Powdery": "Powdery mildew risk index (0–100, UC Davis-style).", "Botrytis": "Botrytis infection risk today (0–100).",
 		"Crop est.": "Crop on the vine now (kg). Changes with frost, set, disease and thinning.", "Must": "Latest must analysis (after véraison).", "Yield": "Crop on the vine per hectare now."}

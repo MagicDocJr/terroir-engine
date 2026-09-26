@@ -45,7 +45,12 @@ static func build(D: Dictionary, shell) -> Control:
 		var rb := UI.button("Restart the fermentation", true, 16)
 		var lid2: String = L["id"]
 		rb.pressed.connect(func(): shell.command("restart", lid2); shell.notify("Restart culture added: warmed, aerated, nutrients and acclimatised yeast."))
-		ap[1].add_child(rb)
+		rb.disabled = L.get("restarted", false)
+		var sb := UI.button("Stop here, keep the sugar", false, 16)
+		sb.pressed.connect(func(): shell.command("acceptstuck", lid2); shell.notify("Fermentation stopped: chilled and sulphured with the residual sugar left."))
+		var bh := UI.hbox(10); bh.add_child(rb); bh.add_child(sb)
+		ap[1].add_child(bh)
+		if L.get("restarted", false): ap[1].add_child(UI.label("Already restarted once — a second restart won't help.", 14, UI.MUTED))
 	var tiles := GridContainer.new(); tiles.columns = 5; tiles.add_theme_constant_override("h_separation", 12); tiles.add_theme_constant_override("v_separation", 12)
 	var napa: bool = D["region"]["units"] == "brix"
 	var items := [

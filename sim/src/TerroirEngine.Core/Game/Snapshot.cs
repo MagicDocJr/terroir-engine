@@ -271,7 +271,7 @@ public static class Snapshot
             ["naturalOe"] = R(l.NaturalOe, 0), ["must"] = new JsonObject { ["oe"] = R(l.NaturalOe, 0), ["ta"] = R(l.HarvestTa, 1), ["ph"] = R(l.HarvestPh, 2) },
             ["curve"] = Arr(l.Curve.Select(c => (JsonNode)new JsonObject { ["day"] = c.Day, ["oe"] = c.Sugar, ["temp"] = c.Temp })),
             ["choices"] = choices, ["log"] = Arr(l.Log.Select(x => (JsonNode)x)),
-            ["ready"] = l.Phase == LotPhase.Ready, ["stuck"] = l.Phase == LotPhase.Stuck,
+            ["ready"] = l.Phase == LotPhase.Ready, ["stuck"] = l.Phase == LotPhase.Stuck, ["restarted"] = l.Restarted,
             ["ageingMonths"] = l.AgeingMonthsTarget, ["ageingDay"] = l.Phase == LotPhase.Ageing ? l.PhaseDay : 0,
         };
     }

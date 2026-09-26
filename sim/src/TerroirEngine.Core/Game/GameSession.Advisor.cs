@@ -111,7 +111,7 @@ public sealed partial class GameSession
                                 "ferment-hot" => "Fermentation releases ~1.3 °C per °Brix; without enough cooling a tank runs away above 32 °C where yeast die.",
                                 _ => "Yeast short of nitrogen make hydrogen sulfide; early aeration or copper fixes it, but neglected it becomes a lasting fault.",
                             }, "high", e.Kind, stop: true, blockId: x.BlockId);
-                        if (e.Kind == "ferment-stuck") m.Actions.Add(("Restart fermentation", "restart", LotOf(x.BlockId)));
+                        if (e.Kind == "ferment-stuck") { m.Actions.Add(("Restart fermentation", "restart", LotOf(x.BlockId))); m.Actions.Add(("Stop here, keep the sugar", "acceptstuck", LotOf(x.BlockId))); }
                         m.Actions.Add(("Open Winery", "goto", "winery"));
                     }
                     break;

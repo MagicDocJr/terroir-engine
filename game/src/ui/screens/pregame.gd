@@ -275,12 +275,16 @@ static func _planting(shell) -> Control:
 	e[0].custom_minimum_size = Vector2(460, 0)
 	e[1].add_child(UI.line_edit(S["estateName"], func(t): S["estateName"] = t, 400))
 	var go := UI.button("Plant and start ›", true, 18); go.custom_minimum_size = Vector2(0, 50)
-	go.pressed.connect(func():
-		var planting := {}
-		for bid in S["planting"]:
-			var pc: Dictionary = S["planting"][bid]
-			planting[bid] = {"variety": pc["variety"], "rootstock": pc["rootstock"], "training": pc["training"], "density": int(pc["density"])}
-		shell.start_game({"plotId": P["id"], "plantingYear": int(S["year"]), "estateName": S["estateName"], "vineyardManager": S["vineyardManager"], "cellarMaster": S["cellarMaster"], "planting": planting}))
+	go.pressed.connect(func(): shell.start_game(setup_json(shell)))
 	e[1].add_child(go)
 	bottom.add_child(e[0])
 	return UI.scroll(v)
+
+## The NewGame payload from the choices on the Planting screen (also used by capture mode).
+static func setup_json(shell) -> Dictionary:
+	var S: Dictionary = shell.setup
+	var planting := {}
+	for bid in S["planting"]:
+		var pc: Dictionary = S["planting"][bid]
+		planting[bid] = {"variety": pc["variety"], "rootstock": pc["rootstock"], "training": pc["training"], "density": int(pc["density"])}
+	return {"plotId": S["plot"], "plantingYear": int(S["year"]), "estateName": S["estateName"], "vineyardManager": S["vineyardManager"], "cellarMaster": S["cellarMaster"], "planting": planting, "seed": 7}

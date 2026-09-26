@@ -167,6 +167,16 @@ public class VineyardCalibrationTests
     }
 
     [Fact]
+    public void VeryRipeMust_CannotFermentBeyondYeastTolerance()
+    {
+        // 29 °Brix ≈ 18 % potential: yeast stop short of dryness (fermentation.md: very high sugar is a stuck-fermentation cause)
+        var g = Fixture.Play("napa-bench", 2018, Units.OeFromBrix(29));
+        // the ordinary cultured yeast sticks; the test fixture then restarts with a tolerant culture (≈18 %)
+        Assert.All(g.Lots, l => Assert.Contains(l.Log, x => x.Contains("STUCK")));
+        Assert.All(g.Lots, l => Assert.True(l.AlcoholPct <= 18.3, $"{l.Id} reached {l.AlcoholPct:0.0} %"));
+    }
+
+    [Fact]
     public void Cabernet_OnTheMoselFlats_FailsToRipen()
     {
         var setup = new GameSetup { PlotId = "mosel-uferflur", PlantingYear = 2007 };   // vintage 2010, a cool year

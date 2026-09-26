@@ -113,6 +113,7 @@ func run_action(action: String, arg: String) -> void:
 			show_screen("plot")
 			notify("Choose how to pick Block %s, then press Harvest." % arg)
 		"restart": command("restart", arg)
+		"acceptstuck": command("acceptstuck", arg); notify("Fermentation stopped; the Lot keeps its residual sugar.")
 		"programme":
 			var p := arg.split(":"); command("programme", p[0], p[1]); notify("%s set to %s." % [p[0].capitalize(), p[1]])
 		"block":
@@ -312,7 +313,7 @@ func _make_toast() -> void:
 	add_child(toast)
 
 func notify(text: String) -> void:
-	if toast == null: return
+	if toast == null or capture: return
 	toast_label.text = text
 	toast.visible = true
 	toast.modulate.a = 1.0
@@ -344,11 +345,15 @@ func _run_capture() -> void:
 	setup["region"] = plot.split("-")[0].replace("cotedor", "cote-dor")
 	setup["plot"] = plot
 	show_screen("plots"); await _shot("%s_02_plots" % prefix)
+	setup["year"] = year
 	show_screen("planting"); await _shot("%s_03_planting" % prefix)
-	var ok: bool = Sim.NewGame(JSON.stringify({"plotId": plot, "plantingYear": year, "estateName": "Capture Estate", "seed": 7}))
-	if not ok: print("NEWGAME FAILED ", Sim.LastError()); get_tree().quit(); return
-	D = JSON.parse_string(Sim.Snapshot()); _build_chrome()
-	show_screen("inbox"); await _shot("%s_04_inbox_start" % prefix)
+	setup["estateName"] = "Capture Estate"
+	await start_game(load("res://src/ui/screens/pregame.gd").setup_json(self))
+	if not Sim.HasGame(): print("NEWGAME FAILED ", Sim.LastError()); get_tree().quit(); return
+	await _shot("%s_04_inbox_start" % prefix)
+	# exercise the real time controls once (Continue stops at the next Alert)
+	advance(60, true)
+	print("advance ok: ", D["date"], " unread ", D["unreadAlerts"])
 	show_screen("programmes"); await _shot("%s_05_programmes" % prefix)
 	# spring → summer
 	Sim.Advance(170, false); D = JSON.parse_string(Sim.Snapshot()); _build_chrome()
@@ -390,11 +395,18 @@ func _run_capture() -> void:
 				if guard == 1 or not state.has("blend_shot"):
 					_build_chrome(); show_screen("blending"); await _shot("%s_13_blending" % prefix); state["blend_shot"] = true
 				Sim.Command("wine", "%s %s" % [l["variety"], l["block"]], "Screwcap", "Sterile", "Bentonite", l["id"])
-			if l.get("stuck", false): Sim.Command("restart", l["id"], "", "", "", "")
+			if l.get("stuck", false): Sim.Command("acceptstuck" if l.get("restarted", false) else "restart", l["id"], "", "", "", "")
 		D = JSON.parse_string(Sim.Snapshot())
 	_build_chrome()
 	show_screen("wines"); await _shot("%s_14_wines" % prefix)
 	show_screen("estate"); await _shot("%s_15_estate_end" % prefix)
 	show_screen("glossary"); await _shot("%s_16_glossary" % prefix)
+	# save → load round trip must reproduce the same state (event-sourced save)
+	var cash_before = D["cash"]
+	Sim.SaveGame("capture_test")
+	var loaded: bool = Sim.LoadGame("capture_test")
+	var D2: Dictionary = JSON.parse_string(Sim.Snapshot())
+	DirAccess.remove_absolute(String(Sim.SaveDir()).path_join("capture_test.json"))
+	print("SAVE/LOAD ", "ok" if loaded and D2["cash"] == cash_before and D2["wines"].size() == D["wines"].size() else "MISMATCH", " cash ", cash_before, " → ", D2["cash"])
 	print("CAPTURE DONE phase=", D.get("phase", ""), " wines=", D.get("wines", []).size())
 	get_tree().quit()

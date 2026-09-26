@@ -20,7 +20,7 @@ static func build(D: Dictionary, shell) -> Control:
 	# planner
 	var pp: Array = UI.panel("Harvest planner", "")
 	var cols := ["Block", "Variety", "Stage", "Sugar", "Pot. alc.", "TA g/L", "pH", "Malic", "Seeds ripe", "Rot (grey · noble)", "Must weight reaches", ""]
-	var widths := [80, 190, 140, 110, 100, 90, 80, 90, 110, 170, 150, 200]
+	var widths := [70, 190, 130, 100, 100, 80, 70, 80, 110, 160, 190, 190]
 	var hdr := UI.hbox(2)
 	for i in cols.size(): hdr.add_child(UI.table_cell(cols[i], widths[i], UI.MUTED, Color(0, 0, 0, 0), "", UI.f_body_b, 14, 32))
 	pp[1].add_child(hdr)
@@ -68,7 +68,7 @@ static func build(D: Dictionary, shell) -> Control:
 		if S.size() == 1:
 			labels.append("");
 		var sc = Charts.LineChart.new()
-		sc.labels = labels; sc.series = [{"name": B["variety"], "values": sug, "color": UI.BLOCK.get(B["id"], UI.GOLD)}]
+		sc.labels = labels; sc.series = [{"name": B["variety"], "short": "Block " + String(B["id"]), "values": sug, "color": UI.BLOCK.get(B["id"], UI.GOLD)}]
 		var bands := []
 		var tmin := 1e9; var tmax := 0.0
 		for i in B["targets"].size():
