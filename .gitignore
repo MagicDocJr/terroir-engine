@@ -1,0 +1,8 @@
+# Purchased reference books — never commit
+reference/
+
+node_modules/
+dist/
+.godot/
+*.blend1
+.DS_Store
