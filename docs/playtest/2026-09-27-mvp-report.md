@@ -72,6 +72,8 @@ Playing through the real UI showed several things that were wrong. All of these 
 | Côte d'Or yields of 58–66 hL/ha, so wines were declassified | The Mentor prunes short (Low bud load) in the Côte d'Or. Yields are now 43–50 hL/ha and inside the AOC limits |
 | A 15.7 % dry Riesling was "Outstanding" | Hot-alcohol rule for the Balance criterion, and a rescaled acidity perception (reds were always "low") |
 | A 28.5 °Brix Cabernet fermented to 17.7 % | Yeast now have an alcohol tolerance (16.8 % cultured, 15.5 % ambient, 18 % for a restart culture). Stuck Lots can be restarted once or stopped with their residual sugar, so a Lot can no longer be left with no way forward |
+| Napa Cabernet pH 3.2–3.5, below the target | Napa soil potassium factor, plus acidification proposed for high-pH musts |
+| The spec's single-event override and 7-day forecast in the top bar were missing | Added "Spray today (extra pass)" and a compact 6-day forecast in the top bar |
 | The fruit-set message said "Crop estimate 0.8 t/ha" | The estimate now uses the full berry size (6–9 t/ha), with one message for all Blocks |
 
 ## Scripted playthroughs: all 12 Plots
@@ -98,15 +100,13 @@ These use the Mentor's Planting, Medium Programmes and planting year 2015, so th
 Most of these need a decision or a source from you. None of them block play.
 
 **Calibration**
-- **Napa pH** runs 3.4–3.5 at harvest, against 3.6–3.9 in `ripening.md`. Potassium is probably too low for the warm alluvial soils.
+- **Napa** now gets a soil-potassium factor of 1.2 (`UNVERIFIED`). Harvest pH is 3.3–3.7 and TA 5.2–6.7, which is at or near the low end of the 3.6–3.9 pH target. The Napa Cellar master proposes tartaric acidification for high-pH musts, which is normal practice there.
 - In very hot years (2018, 2019) **Côte d'Or acidity** falls below the typical-year range (TA 4.5–5.8, pH 3.6–3.8 for late picks). That may be realistic for 2018, but nothing sourced confirms it.
 - **Economy balance**: Napa earns far more than the other Regions (Rutherford: €730k from 1 ha in year one). The Côte d'Or Premier Cru is unaffordable. There are no loans. Every price is `UNVERIFIED` (`economy.md §9–10`).
 - **Côte d'Or Pinot Noir** mostly rates "Acceptable". Young vines and a single clearly perceived aroma family mean it rarely meets the complexity or intensity criteria. That may be right for fourth-leaf vines, but it deserves a look.
-- Côte d'Or white ferments default to 16 °C in steel. Burgundian practice is barrel fermentation at 18–22 °C.
 
 **Missing against the spec**
-- Overriding a single Programme event (for example "spray today") is not built.
-- The top bar shows today's weather only. The 7-day forecast is on the Weather screen.
+- The only single-event override is **Spray today**, from the Programmes screen and from disease alerts. Other overrides (for example "skip this pass") are not built.
 - No sound yet.
 - The 3D view is still in progress (see below).
 - Nothing caps the number of Wines at the spec's "about three". You can bottle each Lot on its own.
@@ -134,7 +134,7 @@ Most of these need a decision or a source from you. None of them block play.
 
 ### For your girlfriend (WSET L3): a 10-minute check, ✓/✗ plus a comment
 
-Please play one Mosel and one Côte d'Or wine to the end, or look at `game/shots/*_14_wines.png`.
+**Use the review page: <https://claude.ai/artifact/PqqJ2CGJXf6qUj3Wvtm9HD>** (private to your account, so open it on your computer). It shows five real tasting sheets, the harvest chemistry table and the law rules, each with Correct / Something's wrong / Not sure buttons and a comment box. Answers save automatically and I can read them back. The questions behind the page:
 
 1. Tasting sheet: are the words right (clarity, intensity, colour, aroma families, the palate scale, the quality levels)?
 2. Do the *because…* lines explain things correctly?
