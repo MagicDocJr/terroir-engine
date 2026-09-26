@@ -224,18 +224,24 @@ static func _planting(shell) -> Control:
 		var pc: Dictionary = S["planting"][bid]
 		var row := UI.hbox(12)
 		row.add_child(UI.block_tag(bid, 18))
-		var info := UI.vbox(0); info.custom_minimum_size = Vector2(430, 0)
+		var info := UI.vbox(0); info.custom_minimum_size = Vector2(380, 0)
 		info.add_child(UI.label(b["name"], 16, UI.INK, UI.f_body_b))
 		info.add_child(UI.label("%s, %d cm deep, %d mm water, lime %d %%, pH %.1f · %s-facing, %d %% slope%s" % [b["texture"], int(b["depth"]), int(b["taw"]), int(b["lime"]), float(b["ph"]), b["aspect"], int(b["slope"]),
 			" · frost pocket" if float(b["frostPocket"]) > 0.5 else ""], 13, UI.MUTED, null, true))
 		row.add_child(info)
-		var ov := UI.option(var_items, pc["variety"], func(x): pc["variety"] = x; shell.show_screen("planting"), 240)
+		var ov := UI.option(var_items, pc["variety"], func(x): pc["variety"] = x; shell.show_screen("planting"), 220)
 		ov.tooltip_text = var_notes.get(pc["variety"], ""); row.add_child(ov)
-		var orr := UI.option(rs_items, pc["rootstock"], func(x): pc["rootstock"] = x; shell.show_screen("planting"), 190)
+		var orr := UI.option(rs_items, pc["rootstock"], func(x): pc["rootstock"] = x; shell.show_screen("planting"), 170)
 		orr.tooltip_text = rs_notes.get(pc["rootstock"], ""); row.add_child(orr)
 		var tr_items := []
 		for t in P["training"]: tr_items.append(t)
 		row.add_child(UI.option(tr_items, pc["training"], func(x): pc["training"] = x, 150))
+		var steep_plot: bool = float(P["slope"]) >= 30
+		var rows_items := [["DownSlope", "Rows downhill"]] if steep_plot else [["NorthSouth", "Rows N–S"], ["EastWest", "Rows E–W"]]
+		if steep_plot: pc["rows"] = "DownSlope"
+		var ro := UI.option(rows_items, String(pc.get("rows", "NorthSouth")), func(x): pc["rows"] = x, 150)
+		ro.tooltip_text = "On steep slopes rows must run straight downhill (winch and safety). On flat land N–S rows light both sides of the canopy evenly; E–W rows shade the north side."
+		row.add_child(ro)
 		var d_items := dens.duplicate()
 		var has := false
 		for d in d_items:
@@ -287,5 +293,5 @@ static func setup_json(shell) -> Dictionary:
 	var planting := {}
 	for bid in S["planting"]:
 		var pc: Dictionary = S["planting"][bid]
-		planting[bid] = {"variety": pc["variety"], "rootstock": pc["rootstock"], "training": pc["training"], "density": int(pc["density"])}
+		planting[bid] = {"variety": pc["variety"], "rootstock": pc["rootstock"], "training": pc["training"], "density": int(pc["density"]), "rows": String(pc.get("rows", "NorthSouth"))}
 	return {"plotId": S["plot"], "plantingYear": int(S["year"]), "estateName": S["estateName"], "vineyardManager": S["vineyardManager"], "cellarMaster": S["cellarMaster"], "planting": planting, "seed": 7}

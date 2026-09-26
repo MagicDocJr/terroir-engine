@@ -95,7 +95,7 @@ public static class SetupCatalog
                 ["id"] = b.Id, ["name"] = b.Name, ["area"] = b.AreaHa, ["texture"] = b.Soil.Texture, ["stones"] = b.Soil.StonesPctVol, ["depth"] = b.Soil.RootingDepthCm, ["taw"] = b.Soil.TawMm,
                 ["ph"] = b.Soil.PH, ["lime"] = b.Soil.ActiveLimePct, ["slope"] = b.Topography.SlopePct, ["aspect"] = Snapshot.Aspect(b.Topography.AspectDeg), ["elevation"] = b.Topography.ElevationM,
                 ["frostPocket"] = b.Microclimate.FrostPocket, ["fog"] = b.Microclimate.FogFrequency, ["notes"] = b.Notes,
-                ["default"] = new JsonObject { ["variety"] = def.Variety.ToString(), ["rootstock"] = def.Rootstock.ToString(), ["training"] = def.Training.ToString(), ["density"] = def.DensityVinesHa },
+                ["default"] = new JsonObject { ["variety"] = def.Variety.ToString(), ["rootstock"] = def.Rootstock.ToString(), ["training"] = def.Training.ToString(), ["density"] = def.DensityVinesHa, ["rows"] = def.Rows.ToString() },
             });
         }
         return new JsonObject

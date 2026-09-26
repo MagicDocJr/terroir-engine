@@ -42,6 +42,9 @@ var toast: PanelContainer
 var toast_label: Label
 var view3d: Node = null
 var busy := false
+var playing := false            # continuous play: advances every tick until an Alert
+var play_speed := 1             # days per 0.25 s tick
+var play_timer: Timer
 
 func _ready() -> void:
 	theme = UI.make_theme()
@@ -62,6 +65,7 @@ func _ready() -> void:
 	body.add_child(host)
 	statusbar = PanelContainer.new(); root_box.add_child(statusbar)
 	_make_toast()
+	play_timer = Timer.new(); play_timer.wait_time = 0.25; play_timer.timeout.connect(_play_tick); add_child(play_timer)
 	if "--fuzz" in args: capture = true; _run_fuzz.call_deferred()
 	elif capture: _run_capture.call_deferred()
 	else: show_screen("title")
@@ -79,8 +83,8 @@ func command(type: String, a := "", b := "", c := "", d := "", e := "", stay := 
 	if stay: refresh()
 
 ## Advance time. stop=true runs until the next Alert (max `days`).
-func advance(days: int, stop := true) -> void:
-	if busy or not Sim.HasGame(): return
+func advance(days: int, stop := true, quiet := false) -> bool:
+	if busy or not Sim.HasGame(): return false
 	busy = true
 	var before := _alert_ids()
 	var n: int = Sim.Advance(days, stop)
@@ -97,8 +101,22 @@ func advance(days: int, stop := true) -> void:
 		notify("%d day%s later — %s" % [n, "" if n == 1 else "s", String(new_alerts[0]["subject"])])
 	else:
 		show_screen(current)
-		if n > 0: notify("%d day%s passed." % [n, "" if n == 1 else "s"])
+		if n > 0 and not quiet: notify("%d day%s passed." % [n, "" if n == 1 else "s"])
 	if view3d != null and view3d.visible and view3d.has_method("apply_snapshot"): view3d.apply_snapshot(D)
+	return new_alerts.size() > 0
+
+## Continuous play (spec §3.3): a day or more per tick, stopping at the first Alert.
+func toggle_play() -> void:
+	playing = not playing and String(D.get("phase", "")) != "Finished"
+	if playing: play_timer.start()
+	else: play_timer.stop()
+	_topbar_refresh_count()
+
+func _play_tick() -> void:
+	if not playing or busy: return
+	var alert := advance(play_speed, true, true)
+	if alert or String(D.get("phase", "")) == "Finished":
+		playing = false; play_timer.stop(); _topbar_refresh_count()
 
 func _alert_ids() -> Dictionary:
 	var ids := {}
@@ -159,6 +177,7 @@ func _unhandled_input(e: InputEvent) -> void:
 	elif k == KEY_0: show_screen("glossary")
 	elif k == KEY_TAB: toggle_3d()
 	elif k == KEY_SPACE: advance(1, false)
+	elif k == KEY_P: toggle_play()
 	elif k == KEY_ENTER or k == KEY_KP_ENTER: advance(60, true)
 
 # ------------------------------------------------------------------ 3D
@@ -216,6 +235,11 @@ func _topbar() -> void:
 		var b := UI.button(spec[0]); b.custom_minimum_size = Vector2(0, 40); b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		b.tooltip_text = spec[3]; b.disabled = finished
 		b.pressed.connect(advance.bind(spec[1], spec[2])); h.add_child(b)
+	var pb := UI.button("❚❚ Pause" if playing else "▶ Play", playing, 15); pb.custom_minimum_size = Vector2(96, 40); pb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	pb.tooltip_text = "Let time run day by day; stops at the next Alert (P)"; pb.disabled = finished
+	pb.pressed.connect(toggle_play); h.add_child(pb)
+	var sp := UI.segmented(["1×", "2×", "4×"], "%d×" % play_speed, func(x): play_speed = int(x.left(1)); _topbar_refresh_count(), 44)
+	sp.size_flags_vertical = Control.SIZE_SHRINK_CENTER; sp.tooltip_text = "Play speed: 4, 8 or 16 days a second"; h.add_child(sp)
 	var cont := UI.button("Continue ▸", true, 16); cont.custom_minimum_size = Vector2(132, 42); cont.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	cont.tooltip_text = "Run day by day until the next Alert (Enter)"; cont.disabled = finished
 	cont.pressed.connect(advance.bind(60, true))
@@ -301,7 +325,7 @@ func _statusbar() -> void:
 			("Mentor: %s (retired)" % mentor.get("name", "")) if mentor.get("retired", false) else ("Mentor: %s, retires after bottling" % mentor.get("name", "")), String(D.get("weatherMode", ""))]:
 		h.add_child(UI.label(txt, 13, UI.MUTED))
 	h.add_child(UI.spacer())
-	h.add_child(UI.label("1–0 screens · Space +1 day · Enter Continue · Tab 3D · Ctrl+S save", 13, UI.MUTED))
+	h.add_child(UI.label("1–0 screens · Space +1 day · P play/pause · Enter Continue · Tab 3D · Ctrl+S save", 13, UI.MUTED))
 
 func _make_toast() -> void:
 	toast = PanelContainer.new()
@@ -457,5 +481,11 @@ func _run_fuzz() -> void:
 		var e := InputEventKey.new(); e.pressed = true; e.physical_keycode = k; e.keycode = k
 		capture = false; _unhandled_input(e); capture = true
 		await get_tree().process_frame
+	# continuous play runs and stops by itself at an Alert (or keeps going); pause it after 3 s either way
+	var d0: String = D["date"]
+	play_speed = 4; toggle_play()
+	await get_tree().create_timer(3.0).timeout
+	print("FUZZ play: ", d0, " → ", D["date"], " still playing=", playing)
+	if playing: toggle_play()
 	print("FUZZ DONE date=", D["date"], " phase=", D["phase"])
 	get_tree().quit()

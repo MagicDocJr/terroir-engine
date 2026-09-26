@@ -19,7 +19,7 @@ static func build(_D: Dictionary, shell) -> Control:
 		g.add_child(p[0])
 	var k: Array = UI.panel("Controls", "")
 	k[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for pair in [["1 – 9, 0", "switch screens"], ["Space", "advance one day"], ["Enter", "Continue until the next Alert"], ["Tab", "3D walkaround (Esc to leave)"], ["Ctrl + S", "save (the game also autosaves after every advance)"]]:
+	for pair in [["1 – 9, 0", "switch screens"], ["Space", "advance one day"], ["P", "play / pause (time runs until the next Alert)"], ["Enter", "Continue until the next Alert"], ["Tab", "3D walkaround (Esc to leave)"], ["Ctrl + S", "save (the game also autosaves after every advance)"]]:
 		k[1].add_child(UI.kv(pair[0], pair[1]))
 	g.add_child(k[0])
 	v.add_child(g)
