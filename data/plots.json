@@ -1,0 +1,1674 @@
+{
+ "schemaVersion": 1,
+ "note": "Fictional Plots at real representative locations. Soil and microclimate values are design values (UNVERIFIED per Plot); TAW = rootingDepth x (1 - stones) x AWC(texture). See docs/science/regions-and-plots.md.",
+ "units": {
+  "price": "EUR per ha, bare plantable land, 2026 levels (game simplification)",
+  "tawMm": "total available water in the root zone, mm",
+  "microclimate": "0..1 relative indices used by the simulation",
+  "activeLimePct": "% active CaCO3"
+ },
+ "startingCapitalEur": 600000,
+ "regions": [
+  {
+   "id": "mosel",
+   "name": "Mosel",
+   "country": "DE",
+   "euZone": "A",
+   "appellationSystem": "German PDO Mosel (Prädikat)",
+   "weatherReference": "ERA5 cell near Bernkastel-Kues",
+   "plots": [
+    {
+     "id": "mosel-uferflur",
+     "name": "Uferflur",
+     "tier": "cheap",
+     "lat": 49.912,
+     "lon": 7.02,
+     "elevationM": 112,
+     "slopePct": 2,
+     "aspectDeg": 180,
+     "areaHa": 1.6,
+     "classification": "Mosel PDO (Qualitätswein / Prädikat eligible; flat land)",
+     "pricePerHaEur": 20000,
+     "mechanisation": "direct tractor (flat)",
+     "trainingAllowed": [
+      "Guyot",
+      "Cordon"
+     ],
+     "summary": "Flat riverbank alluvium just above the flood line: fertile, vigorous, a cold-air and fog trap.",
+     "blocks": [
+      {
+       "id": "A",
+       "name": "Riverside sand",
+       "areaHa": 0.6,
+       "soil": {
+        "texture": "loamy sand",
+        "sandPct": 70,
+        "siltPct": 20,
+        "clayPct": 10,
+        "stonesPctVol": 10,
+        "rootingDepthCm": 140,
+        "tawMm": 113,
+        "pH": 6.6,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.5,
+        "drainage": "excessive"
+       },
+       "topography": {
+        "aspectDeg": 180,
+        "slopePct": 1,
+        "elevationM": 111
+       },
+       "microclimate": {
+        "frostPocket": 0.8,
+        "fogFrequency": 0.8,
+        "windExposure": 0.3,
+        "radiativeHeat": 0.3
+       },
+       "notes": "Deep river sand: warms fast but holds little water in dry spells."
+      },
+      {
+       "id": "B",
+       "name": "Gravel terrace",
+       "areaHa": 0.5,
+       "soil": {
+        "texture": "gravelly loam",
+        "sandPct": 45,
+        "siltPct": 35,
+        "clayPct": 20,
+        "stonesPctVol": 35,
+        "rootingDepthCm": 110,
+        "tawMm": 107,
+        "pH": 6.4,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.8,
+        "drainage": "good"
+       },
+       "topography": {
+        "aspectDeg": 180,
+        "slopePct": 2,
+        "elevationM": 113
+       },
+       "microclimate": {
+        "frostPocket": 0.6,
+        "fogFrequency": 0.7,
+        "windExposure": 0.3,
+        "radiativeHeat": 0.4
+       },
+       "notes": "Old river-terrace gravels: the best-drained Block on the Plot."
+      },
+      {
+       "id": "C",
+       "name": "Silty hollow",
+       "areaHa": 0.5,
+       "soil": {
+        "texture": "silt loam",
+        "sandPct": 20,
+        "siltPct": 60,
+        "clayPct": 20,
+        "stonesPctVol": 5,
+        "rootingDepthCm": 130,
+        "tawMm": 198,
+        "pH": 6.8,
+        "activeLimePct": 0,
+        "organicMatterPct": 2.5,
+        "drainage": "poor"
+       },
+       "topography": {
+        "aspectDeg": 180,
+        "slopePct": 1,
+        "elevationM": 111
+       },
+       "microclimate": {
+        "frostPocket": 0.9,
+        "fogFrequency": 0.9,
+        "windExposure": 0.2,
+        "radiativeHeat": 0.2
+       },
+       "notes": "Lowest point: waterlogs after heavy rain; worst frost and botrytis risk."
+      }
+     ]
+    },
+    {
+     "id": "mosel-seitental",
+     "name": "Seitental",
+     "tier": "mid-low",
+     "lat": 49.925,
+     "lon": 7.085,
+     "elevationM": 190,
+     "slopePct": 18,
+     "aspectDeg": 95,
+     "areaHa": 1.4,
+     "classification": "Mosel PDO (Prädikat eligible)",
+     "pricePerHaEur": 22000,
+     "mechanisation": "direct tractor across the slope",
+     "trainingAllowed": [
+      "Guyot",
+      "Cordon"
+     ],
+     "summary": "Gentle east-facing side valley, loess over slate: morning sun, cool afternoons, late ripening.",
+     "blocks": [
+      {
+       "id": "A",
+       "name": "Deep loess",
+       "areaHa": 0.4,
+       "soil": {
+        "texture": "silt loam",
+        "sandPct": 15,
+        "siltPct": 65,
+        "clayPct": 20,
+        "stonesPctVol": 5,
+        "rootingDepthCm": 120,
+        "tawMm": 182,
+        "pH": 6.2,
+        "activeLimePct": 0,
+        "organicMatterPct": 2.0,
+        "drainage": "moderate"
+       },
+       "topography": {
+        "aspectDeg": 95,
+        "slopePct": 14,
+        "elevationM": 175
+       },
+       "microclimate": {
+        "frostPocket": 0.4,
+        "fogFrequency": 0.5,
+        "windExposure": 0.3,
+        "radiativeHeat": 0.3
+       },
+       "notes": "Loess cap: good water, vigorous vines, softer acidity."
+      },
+      {
+       "id": "B",
+       "name": "Loess over slate",
+       "areaHa": 0.4,
+       "soil": {
+        "texture": "slate loam",
+        "sandPct": 30,
+        "siltPct": 45,
+        "clayPct": 25,
+        "stonesPctVol": 35,
+        "rootingDepthCm": 90,
+        "tawMm": 82,
+        "pH": 5.8,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.8,
+        "drainage": "good"
+       },
+       "topography": {
+        "aspectDeg": 95,
+        "slopePct": 18,
+        "elevationM": 190
+       },
+       "microclimate": {
+        "frostPocket": 0.3,
+        "fogFrequency": 0.4,
+        "windExposure": 0.4,
+        "radiativeHeat": 0.4
+       },
+       "notes": "Transition zone, balanced vigour."
+      },
+      {
+       "id": "C",
+       "name": "Upper slate rib",
+       "areaHa": 0.3,
+       "soil": {
+        "texture": "slate loam",
+        "sandPct": 35,
+        "siltPct": 40,
+        "clayPct": 25,
+        "stonesPctVol": 60,
+        "rootingDepthCm": 70,
+        "tawMm": 39,
+        "pH": 5.5,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.5,
+        "drainage": "excessive"
+       },
+       "topography": {
+        "aspectDeg": 100,
+        "slopePct": 24,
+        "elevationM": 210
+       },
+       "microclimate": {
+        "frostPocket": 0.2,
+        "fogFrequency": 0.3,
+        "windExposure": 0.6,
+        "radiativeHeat": 0.5
+       },
+       "notes": "Shallow, stony, windy: small berries, drought stress in hot years."
+      },
+      {
+       "id": "D",
+       "name": "Valley floor edge",
+       "areaHa": 0.3,
+       "soil": {
+        "texture": "silt loam",
+        "sandPct": 20,
+        "siltPct": 60,
+        "clayPct": 20,
+        "stonesPctVol": 10,
+        "rootingDepthCm": 110,
+        "tawMm": 158,
+        "pH": 6.4,
+        "activeLimePct": 0,
+        "organicMatterPct": 2.2,
+        "drainage": "moderate"
+       },
+       "topography": {
+        "aspectDeg": 90,
+        "slopePct": 8,
+        "elevationM": 165
+       },
+       "microclimate": {
+        "frostPocket": 0.7,
+        "fogFrequency": 0.6,
+        "windExposure": 0.2,
+        "radiativeHeat": 0.2
+       },
+       "notes": "Cold-air drainage from the side valley collects here."
+      }
+     ]
+    },
+    {
+     "id": "mosel-blauschiefer",
+     "name": "Blauschiefer-Hang",
+     "tier": "mid-high",
+     "lat": 49.943,
+     "lon": 7.045,
+     "elevationM": 170,
+     "slopePct": 55,
+     "aspectDeg": 215,
+     "areaHa": 1.2,
+     "classification": "Mosel PDO (Prädikat eligible; single-vineyard name needs ≥85 % Riesling or Pinot Noir)",
+     "pricePerHaEur": 45000,
+     "mechanisation": "winch (Seilzug)",
+     "trainingAllowed": [
+      "Einzelpfahl",
+      "Guyot"
+     ],
+     "summary": "Steep SW-facing blue Devonian slate: the classic Middle Mosel Riesling slope.",
+     "blocks": [
+      {
+       "id": "A",
+       "name": "Top edge",
+       "areaHa": 0.2,
+       "soil": {
+        "texture": "slate loam",
+        "sandPct": 35,
+        "siltPct": 40,
+        "clayPct": 25,
+        "stonesPctVol": 65,
+        "rootingDepthCm": 80,
+        "tawMm": 39,
+        "pH": 5.4,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.4,
+        "drainage": "excessive"
+       },
+       "topography": {
+        "aspectDeg": 215,
+        "slopePct": 50,
+        "elevationM": 235
+       },
+       "microclimate": {
+        "frostPocket": 0.1,
+        "fogFrequency": 0.2,
+        "windExposure": 0.7,
+        "radiativeHeat": 0.6
+       },
+       "notes": "Windy, below the forest edge: coolest part of the slope."
+      },
+      {
+       "id": "B",
+       "name": "Upper core",
+       "areaHa": 0.3,
+       "soil": {
+        "texture": "slate loam",
+        "sandPct": 35,
+        "siltPct": 40,
+        "clayPct": 25,
+        "stonesPctVol": 60,
+        "rootingDepthCm": 90,
+        "tawMm": 50,
+        "pH": 5.5,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.5,
+        "drainage": "excessive"
+       },
+       "topography": {
+        "aspectDeg": 215,
+        "slopePct": 58,
+        "elevationM": 200
+       },
+       "microclimate": {
+        "frostPocket": 0.1,
+        "fogFrequency": 0.3,
+        "windExposure": 0.5,
+        "radiativeHeat": 0.8
+       },
+       "notes": "Classic flaky blue slate, heat-storing."
+      },
+      {
+       "id": "C",
+       "name": "Rocky rib",
+       "areaHa": 0.2,
+       "soil": {
+        "texture": "slate loam",
+        "sandPct": 40,
+        "siltPct": 35,
+        "clayPct": 25,
+        "stonesPctVol": 75,
+        "rootingDepthCm": 70,
+        "tawMm": 24,
+        "pH": 5.3,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.2,
+        "drainage": "excessive"
+       },
+       "topography": {
+        "aspectDeg": 205,
+        "slopePct": 65,
+        "elevationM": 185
+       },
+       "microclimate": {
+        "frostPocket": 0.1,
+        "fogFrequency": 0.3,
+        "windExposure": 0.5,
+        "radiativeHeat": 1.0
+       },
+       "notes": "Bare rock ribs: highest radiation, earliest ripening, drought-prone."
+      },
+      {
+       "id": "D",
+       "name": "Lower core",
+       "areaHa": 0.3,
+       "soil": {
+        "texture": "slate loam",
+        "sandPct": 30,
+        "siltPct": 45,
+        "clayPct": 25,
+        "stonesPctVol": 50,
+        "rootingDepthCm": 110,
+        "tawMm": 77,
+        "pH": 5.7,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.8,
+        "drainage": "good"
+       },
+       "topography": {
+        "aspectDeg": 215,
+        "slopePct": 55,
+        "elevationM": 155
+       },
+       "microclimate": {
+        "frostPocket": 0.2,
+        "fogFrequency": 0.5,
+        "windExposure": 0.4,
+        "radiativeHeat": 0.7
+       },
+       "notes": "Colluvium collects here: a little more water and vigour."
+      },
+      {
+       "id": "E",
+       "name": "Foot of slope",
+       "areaHa": 0.2,
+       "soil": {
+        "texture": "loam",
+        "sandPct": 30,
+        "siltPct": 45,
+        "clayPct": 25,
+        "stonesPctVol": 35,
+        "rootingDepthCm": 130,
+        "tawMm": 131,
+        "pH": 6.0,
+        "activeLimePct": 0,
+        "organicMatterPct": 2.0,
+        "drainage": "good"
+       },
+       "topography": {
+        "aspectDeg": 210,
+        "slopePct": 30,
+        "elevationM": 125
+       },
+       "microclimate": {
+        "frostPocket": 0.4,
+        "fogFrequency": 0.7,
+        "windExposure": 0.2,
+        "radiativeHeat": 0.4
+       },
+       "notes": "Near the road and river: morning fog lingers and botrytis comes early."
+      }
+     ]
+    },
+    {
+     "id": "mosel-terrassen",
+     "name": "Terrassen-Steilstlage",
+     "tier": "expensive",
+     "lat": 49.981,
+     "lon": 7.022,
+     "elevationM": 190,
+     "slopePct": 70,
+     "aspectDeg": 180,
+     "areaHa": 0.8,
+     "classification": "Mosel PDO (Prädikat eligible; single-vineyard name needs ≥85 % Riesling or Pinot Noir)",
+     "pricePerHaEur": 80000,
+     "mechanisation": "hand only (monorack for transport)",
+     "trainingAllowed": [
+      "Einzelpfahl"
+     ],
+     "summary": "Very steep south-facing slate terraces with dry-stone walls: the most heat and the most labour.",
+     "blocks": [
+      {
+       "id": "A",
+       "name": "Red slate terraces",
+       "areaHa": 0.2,
+       "soil": {
+        "texture": "slate loam",
+        "sandPct": 40,
+        "siltPct": 35,
+        "clayPct": 25,
+        "stonesPctVol": 65,
+        "rootingDepthCm": 80,
+        "tawMm": 39,
+        "pH": 5.9,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.3,
+        "drainage": "excessive"
+       },
+       "topography": {
+        "aspectDeg": 180,
+        "slopePct": 72,
+        "elevationM": 170
+       },
+       "microclimate": {
+        "frostPocket": 0.0,
+        "fogFrequency": 0.3,
+        "windExposure": 0.4,
+        "radiativeHeat": 0.9
+       },
+       "notes": "Iron-rich red slate: warm, spicy style (UNVERIFIED sensory link)."
+      },
+      {
+       "id": "B",
+       "name": "Blue slate terraces",
+       "areaHa": 0.25,
+       "soil": {
+        "texture": "slate loam",
+        "sandPct": 35,
+        "siltPct": 40,
+        "clayPct": 25,
+        "stonesPctVol": 65,
+        "rootingDepthCm": 80,
+        "tawMm": 39,
+        "pH": 5.4,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.3,
+        "drainage": "excessive"
+       },
+       "topography": {
+        "aspectDeg": 180,
+        "slopePct": 70,
+        "elevationM": 190
+       },
+       "microclimate": {
+        "frostPocket": 0.0,
+        "fogFrequency": 0.3,
+        "windExposure": 0.4,
+        "radiativeHeat": 0.9
+       },
+       "notes": "Classic blue slate."
+      },
+      {
+       "id": "C",
+       "name": "Wall-foot heat trap",
+       "areaHa": 0.15,
+       "soil": {
+        "texture": "slate loam",
+        "sandPct": 40,
+        "siltPct": 35,
+        "clayPct": 25,
+        "stonesPctVol": 70,
+        "rootingDepthCm": 60,
+        "tawMm": 25,
+        "pH": 5.5,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.0,
+        "drainage": "excessive"
+       },
+       "topography": {
+        "aspectDeg": 175,
+        "slopePct": 75,
+        "elevationM": 160
+       },
+       "microclimate": {
+        "frostPocket": 0.0,
+        "fogFrequency": 0.3,
+        "windExposure": 0.2,
+        "radiativeHeat": 1.0
+       },
+       "notes": "Right under south-facing dry-stone walls: radiant heat, sunburn risk in heatwaves."
+      },
+      {
+       "id": "D",
+       "name": "Upper terrace, forest edge",
+       "areaHa": 0.2,
+       "soil": {
+        "texture": "slate loam",
+        "sandPct": 35,
+        "siltPct": 40,
+        "clayPct": 25,
+        "stonesPctVol": 55,
+        "rootingDepthCm": 90,
+        "tawMm": 57,
+        "pH": 5.2,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.6,
+        "drainage": "excessive"
+       },
+       "topography": {
+        "aspectDeg": 185,
+        "slopePct": 65,
+        "elevationM": 245
+       },
+       "microclimate": {
+        "frostPocket": 0.1,
+        "fogFrequency": 0.2,
+        "windExposure": 0.6,
+        "radiativeHeat": 0.6
+       },
+       "notes": "Cooler, later, more acidity."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cote-dor",
+   "name": "Côte d'Or",
+   "country": "FR",
+   "euZone": "C I (UNVERIFIED)",
+   "appellationSystem": "AOC (regional / village / premier cru / grand cru)",
+   "weatherReference": "ERA5 cell near Beaune",
+   "plots": [
+    {
+     "id": "cotedor-plaine",
+     "name": "Plaine des Bas",
+     "tier": "cheap",
+     "lat": 46.975,
+     "lon": 4.79,
+     "elevationM": 215,
+     "slopePct": 1,
+     "aspectDeg": 110,
+     "areaHa": 1.0,
+     "classification": "Bourgogne AOC (regional)",
+     "pricePerHaEur": 150000,
+     "mechanisation": "straddle tractor",
+     "trainingAllowed": [
+      "Guyot",
+      "Cordon"
+     ],
+     "summary": "Flat land below the slope: deep clay, fertile, frost-prone. Bourgogne AOC only.",
+     "blocks": [
+      {
+       "id": "A",
+       "name": "Heavy clay",
+       "areaHa": 0.35,
+       "soil": {
+        "texture": "clay",
+        "sandPct": 20,
+        "siltPct": 30,
+        "clayPct": 50,
+        "stonesPctVol": 5,
+        "rootingDepthCm": 140,
+        "tawMm": 213,
+        "pH": 7.8,
+        "activeLimePct": 4,
+        "organicMatterPct": 2.2,
+        "drainage": "poor"
+       },
+       "topography": {
+        "aspectDeg": 110,
+        "slopePct": 1,
+        "elevationM": 214
+       },
+       "microclimate": {
+        "frostPocket": 0.7,
+        "fogFrequency": 0.4,
+        "windExposure": 0.2,
+        "radiativeHeat": 0.3
+       },
+       "notes": "Cold, wet clay: late budburst but high frost and rot risk."
+      },
+      {
+       "id": "B",
+       "name": "Silty clay",
+       "areaHa": 0.35,
+       "soil": {
+        "texture": "silty clay",
+        "sandPct": 15,
+        "siltPct": 45,
+        "clayPct": 40,
+        "stonesPctVol": 5,
+        "rootingDepthCm": 130,
+        "tawMm": 198,
+        "pH": 7.9,
+        "activeLimePct": 5,
+        "organicMatterPct": 2.0,
+        "drainage": "moderate"
+       },
+       "topography": {
+        "aspectDeg": 110,
+        "slopePct": 1,
+        "elevationM": 215
+       },
+       "microclimate": {
+        "frostPocket": 0.6,
+        "fogFrequency": 0.4,
+        "windExposure": 0.2,
+        "radiativeHeat": 0.3
+       },
+       "notes": "Vigorous; big crops unless you prune hard."
+      },
+      {
+       "id": "C",
+       "name": "Gravel lens",
+       "areaHa": 0.3,
+       "soil": {
+        "texture": "gravelly loam",
+        "sandPct": 40,
+        "siltPct": 35,
+        "clayPct": 25,
+        "stonesPctVol": 30,
+        "rootingDepthCm": 100,
+        "tawMm": 105,
+        "pH": 8.0,
+        "activeLimePct": 6,
+        "organicMatterPct": 1.6,
+        "drainage": "good"
+       },
+       "topography": {
+        "aspectDeg": 110,
+        "slopePct": 2,
+        "elevationM": 217
+       },
+       "microclimate": {
+        "frostPocket": 0.5,
+        "fogFrequency": 0.3,
+        "windExposure": 0.3,
+        "radiativeHeat": 0.4
+       },
+       "notes": "Old stream gravels: best-drained Block on the flats."
+      }
+     ]
+    },
+    {
+     "id": "cotedor-hautes",
+     "name": "Plateau des Hautes",
+     "tier": "mid-low",
+     "lat": 47.03,
+     "lon": 4.735,
+     "elevationM": 420,
+     "slopePct": 6,
+     "aspectDeg": 150,
+     "areaHa": 1.2,
+     "classification": "Bourgogne Hautes-Côtes de Beaune AOC (regional)",
+     "pricePerHaEur": 70000,
+     "mechanisation": "straddle tractor",
+     "trainingAllowed": [
+      "Guyot",
+      "Cordon"
+     ],
+     "summary": "Hautes-Côtes plateau at ~400 m: cool, windy, late-ripening limestone.",
+     "blocks": [
+      {
+       "id": "A",
+       "name": "Thin rendzina",
+       "areaHa": 0.3,
+       "soil": {
+        "texture": "clay loam",
+        "sandPct": 25,
+        "siltPct": 40,
+        "clayPct": 35,
+        "stonesPctVol": 45,
+        "rootingDepthCm": 45,
+        "tawMm": 38,
+        "pH": 8.2,
+        "activeLimePct": 18,
+        "organicMatterPct": 3.0,
+        "drainage": "excessive"
+       },
+       "topography": {
+        "aspectDeg": 150,
+        "slopePct": 8,
+        "elevationM": 430
+       },
+       "microclimate": {
+        "frostPocket": 0.2,
+        "fogFrequency": 0.3,
+        "windExposure": 0.7,
+        "radiativeHeat": 0.3
+       },
+       "notes": "Very high active lime: severe chlorosis risk unless a lime-tolerant rootstock is used."
+      },
+      {
+       "id": "B",
+       "name": "Marly clay",
+       "areaHa": 0.35,
+       "soil": {
+        "texture": "clay loam",
+        "sandPct": 20,
+        "siltPct": 40,
+        "clayPct": 40,
+        "stonesPctVol": 20,
+        "rootingDepthCm": 90,
+        "tawMm": 112,
+        "pH": 8.0,
+        "activeLimePct": 10,
+        "organicMatterPct": 2.5,
+        "drainage": "moderate"
+       },
+       "topography": {
+        "aspectDeg": 150,
+        "slopePct": 5,
+        "elevationM": 420
+       },
+       "microclimate": {
+        "frostPocket": 0.3,
+        "fogFrequency": 0.3,
+        "windExposure": 0.5,
+        "radiativeHeat": 0.3
+       },
+       "notes": "Water-holding marls: the steadiest Block."
+      },
+      {
+       "id": "C",
+       "name": "Wind-exposed edge",
+       "areaHa": 0.25,
+       "soil": {
+        "texture": "clay loam",
+        "sandPct": 25,
+        "siltPct": 40,
+        "clayPct": 35,
+        "stonesPctVol": 35,
+        "rootingDepthCm": 60,
+        "tawMm": 60,
+        "pH": 8.1,
+        "activeLimePct": 14,
+        "organicMatterPct": 2.6,
+        "drainage": "good"
+       },
+       "topography": {
+        "aspectDeg": 170,
+        "slopePct": 7,
+        "elevationM": 435
+       },
+       "microclimate": {
+        "frostPocket": 0.1,
+        "fogFrequency": 0.2,
+        "windExposure": 0.9,
+        "radiativeHeat": 0.2
+       },
+       "notes": "Dries fast after rain (less rot) but ripens last."
+      },
+      {
+       "id": "D",
+       "name": "Sheltered combe",
+       "areaHa": 0.3,
+       "soil": {
+        "texture": "clay loam",
+        "sandPct": 20,
+        "siltPct": 45,
+        "clayPct": 35,
+        "stonesPctVol": 15,
+        "rootingDepthCm": 100,
+        "tawMm": 132,
+        "pH": 7.9,
+        "activeLimePct": 8,
+        "organicMatterPct": 2.4,
+        "drainage": "moderate"
+       },
+       "topography": {
+        "aspectDeg": 140,
+        "slopePct": 4,
+        "elevationM": 405
+       },
+       "microclimate": {
+        "frostPocket": 0.5,
+        "fogFrequency": 0.4,
+        "windExposure": 0.3,
+        "radiativeHeat": 0.4
+       },
+       "notes": "Warmest spot, but cold air pools on clear spring nights."
+      }
+     ]
+    },
+    {
+     "id": "cotedor-village",
+     "name": "Mi-Côte Villages",
+     "tier": "mid-high",
+     "lat": 46.992,
+     "lon": 4.765,
+     "elevationM": 290,
+     "slopePct": 9,
+     "aspectDeg": 120,
+     "areaHa": 0.5,
+     "classification": "Village AOC (Côte de Beaune village; fictional commune permitting red and white)",
+     "pricePerHaEur": 900000,
+     "mechanisation": "straddle tractor",
+     "trainingAllowed": [
+      "Guyot",
+      "Cordon"
+     ],
+     "summary": "Village-level mid-slope on marl and limestone, ESE-facing.",
+     "blocks": [
+      {
+       "id": "A",
+       "name": "Marl-rich",
+       "areaHa": 0.15,
+       "soil": {
+        "texture": "clay loam",
+        "sandPct": 20,
+        "siltPct": 40,
+        "clayPct": 40,
+        "stonesPctVol": 20,
+        "rootingDepthCm": 100,
+        "tawMm": 124,
+        "pH": 8.0,
+        "activeLimePct": 10,
+        "organicMatterPct": 2.2,
+        "drainage": "moderate"
+       },
+       "topography": {
+        "aspectDeg": 120,
+        "slopePct": 8,
+        "elevationM": 285
+       },
+       "microclimate": {
+        "frostPocket": 0.2,
+        "fogFrequency": 0.2,
+        "windExposure": 0.3,
+        "radiativeHeat": 0.5
+       },
+       "notes": "Marl gives body; watch vigour in wet years."
+      },
+      {
+       "id": "B",
+       "name": "Limestone scree",
+       "areaHa": 0.12,
+       "soil": {
+        "texture": "clay loam",
+        "sandPct": 30,
+        "siltPct": 35,
+        "clayPct": 35,
+        "stonesPctVol": 50,
+        "rootingDepthCm": 70,
+        "tawMm": 54,
+        "pH": 8.1,
+        "activeLimePct": 6,
+        "organicMatterPct": 1.8,
+        "drainage": "good"
+       },
+       "topography": {
+        "aspectDeg": 115,
+        "slopePct": 11,
+        "elevationM": 300
+       },
+       "microclimate": {
+        "frostPocket": 0.1,
+        "fogFrequency": 0.2,
+        "windExposure": 0.4,
+        "radiativeHeat": 0.6
+       },
+       "notes": "Stony, well-drained: finer, more mineral style (UNVERIFIED sensory link)."
+      },
+      {
+       "id": "C",
+       "name": "Brown calcareous",
+       "areaHa": 0.13,
+       "soil": {
+        "texture": "loam",
+        "sandPct": 30,
+        "siltPct": 40,
+        "clayPct": 30,
+        "stonesPctVol": 15,
+        "rootingDepthCm": 120,
+        "tawMm": 158,
+        "pH": 7.8,
+        "activeLimePct": 5,
+        "organicMatterPct": 2.0,
+        "drainage": "good"
+       },
+       "topography": {
+        "aspectDeg": 120,
+        "slopePct": 7,
+        "elevationM": 280
+       },
+       "microclimate": {
+        "frostPocket": 0.2,
+        "fogFrequency": 0.2,
+        "windExposure": 0.3,
+        "radiativeHeat": 0.5
+       },
+       "notes": "The deepest, most balanced soil."
+      },
+      {
+       "id": "D",
+       "name": "Upper stony",
+       "areaHa": 0.1,
+       "soil": {
+        "texture": "clay loam",
+        "sandPct": 30,
+        "siltPct": 35,
+        "clayPct": 35,
+        "stonesPctVol": 55,
+        "rootingDepthCm": 55,
+        "tawMm": 38,
+        "pH": 8.2,
+        "activeLimePct": 8,
+        "organicMatterPct": 1.6,
+        "drainage": "excessive"
+       },
+       "topography": {
+        "aspectDeg": 115,
+        "slopePct": 13,
+        "elevationM": 310
+       },
+       "microclimate": {
+        "frostPocket": 0.1,
+        "fogFrequency": 0.1,
+        "windExposure": 0.5,
+        "radiativeHeat": 0.6
+       },
+       "notes": "Thin soil near the hill forest; drought stress in hot years."
+      }
+     ]
+    },
+    {
+     "id": "cotedor-premiercru",
+     "name": "Clos du Premier",
+     "tier": "expensive",
+     "lat": 47.005,
+     "lon": 4.77,
+     "elevationM": 275,
+     "slopePct": 12,
+     "aspectDeg": 110,
+     "areaHa": 0.5,
+     "classification": "Premier Cru AOC (fictional climat)",
+     "pricePerHaEur": 2500000,
+     "mechanisation": "straddle tractor",
+     "trainingAllowed": [
+      "Guyot",
+      "Cordon"
+     ],
+     "summary": "Premier Cru mid-slope: thin limestone rubble facing E/SE, the sweet spot of the Côte.",
+     "blocks": [
+      {
+       "id": "A",
+       "name": "Thin rubble on limestone",
+       "areaHa": 0.15,
+       "soil": {
+        "texture": "clay loam",
+        "sandPct": 30,
+        "siltPct": 35,
+        "clayPct": 35,
+        "stonesPctVol": 55,
+        "rootingDepthCm": 60,
+        "tawMm": 42,
+        "pH": 8.1,
+        "activeLimePct": 8,
+        "organicMatterPct": 1.8,
+        "drainage": "good"
+       },
+       "topography": {
+        "aspectDeg": 110,
+        "slopePct": 13,
+        "elevationM": 285
+       },
+       "microclimate": {
+        "frostPocket": 0.1,
+        "fogFrequency": 0.1,
+        "windExposure": 0.3,
+        "radiativeHeat": 0.7
+       },
+       "notes": "Classic 1er Cru soil: low vigour, small berries."
+      },
+      {
+       "id": "B",
+       "name": "Red iron clay pocket",
+       "areaHa": 0.12,
+       "soil": {
+        "texture": "clay",
+        "sandPct": 20,
+        "siltPct": 30,
+        "clayPct": 50,
+        "stonesPctVol": 25,
+        "rootingDepthCm": 90,
+        "tawMm": 108,
+        "pH": 7.7,
+        "activeLimePct": 4,
+        "organicMatterPct": 2.2,
+        "drainage": "moderate"
+       },
+       "topography": {
+        "aspectDeg": 110,
+        "slopePct": 10,
+        "elevationM": 275
+       },
+       "microclimate": {
+        "frostPocket": 0.1,
+        "fogFrequency": 0.1,
+        "windExposure": 0.3,
+        "radiativeHeat": 0.6
+       },
+       "notes": "Iron-rich clay: firmer tannin in Pinot Noir (UNVERIFIED sensory link)."
+      },
+      {
+       "id": "C",
+       "name": "Mid-slope core",
+       "areaHa": 0.13,
+       "soil": {
+        "texture": "clay loam",
+        "sandPct": 25,
+        "siltPct": 40,
+        "clayPct": 35,
+        "stonesPctVol": 40,
+        "rootingDepthCm": 80,
+        "tawMm": 74,
+        "pH": 8.0,
+        "activeLimePct": 6,
+        "organicMatterPct": 2.0,
+        "drainage": "good"
+       },
+       "topography": {
+        "aspectDeg": 110,
+        "slopePct": 12,
+        "elevationM": 270
+       },
+       "microclimate": {
+        "frostPocket": 0.1,
+        "fogFrequency": 0.1,
+        "windExposure": 0.3,
+        "radiativeHeat": 0.7
+       },
+       "notes": "Balanced."
+      },
+      {
+       "id": "D",
+       "name": "Lower colluvium",
+       "areaHa": 0.1,
+       "soil": {
+        "texture": "loam",
+        "sandPct": 30,
+        "siltPct": 40,
+        "clayPct": 30,
+        "stonesPctVol": 20,
+        "rootingDepthCm": 110,
+        "tawMm": 136,
+        "pH": 7.8,
+        "activeLimePct": 5,
+        "organicMatterPct": 2.2,
+        "drainage": "moderate"
+       },
+       "topography": {
+        "aspectDeg": 105,
+        "slopePct": 8,
+        "elevationM": 260
+       },
+       "microclimate": {
+        "frostPocket": 0.3,
+        "fogFrequency": 0.2,
+        "windExposure": 0.2,
+        "radiativeHeat": 0.5
+       },
+       "notes": "Deeper and richer: more yield, less concentration."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "napa",
+   "name": "Napa Valley",
+   "country": "US",
+   "euZone": null,
+   "appellationSystem": "AVA (Napa Valley + sub-AVAs)",
+   "weatherReference": "ERA5 cell near Oakville",
+   "plots": [
+    {
+     "id": "napa-floor",
+     "name": "Valley Floor Loam",
+     "tier": "cheap",
+     "lat": 38.37,
+     "lon": -122.33,
+     "elevationM": 25,
+     "slopePct": 1,
+     "aspectDeg": 180,
+     "areaHa": 1.0,
+     "classification": "Napa Valley AVA",
+     "pricePerHaEur": 330000,
+     "mechanisation": "tractor, machine harvest possible",
+     "trainingAllowed": [
+      "Cordon",
+      "Guyot"
+     ],
+     "summary": "Heavy valley-floor loam: vigorous, frost in low spots, irrigation available.",
+     "blocks": [
+      {
+       "id": "A",
+       "name": "Clay loam",
+       "areaHa": 0.4,
+       "soil": {
+        "texture": "clay loam",
+        "sandPct": 30,
+        "siltPct": 35,
+        "clayPct": 35,
+        "stonesPctVol": 5,
+        "rootingDepthCm": 150,
+        "tawMm": 221,
+        "pH": 6.8,
+        "activeLimePct": 0,
+        "organicMatterPct": 2.2,
+        "drainage": "moderate"
+       },
+       "topography": {
+        "aspectDeg": 180,
+        "slopePct": 1,
+        "elevationM": 26
+       },
+       "microclimate": {
+        "frostPocket": 0.6,
+        "fogFrequency": 0.4,
+        "windExposure": 0.3,
+        "radiativeHeat": 0.4
+       },
+       "notes": "Deep, fertile: high vigour and yield."
+      },
+      {
+       "id": "B",
+       "name": "Low swale",
+       "areaHa": 0.3,
+       "soil": {
+        "texture": "silty clay",
+        "sandPct": 15,
+        "siltPct": 45,
+        "clayPct": 40,
+        "stonesPctVol": 5,
+        "rootingDepthCm": 150,
+        "tawMm": 228,
+        "pH": 7.0,
+        "activeLimePct": 0,
+        "organicMatterPct": 2.5,
+        "drainage": "poor"
+       },
+       "topography": {
+        "aspectDeg": 180,
+        "slopePct": 1,
+        "elevationM": 23
+       },
+       "microclimate": {
+        "frostPocket": 0.9,
+        "fogFrequency": 0.5,
+        "windExposure": 0.2,
+        "radiativeHeat": 0.3
+       },
+       "notes": "Frost pocket: needs the wind machine in April."
+      },
+      {
+       "id": "C",
+       "name": "Loam rise",
+       "areaHa": 0.3,
+       "soil": {
+        "texture": "loam",
+        "sandPct": 40,
+        "siltPct": 40,
+        "clayPct": 20,
+        "stonesPctVol": 10,
+        "rootingDepthCm": 130,
+        "tawMm": 181,
+        "pH": 6.7,
+        "activeLimePct": 0,
+        "organicMatterPct": 2.0,
+        "drainage": "good"
+       },
+       "topography": {
+        "aspectDeg": 180,
+        "slopePct": 2,
+        "elevationM": 28
+       },
+       "microclimate": {
+        "frostPocket": 0.4,
+        "fogFrequency": 0.4,
+        "windExposure": 0.3,
+        "radiativeHeat": 0.5
+       },
+       "notes": "Slightly raised, better drained."
+      }
+     ]
+    },
+    {
+     "id": "napa-carneros",
+     "name": "Carneros Clay",
+     "tier": "mid-low",
+     "lat": 38.255,
+     "lon": -122.3,
+     "elevationM": 20,
+     "slopePct": 4,
+     "aspectDeg": 200,
+     "areaHa": 1.2,
+     "classification": "Los Carneros AVA (label must also say Napa Valley)",
+     "pricePerHaEur": 270000,
+     "mechanisation": "tractor",
+     "trainingAllowed": [
+      "Guyot",
+      "Cordon"
+     ],
+     "summary": "Carneros: cool, foggy, windy, shallow clay over claypan. Better for Pinot Noir and Chardonnay than for Cabernet.",
+     "blocks": [
+      {
+       "id": "A",
+       "name": "Shallow clay over claypan",
+       "areaHa": 0.35,
+       "soil": {
+        "texture": "clay loam",
+        "sandPct": 25,
+        "siltPct": 35,
+        "clayPct": 40,
+        "stonesPctVol": 10,
+        "rootingDepthCm": 60,
+        "tawMm": 84,
+        "pH": 6.5,
+        "activeLimePct": 0,
+        "organicMatterPct": 2.0,
+        "drainage": "poor"
+       },
+       "topography": {
+        "aspectDeg": 200,
+        "slopePct": 3,
+        "elevationM": 18
+       },
+       "microclimate": {
+        "frostPocket": 0.3,
+        "fogFrequency": 0.8,
+        "windExposure": 0.7,
+        "radiativeHeat": 0.3
+       },
+       "notes": "Claypan limits roots: low vigour, water stress late season."
+      },
+      {
+       "id": "B",
+       "name": "Windy knoll",
+       "areaHa": 0.3,
+       "soil": {
+        "texture": "clay loam",
+        "sandPct": 30,
+        "siltPct": 35,
+        "clayPct": 35,
+        "stonesPctVol": 20,
+        "rootingDepthCm": 50,
+        "tawMm": 62,
+        "pH": 6.6,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.8,
+        "drainage": "moderate"
+       },
+       "topography": {
+        "aspectDeg": 210,
+        "slopePct": 6,
+        "elevationM": 30
+       },
+       "microclimate": {
+        "frostPocket": 0.1,
+        "fogFrequency": 0.7,
+        "windExposure": 0.9,
+        "radiativeHeat": 0.3
+       },
+       "notes": "Afternoon bay wind: thick skins, slow ripening."
+      },
+      {
+       "id": "C",
+       "name": "Swale",
+       "areaHa": 0.3,
+       "soil": {
+        "texture": "clay",
+        "sandPct": 20,
+        "siltPct": 30,
+        "clayPct": 50,
+        "stonesPctVol": 5,
+        "rootingDepthCm": 100,
+        "tawMm": 152,
+        "pH": 6.8,
+        "activeLimePct": 0,
+        "organicMatterPct": 2.4,
+        "drainage": "poor"
+       },
+       "topography": {
+        "aspectDeg": 190,
+        "slopePct": 2,
+        "elevationM": 15
+       },
+       "microclimate": {
+        "frostPocket": 0.5,
+        "fogFrequency": 0.8,
+        "windExposure": 0.5,
+        "radiativeHeat": 0.3
+       },
+       "notes": "Deeper clay: more water, more vigour, more mildew."
+      },
+      {
+       "id": "D",
+       "name": "Bay-facing slope",
+       "areaHa": 0.25,
+       "soil": {
+        "texture": "clay loam",
+        "sandPct": 25,
+        "siltPct": 35,
+        "clayPct": 40,
+        "stonesPctVol": 15,
+        "rootingDepthCm": 70,
+        "tawMm": 92,
+        "pH": 6.6,
+        "activeLimePct": 0,
+        "organicMatterPct": 2.0,
+        "drainage": "moderate"
+       },
+       "topography": {
+        "aspectDeg": 180,
+        "slopePct": 5,
+        "elevationM": 22
+       },
+       "microclimate": {
+        "frostPocket": 0.2,
+        "fogFrequency": 0.9,
+        "windExposure": 0.7,
+        "radiativeHeat": 0.3
+       },
+       "notes": "Fog sits here longest each morning."
+      }
+     ]
+    },
+    {
+     "id": "napa-mountain",
+     "name": "Mountain Volcanic",
+     "tier": "mid-high",
+     "lat": 38.38,
+     "lon": -122.41,
+     "elevationM": 420,
+     "slopePct": 28,
+     "aspectDeg": 120,
+     "areaHa": 0.8,
+     "classification": "Mountain sub-AVA (e.g. Mount Veeder-type), Napa Valley",
+     "pricePerHaEur": 300000,
+     "mechanisation": "small tracked tractor, hand harvest",
+     "trainingAllowed": [
+      "Cordon",
+      "Guyot"
+     ],
+     "summary": "Hillside above the fog line: thin volcanic and sedimentary soils, low yields, firm tannin.",
+     "blocks": [
+      {
+       "id": "A",
+       "name": "Volcanic tuff",
+       "areaHa": 0.25,
+       "soil": {
+        "texture": "loam",
+        "sandPct": 40,
+        "siltPct": 40,
+        "clayPct": 20,
+        "stonesPctVol": 40,
+        "rootingDepthCm": 60,
+        "tawMm": 56,
+        "pH": 6.0,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.8,
+        "drainage": "excessive"
+       },
+       "topography": {
+        "aspectDeg": 120,
+        "slopePct": 25,
+        "elevationM": 410
+       },
+       "microclimate": {
+        "frostPocket": 0.0,
+        "fogFrequency": 0.1,
+        "windExposure": 0.5,
+        "radiativeHeat": 0.6
+       },
+       "notes": "Thin tuff: tiny berries, intense colour."
+      },
+      {
+       "id": "B",
+       "name": "Rocky ridge",
+       "areaHa": 0.2,
+       "soil": {
+        "texture": "gravelly loam",
+        "sandPct": 45,
+        "siltPct": 35,
+        "clayPct": 20,
+        "stonesPctVol": 60,
+        "rootingDepthCm": 50,
+        "tawMm": 30,
+        "pH": 5.9,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.5,
+        "drainage": "excessive"
+       },
+       "topography": {
+        "aspectDeg": 110,
+        "slopePct": 35,
+        "elevationM": 450
+       },
+       "microclimate": {
+        "frostPocket": 0.0,
+        "fogFrequency": 0.0,
+        "windExposure": 0.8,
+        "radiativeHeat": 0.7
+       },
+       "notes": "Most exposed: sun and wind, lowest yield."
+      },
+      {
+       "id": "C",
+       "name": "Colluvial bench",
+       "areaHa": 0.2,
+       "soil": {
+        "texture": "loam",
+        "sandPct": 35,
+        "siltPct": 40,
+        "clayPct": 25,
+        "stonesPctVol": 25,
+        "rootingDepthCm": 100,
+        "tawMm": 116,
+        "pH": 6.2,
+        "activeLimePct": 0,
+        "organicMatterPct": 2.2,
+        "drainage": "good"
+       },
+       "topography": {
+        "aspectDeg": 125,
+        "slopePct": 15,
+        "elevationM": 400
+       },
+       "microclimate": {
+        "frostPocket": 0.1,
+        "fogFrequency": 0.1,
+        "windExposure": 0.4,
+        "radiativeHeat": 0.5
+       },
+       "notes": "Deeper pocket: the most generous Block up here."
+      },
+      {
+       "id": "D",
+       "name": "North-facing shoulder",
+       "areaHa": 0.15,
+       "soil": {
+        "texture": "loam",
+        "sandPct": 40,
+        "siltPct": 40,
+        "clayPct": 20,
+        "stonesPctVol": 35,
+        "rootingDepthCm": 80,
+        "tawMm": 81,
+        "pH": 6.1,
+        "activeLimePct": 0,
+        "organicMatterPct": 2.0,
+        "drainage": "good"
+       },
+       "topography": {
+        "aspectDeg": 20,
+        "slopePct": 20,
+        "elevationM": 430
+       },
+       "microclimate": {
+        "frostPocket": 0.1,
+        "fogFrequency": 0.1,
+        "windExposure": 0.5,
+        "radiativeHeat": 0.2
+       },
+       "notes": "Cooler, later: freshness in hot years."
+      }
+     ]
+    },
+    {
+     "id": "napa-bench",
+     "name": "Rutherford Bench",
+     "tier": "expensive",
+     "lat": 38.458,
+     "lon": -122.425,
+     "elevationM": 60,
+     "slopePct": 3,
+     "aspectDeg": 90,
+     "areaHa": 1.0,
+     "classification": "Rutherford AVA (Napa Valley)",
+     "pricePerHaEur": 510000,
+     "mechanisation": "tractor",
+     "trainingAllowed": [
+      "Cordon",
+      "Guyot"
+     ],
+     "summary": "Gravelly alluvial fan (the 'bench'): the benchmark Cabernet Sauvignon site.",
+     "blocks": [
+      {
+       "id": "A",
+       "name": "Gravelly fan",
+       "areaHa": 0.3,
+       "soil": {
+        "texture": "gravelly loam",
+        "sandPct": 45,
+        "siltPct": 35,
+        "clayPct": 20,
+        "stonesPctVol": 35,
+        "rootingDepthCm": 120,
+        "tawMm": 117,
+        "pH": 6.5,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.8,
+        "drainage": "good"
+       },
+       "topography": {
+        "aspectDeg": 90,
+        "slopePct": 3,
+        "elevationM": 62
+       },
+       "microclimate": {
+        "frostPocket": 0.2,
+        "fogFrequency": 0.3,
+        "windExposure": 0.3,
+        "radiativeHeat": 0.5
+       },
+       "notes": "Classic bench gravel: moderate vigour, ripe tannin."
+      },
+      {
+       "id": "B",
+       "name": "Cobbly apex",
+       "areaHa": 0.25,
+       "soil": {
+        "texture": "gravelly loam",
+        "sandPct": 50,
+        "siltPct": 30,
+        "clayPct": 20,
+        "stonesPctVol": 50,
+        "rootingDepthCm": 100,
+        "tawMm": 75,
+        "pH": 6.4,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.6,
+        "drainage": "excessive"
+       },
+       "topography": {
+        "aspectDeg": 90,
+        "slopePct": 5,
+        "elevationM": 70
+       },
+       "microclimate": {
+        "frostPocket": 0.1,
+        "fogFrequency": 0.3,
+        "windExposure": 0.3,
+        "radiativeHeat": 0.6
+       },
+       "notes": "Coarsest, driest: most concentrated fruit."
+      },
+      {
+       "id": "C",
+       "name": "Fine loam toe",
+       "areaHa": 0.25,
+       "soil": {
+        "texture": "loam",
+        "sandPct": 40,
+        "siltPct": 40,
+        "clayPct": 20,
+        "stonesPctVol": 15,
+        "rootingDepthCm": 140,
+        "tawMm": 184,
+        "pH": 6.7,
+        "activeLimePct": 0,
+        "organicMatterPct": 2.0,
+        "drainage": "good"
+       },
+       "topography": {
+        "aspectDeg": 90,
+        "slopePct": 2,
+        "elevationM": 55
+       },
+       "microclimate": {
+        "frostPocket": 0.3,
+        "fogFrequency": 0.4,
+        "windExposure": 0.3,
+        "radiativeHeat": 0.4
+       },
+       "notes": "Finer, deeper: more yield."
+      },
+      {
+       "id": "D",
+       "name": "Creek-side gravel",
+       "areaHa": 0.2,
+       "soil": {
+        "texture": "gravelly loam",
+        "sandPct": 50,
+        "siltPct": 30,
+        "clayPct": 20,
+        "stonesPctVol": 40,
+        "rootingDepthCm": 110,
+        "tawMm": 99,
+        "pH": 6.6,
+        "activeLimePct": 0,
+        "organicMatterPct": 1.8,
+        "drainage": "good"
+       },
+       "topography": {
+        "aspectDeg": 95,
+        "slopePct": 2,
+        "elevationM": 52
+       },
+       "microclimate": {
+        "frostPocket": 0.4,
+        "fogFrequency": 0.4,
+        "windExposure": 0.2,
+        "radiativeHeat": 0.4
+       },
+       "notes": "Near the creek: cooler nights, some frost risk."
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
