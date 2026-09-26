@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Builds everything the 3D view loads at runtime into game/assets3d/ (gitignored, has a .gdignore so Godot
+# never imports it; view3d loads GLB/PNG/JPG/HDR files directly with GLTFDocument / Image.load_from_file).
+#
+#   game/tools/sync_assets3d.sh            # download CC0 textures/skies/props + build all models (idempotent)
+#   game/tools/sync_assets3d.sh fetch      # only the downloads (skips files that already exist)
+#   game/tools/sync_assets3d.sh vineyard [misc|einzelpfahl|guyot|cordon]   # only the vineyard models
+#   game/tools/sync_assets3d.sh winery     # only the winery models + winery.json
+#
+# Needs: python3 (WSL), Windows Blender 5.2 LTS (headless). Everything downloaded is CC0 (Poly Haven).
+set -euo pipefail
+HERE="$(cd "$(dirname "$0")" && pwd)"
+DEST="$(cd "$HERE/.." && pwd)/assets3d"
+BLENDER="/mnt/c/Program Files/Blender Foundation/Blender 5.2/blender.exe"
+STEP="${1:-all}"
+mkdir -p "$DEST/models" "$DEST/textures" "$DEST/hdri" "$DEST/props"
+touch "$DEST/.gdignore"
+
+blender_run() {  # script out_dir [extra args]
+  local script="$1" out="$2"; shift 2
+  "$BLENDER" -b --factory-startup -P "$(wslpath -w "$HERE/blender/$script")" -- "$(wslpath -w "$out")" "$@" 2>&1 \
+    | grep -E "exported|DONE|Error|Traceback|line [0-9]+|layout" || true
+}
+
+if [[ "$STEP" == "all" || "$STEP" == "fetch" ]]; then
+  python3 "$HERE/fetch_assets3d.py" "$DEST"
+fi
+if [[ "$STEP" == "all" || "$STEP" == "vineyard" ]]; then
+  blender_run build_vineyard.py "$DEST/models" "${2:-}"
+fi
+if [[ "$STEP" == "all" || "$STEP" == "winery" ]]; then
+  blender_run build_winery.py "$DEST/models"
+fi
+echo "assets3d: $(find "$DEST" -type f | wc -l) files, $(du -sh "$DEST" | cut -f1) in $DEST"
