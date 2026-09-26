@@ -37,9 +37,9 @@ public static class Snapshot
             ["plot"] = PlotObj(g),
             ["staff"] = new JsonObject
             {
-                ["vineyard"] = new JsonObject { ["level"] = g.VineyardManager.ToString(), ["salary"] = EconomyTables.Salary("vineyard", g.VineyardManager), ["forecastDays"] = g.ForecastSkill(g.VineyardManager).Horizon },
-                ["cellar"] = new JsonObject { ["level"] = g.CellarMaster.ToString(), ["salary"] = EconomyTables.Salary("cellar", g.CellarMaster) },
-                ["salaries"] = Arr(new[] { "Junior", "Experienced", "Senior" }.Select(l => (JsonNode)new JsonObject { ["level"] = l, ["vineyard"] = EconomyTables.Salary("vineyard", Enum.Parse<StaffLevel>(l)), ["cellar"] = EconomyTables.Salary("cellar", Enum.Parse<StaffLevel>(l)) })),
+                ["vineyard"] = new JsonObject { ["level"] = g.VineyardManager.ToString(), ["salary"] = R(g.StaffCostYear("vineyard", g.VineyardManager), 0), ["post"] = R(EconomyTables.StaffPost("vineyard", g.Plot, g.WineHlEstimate) * 100, 0), ["forecastDays"] = g.ForecastSkill(g.VineyardManager).Horizon },
+                ["cellar"] = new JsonObject { ["level"] = g.CellarMaster.ToString(), ["salary"] = R(g.StaffCostYear("cellar", g.CellarMaster), 0), ["post"] = R(EconomyTables.StaffPost("cellar", g.Plot, g.WineHlEstimate) * 100, 0) },
+                ["salaries"] = Arr(new[] { "Junior", "Experienced", "Senior" }.Select(l => (JsonNode)new JsonObject { ["level"] = l, ["vineyard"] = R(g.StaffCostYear("vineyard", Enum.Parse<StaffLevel>(l)), 0), ["cellar"] = R(g.StaffCostYear("cellar", Enum.Parse<StaffLevel>(l)), 0) })),
             },
             ["blocks"] = Arr(g.Blocks.Select(b => (JsonNode)BlockObj(g, b))),
             ["weather"] = WeatherObj(g),
@@ -104,7 +104,7 @@ public static class Snapshot
             ["id"] = b.Data.Id, ["name"] = b.Data.Name, ["area"] = b.AreaHa, ["soil"] = $"{Cap(soil.Texture)}, {soil.StonesPctVol:0} % stones, {soil.RootingDepthCm:0} cm", ["slope"] = b.Data.Topography.SlopePct,
             ["aspect"] = Aspect(b.Data.Topography.AspectDeg), ["elevation"] = b.Data.Topography.ElevationM, ["variety"] = b.Variety.Name, ["red"] = b.Variety.Red, ["rootstock"] = b.Rootstock.Name,
             ["training"] = b.Planting.Training.ToString(), ["density"] = b.Planting.DensityVinesHa, ["planted"] = b.PlantingYear, ["leaf"] = b.Leaf(g.Vintage), ["taw"] = R(b.Taw, 0),
-            ["stage"] = b.Harvested ? "Harvested" : b.Picking ? "Picking" : b.Stage.ToString(),
+            ["stage"] = b.Harvested ? "Harvested" : b.Picking ? "Picking" : StageName(b.Stage),
             ["budburst"] = D(b.Budburst), ["flowering"] = D(b.Flowering), ["veraison"] = D(b.Veraison), ["harvestDate"] = D(b.HarvestDate),
             ["health"] = R(health, 2), ["water"] = R(b.PsiStem, 2), ["stress"] = R(b.StressIndex, 2), ["waterClass"] = b.PsiStem > -0.6 ? "none" : b.PsiStem > -0.9 ? "weak" : b.PsiStem > -1.1 ? "weak–moderate" : b.PsiStem > -1.4 ? "moderate–severe" : "severe",
             ["soilWaterPct"] = R(100 * (1 - b.Dr / Math.Max(1, b.Taw)), 0),
@@ -112,17 +112,23 @@ public static class Snapshot
             ["botrytis"] = R(d.BotrytisRiskToday, 0), ["greyRot"] = R(d.GreyRot * 100, 1), ["nobleRot"] = R(d.NobleRot * 100, 1), ["protection"] = R(d.Protection * 100, 0), ["sprays"] = d.SpraysThisSeason,
             ["frostLoss"] = R(b.FrostShootLoss * 100, 0), ["sunburn"] = R(b.SunburnFraction * 100, 1), ["chlorosis"] = R(b.Chlorosis * 100, 0),
             ["yieldKgHa"] = R(b.YieldKgHa, 0), ["cropKg"] = R(b.CropKg, 0), ["exposure"] = R(b.Exposure, 2), ["lai"] = R(b.Lai, 2), ["berriesPerVine"] = R(b.BerriesPerVine, 0), ["berryWeight"] = R(b.BerryWeight, 2),
-            ["budLoad"] = b.BudLoad.ToString(), ["budsPerVine"] = R(VineyardModel.BudsPerVine(b), 1), ["leafSide"] = b.LeafSide.ToString(), ["leafTiming"] = b.LeafTiming.ToString(),
+            ["budLoad"] = b.BudLoad.ToString(), ["thinning"] = b.CropThinning, ["budsPerVine"] = R(VineyardModel.BudsPerVine(b), 1), ["leafSide"] = b.LeafSide.ToString(), ["leafTiming"] = b.LeafTiming.ToString(),
             ["harvested"] = b.Harvested, ["picking"] = b.Picking, ["pickedPct"] = R(b.CropKg > 0 ? 100 * b.PickedKg / Math.Max(1, b.PickTargetKg) : 0, 0), ["lotId"] = b.LotId ?? "",
             ["inWindow"] = !b.Harvested && b.Veraison != null && b.SugarGL >= g.HarvestWindowSugar(b),
             ["must"] = b.Veraison == null ? null : new JsonObject { ["oe"] = R(must.Oe, 0), ["brix"] = R(must.Brix, 1), ["pa"] = R(must.PotentialAlcohol, 1), ["ta"] = R(must.TaGL, 1), ["ph"] = R(must.Ph, 2), ["malic"] = R(must.MalicGL, 1), ["yan"] = R(must.YanMgL, 0), ["seeds"] = R(b.SeedMaturity * 100, 0), ["anth"] = R(b.Anthocyanin, 2), ["ibmp"] = R(b.Ibmp, 1) },
             ["samples"] = Arr(b.Samples.Select(s => (JsonNode)new JsonObject { ["date"] = Dates.Short(s.Date), ["oe"] = s.Oe, ["brix"] = s.Brix, ["ta"] = s.TaGL, ["ph"] = s.Ph, ["malic"] = s.MalicGL, ["seeds"] = R(s.SeedMaturity * 100, 0), ["anth"] = s.Anthocyanin, ["ibmp"] = s.IbmpNgL, ["berry"] = s.BerryWeightG, ["grey"] = s.GreyRotPct, ["noble"] = s.NobleRotPct })),
-            ["targets"] = Arr(g.StyleTargets(b).Select(t => (JsonNode)new JsonObject { ["style"] = t.Name, ["oe"] = R(t.Oe, 0) })),
+            ["targets"] = Arr(g.StyleTargets(b).Select(t => (JsonNode)new JsonObject { ["style"] = t.Name, ["oe"] = R(t.Oe, 0), ["brix"] = R(Units.BrixFromOe(t.Oe), 1) })),
             ["soilProfile"] = new JsonObject { ["texture"] = soil.Texture, ["sand"] = soil.SandPct, ["silt"] = soil.SiltPct, ["clay"] = soil.ClayPct, ["stones"] = soil.StonesPctVol, ["depthCm"] = soil.RootingDepthCm, ["tawMm"] = soil.TawMm, ["ph"] = soil.PH, ["lime"] = soil.ActiveLimePct, ["om"] = soil.OrganicMatterPct, ["drainage"] = soil.Drainage },
             ["micro"] = new JsonObject { ["frostPocket"] = b.Data.Microclimate.FrostPocket, ["fog"] = b.Data.Microclimate.FogFrequency, ["wind"] = b.Data.Microclimate.WindExposure, ["radiative"] = b.Data.Microclimate.RadiativeHeat },
             ["notes"] = b.Data.Notes, ["winkler"] = R(b.Winkler, 0), ["huglin"] = R(b.Huglin, 0),
         };
     }
+
+    public static string StageName(Stage s) => s switch
+    {
+        Stage.Dormant => "Dormant", Stage.Budburst => "Budburst", Stage.Shoots => "Shoot growth", Stage.Flowering => "Flowering", Stage.FruitSet => "Fruit set",
+        Stage.BunchClosure => "Bunch closure", Stage.Veraison => "Véraison", Stage.Ripening => "Ripening", Stage.Harvested => "Harvested", _ => "Leaf fall",
+    };
 
     private static string Cap(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..];
     private static string? D(DateOnly? d) => d == null ? null : Dates.Short(d.Value);
@@ -303,7 +309,11 @@ public static class Snapshot
         {
             ["cash"] = R(g.Ledger.Cash, 0),
             ["byCategory"] = Obj(all), ["vintageByCategory"] = Obj(vintage),
-            ["entries"] = Arr(g.Ledger.Entries.TakeLast(40).Reverse().Select(e => (JsonNode)new JsonObject { ["date"] = Dates.Short(e.Date), ["category"] = e.Category, ["amount"] = R(e.Amount, 0), ["note"] = e.Note })),
+            // routine daily postings are summed per month so the ledger stays readable
+            ["entries"] = Arr(g.Ledger.Entries.GroupBy(e => (e.Date.Year, e.Date.Month, e.Category, e.Note))
+                .Select(grp => (date: grp.Max(e => e.Date), grp.Key.Category, note: grp.Count() > 1 ? $"{grp.Key.Note} ({grp.Count()} days, {Dates.MonthName(grp.Key.Month)})" : grp.Key.Note, amount: grp.Sum(e => e.Amount)))
+                .OrderByDescending(e => e.date).Take(60)
+                .Select(e => (JsonNode)new JsonObject { ["date"] = Dates.Short(e.date), ["category"] = e.Category, ["amount"] = R(e.amount, 0), ["note"] = e.note })),
             ["cashSeries"] = Arr(g.CashSeries.Select(c => (JsonNode)new JsonObject { ["date"] = Dates.Short(c.Date), ["cash"] = R(c.Cash, 0) })),
             ["revenue"] = R(revenue, 0), ["projectedRevenue"] = R(projected, 0),
             ["landValue"] = R(g.Plot.Price, 0),

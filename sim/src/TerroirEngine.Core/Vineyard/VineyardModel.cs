@@ -275,7 +275,8 @@ public static class VineyardModel
             double lafr = b.LeafAreaPerVine * 0.55 / Math.Max(0.05, b.CropKgPerVine);
             double capacity = M.Clamp(lafr / 1.0, 0.4, 1.1) * (1 - 0.4 * b.Chlorosis);
             double stressPost = b.StressIndex;
-            double waterFactor = b.PsiStem < -1.4 ? 0.4 : 1 - 0.5 * M.Clamp((stressPost - 0.6) / 0.4, 0, 1);
+            // ripening.md: no slowdown for none-to-moderate stress, 0.4 when severe. Ψstem −1.2 → −1.6 MPa is the transition (UNVERIFIED breakpoints).
+            double waterFactor = 1 - 0.6 * M.Clamp((-1.2 - b.PsiStem) / 0.4, 0, 1);
             double radiation = 0.7 + 0.4 * clear;
             double heat = w.Tmax > 35 ? 0.5 : 1.0;
             if (active) b.SEff += Math.Max(0, w.Tmean) * capacity * waterFactor * radiation * heat;

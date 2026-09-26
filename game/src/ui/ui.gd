@@ -266,3 +266,60 @@ static func scroll(child: Control) -> ScrollContainer:
 	child.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	s.add_child(child)
 	return s
+
+## Dropdown: items are [value, text] pairs (or plain strings). on_pick(value) is called on change.
+static func option(items: Array, chosen: String, on_pick: Callable, min_w := 160.0) -> OptionButton:
+	var o := OptionButton.new()
+	o.custom_minimum_size = Vector2(min_w, 36)
+	o.add_theme_font_size_override("font_size", 15)
+	var values := []
+	for it in items:
+		var v: String = String(it[0]) if it is Array else String(it)
+		var t: String = String(it[1]) if it is Array else String(it)
+		o.add_item(t)
+		values.append(v)
+		if v == chosen: o.select(values.size() - 1)
+	o.item_selected.connect(func(i): on_pick.call(values[i]))
+	return o
+
+static func line_edit(text: String, on_change: Callable, min_w := 260.0) -> LineEdit:
+	var e := LineEdit.new()
+	e.text = text
+	e.custom_minimum_size = Vector2(min_w, 38)
+	e.add_theme_font_size_override("font_size", 16)
+	e.text_changed.connect(on_change)
+	return e
+
+## Clickable card: a panel that calls on_click when pressed. selected draws the gold edge.
+static func card(selected := false, pad := 16.0) -> PanelContainer:
+	var p := PanelContainer.new()
+	var st := sb(RAISED if selected else SURFACE, 6, GOLD if selected else LINE, 2 if selected else 1, pad)
+	p.add_theme_stylebox_override("panel", st)
+	p.mouse_filter = Control.MOUSE_FILTER_STOP
+	p.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	return p
+
+static func on_click(c: Control, f: Callable) -> void:
+	c.gui_input.connect(func(e): if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT: f.call())
+
+## Key/value row for detail panels.
+static func kv(k: String, v: String, tip := "", vcol := INK) -> HBoxContainer:
+	var h := hbox(8)
+	var kl := label(k, 15, INK2); kl.custom_minimum_size = Vector2(170, 0); h.add_child(kl)
+	var vl := label(v, 15, vcol, null, true); vl.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(vl)
+	if tip != "": h.tooltip_text = tip; h.mouse_filter = Control.MOUSE_FILTER_PASS
+	return h
+
+## Big number tile: caption above, value below, optional sub-line.
+static func tile(caption: String, value: String, sub := "", col := INK) -> PanelContainer:
+	var p := PanelContainer.new()
+	var v := vbox(2); p.add_child(v)
+	v.add_child(label(caption, 14, INK2))
+	v.add_child(num(value, 28, col))
+	if sub != "": v.add_child(label(sub, 13, MUTED, null, true))
+	p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return p
+
+static func fmt(v, d := 1) -> String:
+	if v == null: return "—"
+	return ("%." + str(d) + "f") % float(v)

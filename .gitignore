@@ -24,3 +24,6 @@ game/.godot/
 game/assets3d/
 *.import
 !game/fonts/*.import
+
+# Screenshots from scripts/capture.sh (regenerated)
+game/shots/

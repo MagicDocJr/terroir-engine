@@ -73,6 +73,7 @@ public static class Units
 public static class Dates
 {
     public static int Doy(DateOnly d) => d.DayOfYear;
+    public static string MonthName(int m) => System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedMonthName(m);
     public static string Short(DateOnly d) => d.ToString("d MMM", System.Globalization.CultureInfo.InvariantCulture);
     public static string Long(DateOnly d) => d.ToString("ddd d MMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
     public static string Iso(DateOnly d) => d.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);

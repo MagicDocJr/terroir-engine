@@ -79,7 +79,7 @@ if (cmd == "calib")
                 {
                     hit = d;
                     var m = Chemistry.MustFromBlock(b);
-                    line = $"{d:dd MMM}  {m.Oe,5:0} {m.Brix,4:0.0} {m.TaGL,4:0.0} {m.Ph,4:0.00} {m.MalicGL,4:0.0}  {b.SeedMaturity,4:0.00} {b.Anthocyanin,4:0.00} {b.Ibmp,4:0.0} {b.YieldKgHa / 1000,5:0.0} {b.FrostShootLoss,5:0.00} {b.Disease.DownyLeaf,5:0.0}% {b.Disease.DownyBunch * 100,5:0.0}% {b.Disease.PowderyBunch * 100,4:0.0} {b.Disease.GreyRot * 100,4:0.0} {b.Disease.NobleRot * 100,4:0.0}  {b.Disease.SpraysThisSeason,3}";
+                    line = $"{d:dd MMM}  {m.Oe,5:0} {m.Brix,4:0.0} {m.TaGL,4:0.0} {m.Ph,4:0.00} {m.MalicGL,4:0.0}  {b.SeedMaturity,4:0.00} {b.Anthocyanin,4:0.00} {b.Ibmp,4:0.0} {b.YieldKgHa / 1000,5:0.0} {b.FrostShootLoss,5:0.00} {b.Disease.DownyLeaf,5:0.0}% {b.Disease.DownyBunch * 100,5:0.0}% {b.Disease.PowderyBunch * 100,4:0.0} {b.Disease.GreyRot * 100,4:0.0} {b.Disease.NobleRot * 100,4:0.0}  {b.Disease.SpraysThisSeason,3} stressPost {(b.StressPostDays > 0 ? b.StressPostSum / b.StressPostDays : 0):0.00} psi {b.PsiStem:0.00} taw {b.Taw:0}";
                 }
             }
             Console.WriteLine($"{vint} {bd.Id}    {b.Budburst:dd MMM}   {b.Flowering:dd MMM}  {b.Veraison:dd MMM}   {line} {b.Winkler,5:0} {b.Huglin,5:0}");

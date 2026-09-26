@@ -46,7 +46,7 @@ public static class CellarOptions
             "Time in vessel before bottling. Longer oak ageing integrates tannin and builds oak character; Côte d'Or AOC wines may not be released before 15 June after harvest.", LockedAfterFermentStart: false),
         new("Lees", new[] { "Fine lees", "Racked off lees", "Fine lees + bâtonnage" },
             "Ageing on fine lees adds texture (mannoproteins) and protects from oxidation; stirring (bâtonnage) adds bready, creamy notes but risks reduction if neglected.", LockedAfterFermentStart: false),
-        new("SO₂", new[] { "Standard (30 mg/L free)", "Low (20 mg/L free)", "High (45 mg/L free)" },
+        new("SO₂", new[] { "Adjust to pH (molecular 0.8 whites / 0.5 reds)", "Low (20 mg/L free)", "Fixed 30 mg/L free" },
             "Free SO₂ protects against oxidation and microbes; what matters is molecular SO₂ (≈0.8 mg/L for whites, 0.5 for reds), which falls fast as pH rises.", LockedAfterFermentStart: false),
     };
     public static Choice Get(string key) => All.First(c => c.Key == key);
@@ -77,6 +77,7 @@ public sealed class Lot
     public double AnthPotential, SkinTanPotential, SeedTanPotential, StemTanPotential;            // mg/L max extractable
     public double IsoamylAcetate, EthylHexanoate, Damascenone, Linalool, TdnPotential, Ibmp, ThiolPotential, Thiol3mh, Diacetyl; // µg/L (IBMP, 3MH in ng/L)
     public double OakLactone, Vanillin, Guaiacol, Eugenol, Furfural;                               // µg/L
+    public double YanStart, YanTarget;   // YAN at inoculation (after DAP) and what this must needed (fermentation.md YAN heuristic)
     public double H2sIndex, Acetaldehyde, FourEp, OxygenDose, LeesMonths, BatonnageMonths, Laccase, MustyIndex, SunburnIndex, NobleRotShare, GreyRotShare;
     public double SeedMaturity, IbmpGrape, WholeBunchShare, Clarity = 1;
     public double MaxTempC, DapAddedMgL;
@@ -206,7 +207,10 @@ public static class WineryModel
         if (chap > 0) { lot.ChaptalSugarAdded = chap * 16.83; lot.Sugar += lot.ChaptalSugarAdded; }
         int acid = lot.Choices["Acidification"];
         if (acid > 0) { lot.AcidAdded = acid; lot.Tartaric += acid; }
-        if (lot.Choices["Nutrients"] == 0 && lot.YanMgL < 150) { lot.DapAddedMgL = 150 - lot.YanMgL + 30; lot.YanMgL += lot.DapAddedMgL; }
+        // fermentation.md: YAN target 140 mg/L at 20 °Brix + 25 mg/L per extra °Brix (game heuristic, UNVERIFIED); DAP tops the must up to it
+        lot.YanTarget = 140 + 25 * Math.Max(0, Units.BrixFromSugar(lot.Sugar) - 20);
+        if (lot.Choices["Nutrients"] == 0 && lot.YanMgL < lot.YanTarget) { lot.DapAddedMgL = lot.YanTarget - lot.YanMgL + 20; lot.YanMgL += lot.DapAddedMgL; }
+        lot.YanStart = lot.YanMgL;
         bool ambient = lot.Choices["Yeast"] == 1;
         lot.Biomass = ambient ? 0.015 : 0.2;
         lot.TempC = lot.Red ? 20 : 15;
@@ -263,7 +267,9 @@ public static class WineryModel
             lot.IsoamylAcetate += esterRate;
             lot.EthylHexanoate += esterRate * 0.2;
             // H₂S when yeast run short of nitrogen while sugar remains, worse when warm and cloudy
-            if (lot.YanMgL < 30 && lot.Sugar > 30) lot.H2sIndex += 0.01 * (1 + (T - 16) / 10) * (2 - lot.Clarity);
+            // (yeast always use up YAN mid-ferment; how much H₂S follows depends on how short the must was of its requirement)
+            double deficit = M.Clamp(1 - lot.YanStart / Math.Max(1, lot.YanTarget), 0, 1);
+            if (lot.YanMgL < 30 && lot.Sugar > 30) lot.H2sIndex += 0.01 * (0.1 + 1.5 * deficit) * (1 + (T - 16) / 10) * (2 - lot.Clarity);
             if (lot.Red) Extract(lot, 1, coldSoak: false);
             if (stopAt > 0 && lot.Sugar <= stopAt) { StopFermentation(lot, date, events); return; }
             if (pressEarlyAt > 0 && lot.Sugar <= pressEarlyAt) { EndFermentationPhase(lot, date, events, pressedEarly: true); return; }
@@ -384,7 +390,14 @@ public static class WineryModel
         }
     }
 
-    public static double So2Target(Lot lot) => lot.Choices["SO₂"] switch { 1 => 20, 2 => 45, _ => 30 };
+    /// <summary>Free SO₂ the Cellar master aims for. "Adjust to pH" uses free = molecular × (1 + 10^(pH − 1.81)) (acid-ph-so2.md §3),
+    /// capped at 60 mg/L free to stay well inside EU/US total-SO₂ limits (cap is a game simplification).</summary>
+    public static double So2Target(Lot lot) => lot.Choices["SO₂"] switch
+    {
+        1 => 20,
+        2 => 30,
+        _ => Math.Clamp((lot.Red ? 0.5 : 0.8) * (1 + Math.Pow(10, lot.Ph - 1.81)), 20, 60),
+    };
     private static void AddSo2(Lot lot, DateOnly date)
     {
         double target = So2Target(lot);

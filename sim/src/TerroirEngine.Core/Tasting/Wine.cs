@@ -113,15 +113,24 @@ public static class Law
             if (chaptalised) { double maxTotal = b.Red ? 12.0 : 11.5; if (alc > maxTotal + 0.3) { notes.Add($"After enrichment the alcohol ({alc:0.0} %) is above the zone A limit ({maxTotal} %)."); pdoOk = false; } }
             string cat; double price;
             if (!pdoOk) { cat = "Deutscher Wein"; price = 4.0; }
-            else if (!chaptalised && naturalOe >= 150) { cat = "Trockenbeerenauslese"; price = 90; }
-            else if (!chaptalised && naturalOe >= 110) { cat = "Beerenauslese"; price = 45; }
-            else if (!chaptalised && naturalOe >= ausl) { cat = "Auslese"; price = 24; }
+            // BA/TBA must come from noble-rotten (or at least overripe, for TBA shrivelled) berries picked berry by berry (WeinV §20).
+            // Game simplification: a whole-Block pick qualifies only if enough of it is noble rot (thresholds UNVERIFIED).
+            else if (!chaptalised && naturalOe >= 150 && b.NobleRotShare >= 0.6) { cat = "Trockenbeerenauslese"; price = 90; }
+            else if (!chaptalised && naturalOe >= 110 && b.NobleRotShare >= 0.3) { cat = "Beerenauslese"; price = 45; }
+            else if (!chaptalised && naturalOe >= ausl)
+            {
+                cat = "Auslese"; price = 24;
+                if (naturalOe >= 110) notes.Add($"Must weight {naturalOe:0} °Oe reaches Beerenauslese, but only {b.NobleRotShare * 100:0} % of the fruit was noble-rotten: Beerenauslese needs botrytised or overripe berries selected one by one (game rule: ≥ 30 % noble rot).");
+                if (term == "trocken") { price = 18; notes.Add("A dry Auslese sells for less than the classic sweet style: the market expects Auslese to be sweet (price UNVERIFIED)."); }
+            }
             else if (!chaptalised && naturalOe >= spaet) { cat = "Spätlese"; price = 15; }
             else if (!chaptalised && naturalOe >= 73) { cat = "Kabinett"; price = 11; }
             else if (naturalOe >= 55) { cat = "Qualitätswein Mosel"; price = 8; }
             else if (naturalOe >= 50 && rs <= 18) { cat = "Landwein der Mosel"; price = 5.5; }
             else { cat = "Deutscher Wein"; price = 4; }
             if (chaptalised && naturalOe >= 73) notes.Add($"Must weight {naturalOe:0} °Oe would have qualified as Prädikatswein, but chaptalisation is forbidden for Prädikat wines (Weingesetz §20).");
+            // Site matters as much as Prädikat: flat riverbank wine sells near bulk prices, famous steep slate at a premium (UNVERIFIED factors, economy.md §9).
+            price *= plot.TierRank switch { 0 => 0.55, 1 => 0.75, 3 => 1.15, _ => 1.0 };
             bool singleVineyard = (riesling || (mainVar == "Pinot Noir" && mainShare >= 0.85)) && cat != "Deutscher Wein" && cat != "Landwein der Mosel";
             if (singleVineyard) price *= 1.2;
             else if (cat != "Deutscher Wein" && cat != "Landwein der Mosel") notes.Add("No single-vineyard name: in Bereich Bernkastel that needs ≥ 85 % Riesling or Pinot Noir.");
@@ -167,7 +176,7 @@ public static class Law
         {
             string term = rs <= 4 ? "dry" : rs <= 12 ? "off-dry" : rs <= 45 ? "medium" : "sweet";
             if (chaptalised) { notes.Add("Adding sugar is not allowed for California wine: this can't be labelled Napa Valley."); return new LegalResult("American wine (non-California)", $"American Red/White Wine", term, 9, notes, true); }
-            string ava = plot.Id switch { "napa-carneros" => "Los Carneros", "napa-mountain" => "Mount Veeder (mountain AVA)", "napa-bench" => "Rutherford", _ => "Napa Valley" };
+            string ava = plot.Id switch { "napa-carneros" => "Los Carneros", "napa-mountain" => "Mount Veeder", "napa-bench" => "Rutherford", _ => "Napa Valley" };
             double basePrice = (plot.Id, mainVar) switch
             {
                 ("napa-bench", "Cabernet Sauvignon") => 70, ("napa-mountain", "Cabernet Sauvignon") => 60, ("napa-carneros", "Pinot Noir" or "Chardonnay") => 30,

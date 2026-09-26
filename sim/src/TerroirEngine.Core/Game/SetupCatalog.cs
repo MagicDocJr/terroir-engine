@@ -106,6 +106,11 @@ public static class SetupCatalog
             ["winkler"] = Math.Round(wink), ["huglin"] = Math.Round(hug), ["springFrostNights"] = Math.Round(frostNights, 1),
             ["plantingCost"] = Math.Round(planting), ["runningCostYear"] = Math.Round(labour + EconomyTables.MaterialsPerHaYear(p.Region.Id) * p.AreaHa + EconomyTables.SprayCostPerHaYear(Tier.Medium, p.SlopePct >= 30) * p.AreaHa),
             ["labourHoursHa"] = EconomyTables.LabourHoursPerHa(p),
+            ["salaries"] = new JsonObject(new[] { StaffLevel.Junior, StaffLevel.Experienced, StaffLevel.Senior }.Select(l => new KeyValuePair<string, JsonNode?>(l.ToString(), new JsonObject
+            {
+                ["vineyard"] = Math.Round(EconomyTables.Salary("vineyard", l) * EconomyTables.SalaryMultiplier(p.Region.Id) * EconomyTables.StaffPost("vineyard", p, p.AreaHa * 50)),
+                ["cellar"] = Math.Round(EconomyTables.Salary("cellar", l) * EconomyTables.SalaryMultiplier(p.Region.Id) * EconomyTables.StaffPost("cellar", p, p.AreaHa * 50)),
+            }))),
             ["ratings"] = ratings, ["blocks"] = blocks, ["mentor"] = new JsonArray(MentorComments(p, hug, frostNights, taw, lime, pocket).Select(s => (JsonNode)s).ToArray()),
         };
     }

@@ -112,6 +112,9 @@ public sealed partial class GameSession
         double planting = Blocks.Sum(b => EconomyTables.PlantingCostPerHa(Plot, b.Planting.Training) * b.AreaHa);
         Ledger.Post(Date, "Planting", -planting, "Planting: vines, rootstocks, stakes/trellis, labour");
         RunEstablishment();
+        // The Mentor's pruning for the first Vintage: Côte d'Or growers prune short to stay inside the AOC bud and yield limits
+        // (canopy-and-yield.md §7 calibration: Côte d'Or ≈ 35–50 hL/ha).
+        if (Region.Id == "cote-dor") foreach (var b in Blocks) b.BudLoad = BudLoad.Low;
     }
 
     public static PlantingChoice DefaultPlanting(PlotData p, BlockData b)
@@ -411,6 +414,11 @@ public sealed partial class GameSession
     }
 
     // ================================================================================== costs
+    /// <summary>Wine volume the Cellar master is sized for: the Lots made, or ≈50 hL/ha before the harvest (UNVERIFIED planning figure).</summary>
+    public double WineHlEstimate => Lots.Count > 0 ? Lots.Sum(l => l.GrapeKg) * 0.65 / 100.0 : Blocks.Sum(b => b.AreaHa) * 50;
+    /// <summary>What a staff member costs per year on this estate: full salary × regional multiplier × part-time post (economy.md §7).</summary>
+    public double StaffCostYear(string role, StaffLevel l) => EconomyTables.Salary(role, l) * EconomyTables.SalaryMultiplier(Region.Id) * EconomyTables.StaffPost(role, Plot, WineHlEstimate);
+
     private void DailyCosts()
     {
         double ha = Blocks.Sum(b => b.AreaHa);
@@ -439,7 +447,7 @@ public sealed partial class GameSession
         }
         if (Date.Day == 1)
         {
-            Ledger.Post(Date, "Staff", -(EconomyTables.Salary("vineyard", VineyardManager) + EconomyTables.Salary("cellar", CellarMaster)) / 12.0, $"Salaries: Vineyard manager ({VineyardManager}), Cellar master ({CellarMaster})");
+            Ledger.Post(Date, "Staff", -(StaffCostYear("vineyard", VineyardManager) + StaffCostYear("cellar", CellarMaster)) / 12.0, $"Salaries: Vineyard manager ({VineyardManager}, {EconomyTables.StaffPost("vineyard", Plot, WineHlEstimate) * 100:0} % post), Cellar master ({CellarMaster}, {EconomyTables.StaffPost("cellar", Plot, WineHlEstimate) * 100:0} % post)");
             if (Date.Month == 1) Ledger.Post(Date, "Overheads", -EconomyTables.TaxAndDuesPerHaYear(Plot) * ha, "Property tax, insurance, dues");
             // monthly cellar running costs
             foreach (var lot in Lots.Where(l => l.Phase is not (LotPhase.Blended or LotPhase.Received)))

@@ -57,6 +57,11 @@ public static class EconomyTables
     public static double Salary(string role, StaffLevel l) => role == "vineyard"
         ? l switch { StaffLevel.Junior => 38000, StaffLevel.Senior => 62000, _ => 48000 }
         : l switch { StaffLevel.Junior => 40000, StaffLevel.Senior => 68000, _ => 52000 };
+    public static double SalaryMultiplier(string region) => region switch { "napa" => 1.70, "cote-dor" => 0.95, _ => 1.00 };
+    /// <summary>Part-time share of a full post on a small estate (economy.md §7): vineyard max(0.25, hours ÷ 3,400), cellar max(0.25, hL ÷ 400).</summary>
+    public static double StaffPost(string role, PlotData p, double wineHl) => role == "vineyard"
+        ? Math.Max(0.25, LabourHoursPerHa(p) * p.AreaHa / 3400.0)
+        : Math.Max(0.25, wineHl / 400.0);
     public static double CrewHoursPerDay(Tier t) => t switch { Tier.Low => 64, Tier.High => 160, _ => 96 };   // harvest crew
     public static double HarvestHoursPerKg(PlotData p, bool hand) => !hand ? 0.0006 : p.SlopePct >= 30 ? 0.035 : 0.015;
     public static double BottleCost(Tasting.Closure c) => c switch { Tasting.Closure.NaturalCork => 1.80, Tasting.Closure.TechnicalCork => 1.45, _ => 1.35 };

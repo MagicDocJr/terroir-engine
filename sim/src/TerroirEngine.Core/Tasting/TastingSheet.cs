@@ -161,8 +161,10 @@ public static class TastingSheetGenerator
         double perceivedSweet = rs - (ta - 6) * 2;
         string sweet = rs < 4 ? "dry" : perceivedSweet < 12 ? "off-dry" : perceivedSweet < 30 ? "medium-dry" : perceivedSweet < 45 ? "medium-sweet" : rs < 120 ? "sweet" : "luscious";
         s.Palate.Add(new("Sweetness", sweet, rs < 4 ? "fermented to dryness" : b.Stopped ? $"fermentation stopped at {rs:0} g/L by chilling and SO₂" : $"{rs:0} g/L of sugar left{(b.MaxTempC > 32 ? " after the fermentation overheated and stuck" : "")}"));
-        double acidScore = ta - (red ? 0.5 : 0) + (3.3 - ph) * 2;
-        string acid = acidScore < 5 ? Five[0] : acidScore < 6 ? Five[1] : acidScore < 7 ? Five[2] : acidScore < 8.5 ? Five[3] : Five[4];
+        // Perceived acidity from TA and pH. Reds are judged on a lower scale (tannin adds to the impression of structure).
+        // Anchors (UNVERIFIED calibration): Mosel Riesling TA 8/pH 3.0 → high; Burgundy Pinot TA 5.8/pH 3.5 → medium(+); Napa Cabernet TA 6/pH 3.75 → medium.
+        double acidScore = ta + (3.4 - ph) * 2 + (red ? 0.8 : 0);
+        string acid = acidScore < 4.5 ? Five[0] : acidScore < 5.5 ? Five[1] : acidScore < 6.5 ? Five[2] : acidScore < 7.5 ? Five[3] : Five[4];
         s.Palate.Add(new("Acidity", acid, $"TA {ta:0.0} g/L, pH {ph:0.00}: {(b.Malic < 0.3 && b.Lactic > 0.5 ? "softened by malolactic fermentation; " : "")}{(p0.SeasonTemp < 15.5 ? "cool site and season kept malic acid" : p0.SeasonTemp > 18 ? "warm season burned malic acid off" : "moderate climate")}{(b.AcidAdded > 0 ? $"; acidified +{b.AcidAdded:0} g/L" : "")}"));
         if (red)
         {
@@ -186,9 +188,10 @@ public static class TastingSheetGenerator
         // ---------------- quality (balance, length, intensity, complexity)
         bool faulty = s.Faults.Any(f => !f.StartsWith("Refermentation"));
         double perceivedAcid = acidScore - rs / 12;
-        bool hot = alc >= 14.5 && body != "full";
-        bool flabby = perceivedAcid < 4.2;
-        bool tart = perceivedAcid > 10.5 && rs < 10;
+        // Alcohol reads as hot when it isn't carried by sugar, extract or (for reds) tannin. Thresholds are game calibration (UNVERIFIED).
+        bool hot = rs < 30 && (red ? alc >= 15.5 || (alc >= 14.5 && body is not ("full" or "medium(+)")) : alc >= 15.0 || (alc >= 14.0 && body is not ("full" or "medium(+)")));
+        bool flabby = perceivedAcid < 4.0;
+        bool tart = perceivedAcid > 11 && rs < 10;
         bool green = red && s.Palate.Any(pl => pl.Attribute == "Tannin" && pl.Level.Contains("green"));
         bool thin = !red && body == "light" && s.FlavourIntensity is "light" or "medium(−)" && acidScore > 8.5;
         bool balance = !(hot || flabby || tart || green || thin);

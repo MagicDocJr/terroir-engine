@@ -206,6 +206,9 @@ Lifetime: a barrique is "new" for one fill, gives **most of its oak flavour in t
 | | Auslese | €24.00 |
 | | Beerenauslese / Eiswein / TBA (0.375 L) | €45 / €70 / €90 |
 | | +20 % if a single-vineyard name is allowed (≥ 85 % Riesling or Pinot Noir) | — |
+| | Site factor by Plot tier: cheap riverbank ×0.55, mid-low side valley ×0.75, mid-high slate slope ×1.0, famous terraces ×1.15 (`UNVERIFIED`; added after playtest: flat-site Prädikat wine was selling at steep-slope prices) | — |
+| | Dry (trocken) Auslese: €18 instead of €24 (`UNVERIFIED`; the market expects Auslese to be sweet) | — |
+| | Beerenauslese / TBA need ≥ 30 % / ≥ 60 % noble-rotten fruit in the Lot (game rule for "berry-by-berry selection", `UNVERIFIED` thresholds) | — |
 | Côte d'Or | Vin de France | €7.00 |
 | | Bourgogne (red or white) | €16.00 |
 | | Bourgogne Hautes-Côtes de Beaune | €15.00 |
