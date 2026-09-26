@@ -11,3 +11,6 @@ dist/
 prototypes/*/assets/
 prototypes/*/godot/assets/
 prototypes/*/godot/.godot/
+
+# Agent worktrees
+.claude/worktrees/
