@@ -132,6 +132,7 @@ func run_action(action: String, arg: String) -> void:
 			show_screen("plot")
 			notify("Choose how to pick Block %s, then press Harvest." % arg)
 		"restart": command("restart", arg)
+		"spraynow": command("spraynow"); notify("Extra spray pass ordered for today — advance a day to carry it out.")
 		"acceptstuck": command("acceptstuck", arg); notify("Fermentation stopped; the Lot keeps its residual sugar.")
 		"programme":
 			var p := arg.split(":"); command("programme", p[0], p[1]); notify("%s set to %s." % [p[0].capitalize(), p[1]])

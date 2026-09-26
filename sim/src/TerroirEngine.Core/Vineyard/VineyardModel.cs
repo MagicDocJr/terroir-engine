@@ -20,6 +20,7 @@ public sealed class VineyardContext
     public List<VineEvent> Events { get; } = new();
     public int FrostProtectionNights;
     public int SprayPassesToday;
+    public bool ForceSprayToday;   // the player's one-off override: an extra spray pass today (spec §5.1)
 }
 
 /// <summary>Daily vineyard model per Block. Formulas and parameters from docs/science/{phenology, soil-and-water, canopy-and-yield,
@@ -402,7 +403,13 @@ public static class VineyardModel
         double halfLife = ctx.Spray switch { Tier.Low => 7, Tier.High => 8, _ => 8 };
         bool sprayWindow = b.Gdd10SinceBudburst > 25 && (b.Veraison == null || date.DayNumber - b.Veraison.Value.DayNumber < 10);
         d.NextSprayDue ??= date;
-        if (sprayWindow && date >= d.NextSprayDue)
+        if (ctx.ForceSprayToday && !b.Harvested && w.Precip <= 5)
+        {
+            d.LastSpray = date; d.RainSinceSpray = 0; d.SpraysThisSeason++;
+            ctx.SprayPassesToday++;
+            d.NextSprayDue = date.AddDays((int)interval);
+        }
+        else if (sprayWindow && date >= d.NextSprayDue)
         {
             bool raining = w.Precip > 5;
             bool skip = raining && ctx.Spray == Tier.Low;

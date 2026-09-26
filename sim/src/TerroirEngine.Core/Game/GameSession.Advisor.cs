@@ -73,6 +73,7 @@ public sealed partial class GameSession
                     {
                         var m = Post("vineyard", "3-10 rule met: downy mildew season has started", Detail(VineyardManager, "Downy mildew risk is rising.", e.Text + $" We're on the {Ctx.Spray} spray programme ({(Ctx.Spray == Tier.Low ? "every ~17 days, skipped in rain" : Ctx.Spray == Tier.High ? "every ~8 days plus extra after rain" : "every ~12 days")})."),
                             "Primary infection needs ≥ 10 °C, ≥ 10 mm rain and shoots ≥ 10 cm (Gessler et al. 2011). Protective sprays must be on the leaves before the next rain.", "high", "downy", stop: true);
+                        m.Actions.Add(("Spray today (extra pass)", "spraynow", ""));
                         m.Actions.Add(("Open Programmes", "goto", "programmes"));
                     }
                     break;
@@ -84,7 +85,7 @@ public sealed partial class GameSession
                     {
                         string key = $"{e.Kind}-{x.BlockId}-{(e.Kind == "botrytis" ? Date.DayNumber / 7 : Date.DayNumber / 14)}";
                         if (!Gate(key)) continue;
-                        Post("vineyard", e.Kind switch { "downy-symptoms" => $"Downy mildew visible in Block {x.BlockId}", "powdery" => $"Powdery mildew on bunches, Block {x.BlockId}", "botrytis" => $"Grey rot spreading, Block {x.BlockId}", _ => $"Sunburn in Block {x.BlockId}" },
+                        var dm = Post("vineyard", e.Kind switch { "downy-symptoms" => $"Downy mildew visible in Block {x.BlockId}", "powdery" => $"Powdery mildew on bunches, Block {x.BlockId}", "botrytis" => $"Grey rot spreading, Block {x.BlockId}", _ => $"Sunburn in Block {x.BlockId}" },
                             Detail(VineyardManager, x.Text.Split(':')[0] + ".", x.Text), e.Kind switch
                             {
                                 "botrytis" => "Botrytis infects when berries stay wet for hours at 15–25 °C; compact bunches, split berries and dense canopies make it worse (Broome et al. 1995).",
@@ -92,6 +93,7 @@ public sealed partial class GameSession
                                 "powdery" => "Powdery mildew needs warm, dry-ish weather rather than rain; berries are only susceptible until ~4 weeks after flowering.",
                                 _ => "Visible lesions sporulate on humid nights and spread the disease in the next rain.",
                             }, x.Severity >= 3 ? "high" : "normal", e.Kind, stop: x.Severity >= 3 || e.Kind == "botrytis", blockId: x.BlockId);
+                        if (e.Kind != "sunburn") dm.Actions.Add(("Spray today (extra pass)", "spraynow", ""));
                     }
                     break;
                 case "leaffall":

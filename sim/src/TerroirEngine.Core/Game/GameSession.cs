@@ -237,6 +237,7 @@ public sealed partial class GameSession
                 var sl = Lots.FirstOrDefault(x => x.Id == c.A);
                 if (sl != null) WineryModel.Restart(sl, Date);
                 break;
+            case "spraynow": if (Blocks.Any(b => b.Budburst != null && !b.Harvested)) Ctx.ForceSprayToday = true; break;
             case "acceptstuck":
                 var al = Lots.FirstOrDefault(x => x.Id == c.A);
                 if (al != null) WineryModel.AcceptStuck(al, Date);
@@ -275,6 +276,12 @@ public sealed partial class GameSession
         Ctx.LabourFactor = Ctx.Labour switch { Tier.Low => 0.85, Tier.High => 1.2, _ => 1.0 };
         Ctx.SprayPassesToday = 0; Ctx.FrostProtectionNights = 0;
         if (vineYear) foreach (var b in Blocks) VineyardModel.Step(b, w, Ctx, Setup.Seed);
+        if (Ctx.ForceSprayToday)
+        {
+            Post("vineyard", Ctx.SprayPassesToday > 0 ? "Extra spray pass done" : "Extra spray pass cancelled: raining", Ctx.SprayPassesToday > 0 ? "All Blocks were sprayed today, outside the normal schedule. The next regular pass moves back accordingly." : "Spraying in heavy rain washes the product off; the crew stayed in. Order it again for a dry day.",
+                "A protective spray only works if it is on the leaves before the infection period (rain + leaf wetness).", "normal", "spray-now", stop: false);
+            Ctx.ForceSprayToday = false;
+        }
         HarvestProgress();
         // a Lot received today waits until tomorrow, so the player can set its cellar choices first
         foreach (var lot in Lots.Where(l => l.Phase != LotPhase.Blended && l.Harvested < Date)) WineryModel.Step(lot, Date, CellarMaster, Ctx.Events);

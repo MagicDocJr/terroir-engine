@@ -214,6 +214,22 @@ public class GameLoopTests
     }
 
     [Fact]
+    public void SprayNow_AddsOneExtraPass_OnADryDay_AndReplays()
+    {
+        var g = new GameSession(Fixture.Data, new GameSetup { PlotId = "mosel-blauschiefer", PlantingYear = 2016 });
+        while (g.Blocks.Any(b => b.Budburst == null) || g.Date.Month < 6) g.Advance(1, false);
+        while (g.Weather.Get(g.Date).Precip > 5) g.Advance(1, false);   // wait for a dry day
+        int before = g.Blocks.Sum(b => b.Disease.SpraysThisSeason);
+        double cash = g.Ledger.Cash;
+        g.Apply(new Command { Type = "spraynow" });
+        g.Advance(1, false);
+        Assert.True(g.Blocks.Sum(b => b.Disease.SpraysThisSeason) >= before + g.Blocks.Count);
+        Assert.True(g.Ledger.Cash < cash);
+        var g2 = GameSession.Load(Fixture.Data, g.Save());
+        Assert.Equal(g.Blocks.Sum(b => b.Disease.SpraysThisSeason), g2.Blocks.Sum(b => b.Disease.SpraysThisSeason));
+    }
+
+    [Fact]
     public void SaveAndReplay_IsDeterministic()
     {
         var g = Fixture.Play("mosel-terrassen", 2016, 86);

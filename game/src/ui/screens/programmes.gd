@@ -30,6 +30,11 @@ static func build(D: Dictionary, shell) -> Control:
 			elif not p["available"]:
 				c.modulate = Color(1, 1, 1, 0.45); c.mouse_default_cursor_shape = Control.CURSOR_ARROW
 			card[1].add_child(c)
+		if id == "spray":
+			var sb := UI.button("Spray today (one extra pass)", false, 15)
+			sb.tooltip_text = "Override the schedule once, e.g. before forecast rain. Costs one pass; skipped if it's pouring."
+			sb.pressed.connect(func(): shell.command("spraynow"); shell.notify("Extra spray pass ordered for today — advance a day to carry it out."))
+			card[1].add_child(sb)
 		g.add_child(card[0])
 	v.add_child(g)
 	v.add_child(UI.label("Game simplification: one spray programme covers all three fungal diseases, and costs are regional averages (see docs/science/economy.md).", 13, UI.MUTED, null, true))
