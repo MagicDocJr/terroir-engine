@@ -149,11 +149,11 @@ In Normal mode, measured values are exact. The 3D view adds qualitative cues: le
 - The **simulation core is a pure, headless, deterministic library** with no engine or UI dependency, tested from the command line (ADR 0001).
 - A save file is the starting parameters plus the player's decision log. Replaying the log reproduces the game exactly, and any bug report becomes a test case.
 - Every state is modelled with multi-vintage continuation in mind (ADR 0002), even though the MVP plays one vintage.
-- **The engine is chosen after the demo:** Three.js (WebGPU) vs. Godot 4.7, using the same Blender-made assets.
+- **Engine:** Godot 4.7 (.NET) for the 3D views and the dashboard. The simulation core is a plain C# library tested with `dotnet test` (ADR 0003).
 - Assets: Blender 5.2 LTS through Blender MCP, plus CC0/CC-BY textures and sounds with credits.
 
 ## 11. Milestones
-0. **Engine demo:** the same steep slate slope with ~500 vines in late-afternoon sun, built in Three.js and in Godot. The owner picks the engine, recorded as an ADR. Then the first **UI prototype** with fake data.
+0. **Engine demo** ✅ done: Godot chosen (ADR 0003; prototype on branch `prototype/engine-demo`). Next: the first **UI prototype** with fake data.
 1. **Science pass:** `docs/science/`, calibration table → **review #1**.
 2. **Simulation core:** weather ingest, vine stages (phenology), water balance, soil per Block. A season runs from the command line.
 3. **Vineyard:** Programmes, disease, frost, ripening, yield, Planting, Establishment.
