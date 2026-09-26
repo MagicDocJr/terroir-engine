@@ -1,0 +1,224 @@
+# Phenology: budburst, flowering, véraison, sugar ripeness, frost damage by stage
+
+Science pass, part 1. Status: **draft for review**. Every number has a source or is marked `UNVERIFIED`. Game simplifications are labelled.
+
+## 1. Purpose in the game
+
+Phenology sets **when** everything happens on each Block:
+- the Alerts that stop time (frost risk after budburst, flowering, véraison, harvest window)
+- the window for each Programme (e.g. canopy work between flowering and véraison)
+- how far the fruit gets before autumn
+
+It is also the mechanism behind "any grape anywhere" (section 7). A Variety that needs more heat than the Plot gives reaches its stages late and never gets ripe.
+
+## 2. Stages
+
+Stages are named on the modified Eichhorn-Lorenz (E-L) system (Coombe 1995):
+
+| Game stage | E-L | Definition used by the game |
+|---|---|---|
+| Dormant | 1 | Winter bud |
+| Budburst | 4 | Green tip visible; the model's "budburst date" is when 50% of buds reach it |
+| Leaves unfolding | 7–12 | First leaves through 5 separated leaves |
+| Flowering | 23 | 50% of caps off (full bloom) |
+| Fruit set | 27 | Berries set |
+| Bunch closure | 32 | Berries touching |
+| Véraison | 35 | Berries begin to colour and soften (50%) |
+| Harvest ripe | 38 | The player's picking date; not a model output |
+
+## 3. Budburst: chilling + forcing (BRIN)
+
+Budburst uses the **BRIN** model (García de Cortázar-Atauri et al. 2009), a sequential chilling-forcing model. It chains Bidabe's cold-action model (endodormancy) with Richardson's growing-degree model (ecodormancy).
+
+1. **Chilling (endodormancy release).** Chill units accumulate daily from t0_chill until the requirement C_c is met:
+   ```
+   CU_day = Q10^(−Tmax/10) + Q10^(−Tmin/10)          (Bidabe's action, as used in BRIN)
+   ```
+   Costafreda-Aumedes et al. (2025) start chilling models on DOY 244 (1 September) of the previous year.
+2. **Forcing (ecodormancy).** After C_c is met, forcing units accumulate. They are degree-days (or hours) between a lower and an upper cardinal temperature (Richardson). Budburst happens when the sum reaches G_hc.
+
+| Parameter | Meaning | Value | Status |
+|---|---|---|---|
+| t0_chill | Start of chilling | 1 Sep, previous year | Costafreda-Aumedes et al. 2025 |
+| Q10 | Temperature response of chilling | 2.17 | UNVERIFIED (recalled from García de Cortázar-Atauri 2009) |
+| C_c | Chilling requirement per Variety | — | UNVERIFIED |
+| T_low | Lower forcing threshold | 5 °C | UNVERIFIED (García de Cortázar-Atauri et al. 2009 report the base temperature as the main driver; 5 °C is also their GDD comparison base) |
+| T_high | Upper forcing threshold | 25 °C | UNVERIFIED |
+| G_hc | Forcing requirement per Variety | — | UNVERIFIED |
+
+**Relative earliness** (Costafreda-Aumedes et al. 2025): **Chardonnay** is among the earlier ("warm-adapted") varieties for budbreak; **Riesling and Cabernet Sauvignon** are among the later ("cold-adapted") ones. Pinot noir is early (`UNVERIFIED`, no source fetched). An early budburst means more exposure to spring frost. This is the Chardonnay-in-Chablis or Côte d'Or frost lesson.
+
+**Calibration approach** (the variety parameters aren't in the open sources I could reach):
+fix Q10, T_low and T_high; fit C_c and G_hc per Variety so that simulated mean budburst dates (1991–2020, Block-adjusted Historical weather) fall inside these windows:
+
+| Region / Variety | Target mean budburst (1991–2020) | Status |
+|---|---|---|
+| Mosel, Riesling | mid to late April | UNVERIFIED |
+| Côte d'Or, Chardonnay / Pinot noir | early to mid April | UNVERIFIED |
+| Napa (Oakville), Cabernet Sauvignon | late March to early April | UNVERIFIED |
+
+Fallback, labelled Game simplification: if BRIN proves unstable in warm Synthetic weather (Costafreda-Aumedes et al. 2025 report that chilling-forcing models can fail to reach budburst under high temperatures), use a pure forcing model: GDD above 5 °C from 1 January to a per-Variety F*.
+
+## 4. Flowering and véraison: GFV
+
+The **Grapevine Flowering Véraison model** (Parker et al. 2011) is a spring-warming model:
+
+```
+S(t) = Σ_{DOY=t0}^{t} max(0, Tmean − Tb)       with t0 = DOY 60 (1 March, Northern Hemisphere), Tb = 0 °C
+stage reached when S(t) ≥ F*
+```
+
+Per-variety F* (°C·day) from Parker et al. (2013), fitted on the French and European phenology database:
+
+| Variety | Flowering F* | Véraison F* | Flowering RMSE (days) | Véraison RMSE (days) | Source |
+|---|---|---|---|---|---|
+| Chardonnay | 1217 | 2547 | 4.9 | 6.5 | Parker et al. 2013, Tables 1–2 |
+| Pinot noir | 1219 | 2511 | 5.1 | 7.8 | Parker et al. 2013, Tables 1–2 |
+| Riesling | 1249 | 2590 | 5.9 | 6.8 | Parker et al. 2013, Tables 1–2 |
+| Cabernet Sauvignon | 1299 | 2689 | 5.2 | 6.9 | Parker et al. 2013, Tables 1–2 |
+
+Southern Hemisphere is not needed for the MVP; Napa is Northern Hemisphere.
+
+## 5. Sugar ripeness: GSR
+
+The **Grapevine Sugar Ripeness model** (Parker et al. 2020) uses the same structure. It characterises the thermal time to six target sugar concentrations (**170, 180, 190, 200, 210 and 220 g/L**) for 65 cultivars, summing Tmean above **0 °C from DOY 91 (1 April)** in the Northern Hemisphere (as described in Parker et al. 2020b). Prediction errors are within about 7–10 days for new datasets (Parker et al. 2020b).
+
+**The per-variety F* for each sugar target is behind a paywall and `UNVERIFIED`.** Planned calibration: fit F*₂₀₀ per Variety so the simulation on Historical weather reproduces known harvest timing:
+- **Côte d'Or:** in Beaune, picking started on average from 28 September over 1354–1987, and about **13 days earlier over 1988–2018** (Labbé et al. 2019). Target: Pinot noir / Chardonnay reach ~200 g/L around mid-September in 1988–2018.
+- **Mosel Riesling:** traditionally picked in October (`UNVERIFIED`). Target: 190–200 g/L around early to mid October in 1991–2020.
+- **Napa Cabernet Sauvignon:** reaches 220 g/L+ from late September (`UNVERIFIED`).
+
+Interface to the ripening model: phenology exposes the GSR thermal sum `S_GSR(t)`. The ripening model (other doc) turns it into a daily sugar concentration, and adds dilution by rain and concentration by water stress (Game simplification: thermal time drives mean sugar; water and crop load modify it).
+
+## 6. Frost damage by stage
+
+Radiation frosts in spring kill young green tissue. Critical temperatures fall towards 0 °C as the shoot develops.
+
+University of Maryland Extension (Grapevine Frost/Freeze Damage I):
+
+| Stage | Critical temperature |
+|---|---|
+| Dormant bud | < 20 °F (< −6.7 °C) |
+| Dormant swollen | 26 °F (−3.3 °C) |
+| Burst bud | 28 °F (−2.2 °C) |
+| One leaf unfolded | 28–29 °F (−2.2 to −1.7 °C) |
+| Two leaves unfolded | 29–32 °F (−1.7 to 0 °C) |
+
+Pinot noir LT50 (the temperature that kills 50% of tissue), as reported by Growing Produce citing Gardea (1987): green swollen buds 26 °F (−3.3 °C), budburst 28 °F (−2.2 °C), two-leaf 29 °F (−1.7 °C), four-leaf 30 °F (−1.1 °C). The original Gardea (1987) source was not fetched (`UNVERIFIED` via secondary).
+
+Game model:
+
+```
+damage_fraction = clamp((T_crit(stage) + 1.0 − T_min_block) / 2.0, 0, 1)     # linear from 0% (1 °C above T_crit) to 100% (1 °C below). UNVERIFIED shape
+```
+
+- T_min_block is the Block's night minimum, including frost-pocket cooling on clear, calm nights (see `weather-and-climate.md`).
+- Killed primary shoots are partly replaced by secondary buds, with lower fruitfulness: the game assumes 30–50% of normal crop on damaged shoots (`UNVERIFIED`). Replacement shoots are ~10 days behind (`UNVERIFIED`).
+- Frost protection Programme tiers raise the effective T_min: wind machines work under inversions only (UMD Extension); **magnitudes are `UNVERIFIED`**.
+- The Côte d'Or April 2021 frost Vintage is the calibration case: widespread damage after an early, warm March–April budburst (`UNVERIFIED` description, to be checked by the regions/vintage-notes work).
+
+## 7. "Any grape anywhere": how the wrong Variety fails
+
+The game never blocks a Variety. It lets the season run out.
+
+1. **Late stages.** With too little heat, GFV véraison slips into September and GSR sugar targets move past the end of the season.
+2. **End of season.** Ripening stops at the earlier of (a) the first autumn frost (T_min_block ≤ −2 °C after véraison) and (b) 31 October (Game simplification, `UNVERIFIED` cut-off). Fruit keeps whatever sugar it reached, with high acidity and green (pyrazine) character (ripening model).
+3. **Heat indices as a sanity check.** Huglin's minimum heat for each variety (`weather-and-climate.md`): Riesling, Chardonnay and Pinot noir ~1700; Cabernet Sauvignon ~1900–2000. The Jones (2010) growing-season-temperature niches (Pinot noir 14.0–16.0 °C, Cabernet Sauvignon 16.8–20.2 °C) tell the same story.
+
+Worked expectation (see Calibration): at Bernkastel, Cabernet Sauvignon's GFV véraison lands 8–10 days after Riesling's on average, and in cool years not until October. Its sugar target can't be reached in most years, so "Cabernet on the Mosel" gives thin, green, acidic wine at low must weight. The Mentor warns about this at Planting.
+
+## 8. Per-Variety parameter summary
+
+| Variety | Budburst timing | GFV flowering F* | GFV véraison F* | GSR F*₂₀₀ | Huglin minimum (Huglin table) | GST niche (Jones 2010) |
+|---|---|---|---|---|---|---|
+| Riesling | Later (Costafreda-Aumedes 2025) | 1249 | 2590 | UNVERIFIED | 1700–1800 | UNVERIFIED (not in the text I could read) |
+| Chardonnay | Earlier (Costafreda-Aumedes 2025) | 1217 | 2547 | UNVERIFIED | 1700–1800 | UNVERIFIED |
+| Pinot noir | Early (UNVERIFIED) | 1219 | 2511 | UNVERIFIED | 1700–1800 | 14.0–16.0 °C |
+| Cabernet Sauvignon | Later (Costafreda-Aumedes 2025) | 1299 | 2689 | UNVERIFIED | 1900–2000 | 16.8–20.2 °C |
+
+Rootstock phenology shifts are in `soil-and-water.md` §7.
+
+## 9. Calibration
+
+See `docs/science/data/climate_indices.json`, produced by `tools/science/climate_indices.py`. GFV is applied to NASA POWER (MERRA-2) **grid-cell** temperatures, without the Block adjustments of `weather-and-climate.md` §3. Grid-cell elevations: Bernkastel 387 m, Beaune 283 m, Oakville 266 m.
+
+| Site | Period | Variety | GFV flowering (mean date, DOY range) | GFV véraison (mean date, DOY range) |
+|---|---|---|---|---|
+| Bernkastel (Mosel) | 1981-2000 | Chardonnay | 06 Jul (176–203) | 27 Sep (256–303) |
+| Bernkastel (Mosel) | 1981-2000 | Pinot noir | 07 Jul (177–203) | 24 Sep (253–299) |
+| Bernkastel (Mosel) | 1981-2000 | Riesling | 08 Jul (179–205) | 01 Oct (258–310) |
+| Bernkastel (Mosel) | 1981-2000 | Cabernet Sauvignon | 11 Jul (183–208) | 11 Oct (264–330) |
+| Bernkastel (Mosel) | 2001-2020 | Chardonnay | 29 Jun (170–195) | 14 Sep (235–278) |
+| Bernkastel (Mosel) | 2001-2020 | Pinot noir | 29 Jun (170–195) | 11 Sep (233–274) |
+| Bernkastel (Mosel) | 2001-2020 | Riesling | 01 Jul (172–197) | 17 Sep (237–281) |
+| Bernkastel (Mosel) | 2001-2020 | Cabernet Sauvignon | 04 Jul (175–200) | 25 Sep (244–293) |
+| Beaune (Côte d'Or) | 1981-2000 | Chardonnay | 23 Jun (168–188) | 01 Sep (232–263) |
+| Beaune (Côte d'Or) | 1981-2000 | Pinot noir | 23 Jun (168–188) | 30 Aug (231–260) |
+| Beaune (Côte d'Or) | 1981-2000 | Riesling | 25 Jun (170–190) | 04 Sep (235–267) |
+| Beaune (Côte d'Or) | 1981-2000 | Cabernet Sauvignon | 28 Jun (172–192) | 10 Sep (239–275) |
+| Beaune (Côte d'Or) | 2001-2020 | Chardonnay | 18 Jun (160–182) | 23 Aug (218–252) |
+| Beaune (Côte d'Or) | 2001-2020 | Pinot noir | 18 Jun (160–182) | 21 Aug (217–249) |
+| Beaune (Côte d'Or) | 2001-2020 | Riesling | 19 Jun (162–184) | 26 Aug (220–255) |
+| Beaune (Côte d'Or) | 2001-2020 | Cabernet Sauvignon | 22 Jun (164–187) | 31 Aug (223–262) |
+| Oakville (Napa) | 1981-2000 | Chardonnay | 05 Jun (147–166) | 05 Aug (208–228) |
+| Oakville (Napa) | 1981-2000 | Pinot noir | 05 Jun (147–166) | 04 Aug (206–227) |
+| Oakville (Napa) | 1981-2000 | Riesling | 07 Jun (148–167) | 07 Aug (210–231) |
+| Oakville (Napa) | 1981-2000 | Cabernet Sauvignon | 09 Jun (150–170) | 12 Aug (214–235) |
+| Oakville (Napa) | 2001-2020 | Chardonnay | 04 Jun (146–168) | 05 Aug (208–234) |
+| Oakville (Napa) | 2001-2020 | Pinot noir | 04 Jun (146–168) | 03 Aug (207–232) |
+| Oakville (Napa) | 2001-2020 | Riesling | 05 Jun (148–170) | 07 Aug (210–236) |
+| Oakville (Napa) | 2001-2020 | Cabernet Sauvignon | 08 Jun (150–172) | 11 Aug (213–240) |
+
+What the table shows:
+- **Ordering is right everywhere:** Pinot noir ≤ Chardonnay < Riesling < Cabernet Sauvignon, as in Parker et al. (2013).
+- **Warming is visible:** Beaune véraison moves about 9 days earlier and Bernkastel about 13–16 days earlier between the two periods, in the same direction and of similar size to the harvest advance in Labbé et al. (2019).
+- **The raw Mosel grid cell is too cold.** GFV Riesling véraison on 17 September (2001–2020) is far too late for a Mosel slope. Riesling véraison there is usually in August (`UNVERIFIED` exact timing). This is the same bias as in `weather-and-climate.md` §5.1: the cell is at 387 m, not on a 150 m south slope. **Acceptance check:** with Block adjustments applied (lapse rate plus slope heat), the Mosel steep-south Block must place Riesling véraison in the second half of August (1991–2020 mean) (`UNVERIFIED` target, to be confirmed by review).
+
+**GSR thermal sums at fixed dates** (Tmean above 0 °C from 1 April, grid cells) give provisional starting values for the per-Variety sugar F*:
+
+| Site | Period | Thermal sum at 15 Sep | at 1 Oct | at 15 Oct |
+|---|---|---|---|---|
+| Bernkastel (Mosel) | 1981-2000 | 2294 (2063–2469) | 2495 (2232–2700) | 2634 (2370–2825) |
+| Bernkastel (Mosel) | 2001-2020 | 2464 (2296–2842) | 2663 (2468–3052) | 2806 (2607–3235) |
+| Beaune (Côte d'Or) | 1981-2000 | 2621 (2396–2791) | 2858 (2595–3033) | 3025 (2742–3226) |
+| Beaune (Côte d'Or) | 2001-2020 | 2783 (2527–3201) | 3014 (2768–3465) | 3191 (2939–3633) |
+| Oakville (Napa) | 1981-2000 | 3159 (2930–3402) | 3476 (3236–3701) | 3723 (3475–3942) |
+| Oakville (Napa) | 2001-2020 | 3151 (2822–3420) | 3474 (3163–3778) | 3723 (3400–4074) |
+
+**Provisional GSR F*₂₀₀ (derived here, not published; `UNVERIFIED`):**
+- **Pinot noir / Chardonnay ≈ 2750.** Beaune's recent harvests start around mid-September (Labbé et al. 2019), and the 15 September thermal sum there averages ~2780 in 2001–2020.
+- **Riesling ≈ 2900.** On a Block-adjusted Mosel slope (about +250 °C·day by 1 October from the lapse-rate correction alone), 200 g/L then falls in early October, matching the traditional October Mosel harvest (`UNVERIFIED`).
+- **Cabernet Sauvignon ≈ 3100.** In Oakville that gives 200 g/L around mid-September, leaving time to reach the 230–250 g/L typical of Napa picking (`UNVERIFIED`).
+
+Replace these with Parker et al. (2020) Table 2 values when obtained.
+
+Acceptance checks:
+- **GFV's own error:** RMSE of about 5–8 days in the calibration data (Parker et al. 2013), so ±1 week is the tolerance.
+- **Côte d'Or:** 1988–2018 is about 13 days earlier than the long-term mean (Labbé et al. 2019). The simulated ripeness date should show an advance of similar size between 1981–2000 and 2001–2020 (GFV véraison at Beaune advances ~9 days on the grid data).
+- **Ordering:** Pinot noir ≤ Chardonnay < Riesling < Cabernet Sauvignon for véraison at every site.
+
+## 10. Game simplifications
+
+1. One mean date per stage per Block. Real bud populations spread over days.
+2. GSR thermal time sets the mean sugar trajectory; crop load and water status only modify it.
+3. Ripening stops on 31 October or at the first hard autumn frost.
+4. Secondary-bud crop after frost is a fixed fraction.
+
+## 11. Open questions
+
+- Obtain GSR F* values (Parker et al. 2020, Table 2) and BRIN per-variety parameters (García de Cortázar-Atauri et al. 2009, or supplementary tables), or fit them against observed dates.
+- Get observed budburst dates for Moselle Riesling (the Luxembourg series 1971–2018 used by Costafreda-Aumedes et al. 2025) and for Napa.
+
+## Sources
+
+- Coombe, B.G. (1995). Adoption of a system for identifying grapevine growth stages. *Australian Journal of Grape and Wine Research* 1, 104–110.
+- García de Cortázar-Atauri, I., Brisson, N., Gaudillère, J.-P. (2009). Performance of several models for predicting budburst date of grapevine (*Vitis vinifera* L.). *International Journal of Biometeorology* 53, 317–326. [Springer](https://link.springer.com/article/10.1007/s00484-009-0217-4)
+- Costafreda-Aumedes, S., Leolini, L., Menz, C., Yang, C., Argenti, G., Dibari, C., Bindi, M., Fraga, H., Santos, J., Molitor, D., Torres-Matallana, J.A., Simeunović, M., Moriondo, M. (2025). Uncertainties in predicting the medium-term future occurrence of grapevine budburst in Europe: the role of phenological models and climate scenarios. *OENO One* 59(2). [doi:10.20870/oeno-one.2025.59.2.8056](https://oeno-one.eu/article/view/8056)
+- Parker, A.K., García de Cortázar-Atauri, I., van Leeuwen, C., Chuine, I. (2011). General phenological model to characterise the timing of flowering and veraison of *Vitis vinifera* L. *Australian Journal of Grape and Wine Research* 17, 206–216. [Wiley](https://onlinelibrary.wiley.com/doi/10.1111/j.1755-0238.2011.00140.x)
+- Parker, A., García de Cortázar-Atauri, I., Chuine, I., Barbeau, G., Bois, B., Boursiquot, J.-M., et al. (2013). Classification of varieties for their timing of flowering and veraison using a modelling approach: A case study for the grapevine species *Vitis vinifera* L. *Agricultural and Forest Meteorology* 180, 249–264. [PDF](https://www-iuem.univ-brest.fr/wapps/letg/adviclim/BDX/PDF/PI_49_Parker_Flow_Ver_Classification_AgForMet_2013.pdf)
+- Parker, A., García de Cortázar-Atauri, I., Gény, L., Spring, J.-L., Destrac, A., Schultz, H., Molitor, D., Lacombe, T., Graça, A., Monamy, C., Stoll, M., Storchi, P., Trought, M.C.T., Hofmann, R., van Leeuwen, C. (2020). Temperature-based grapevine sugar ripeness modelling for a wide range of *Vitis vinifera* L. cultivars. *Agricultural and Forest Meteorology* 285–286, 107902. [doi:10.1016/j.agrformet.2020.107902](https://ira.agroscope.ch/en-US/publication/43744)
+- Parker, A.K., García de Cortázar-Atauri, I., Trought, M.C.T., Destrac, A., Agnew, R., Sturman, A., van Leeuwen, C. (2020b). Adaptation to climate change by determining grapevine cultivar differences using temperature-based phenology models. *OENO One* 54(4). [doi:10.20870/oeno-one.2020.54.4.3861](https://oeno-one.eu/article/view/3861)
+- Labbé, T., Pfister, C., Brönnimann, S., Rousseau, D., Franke, J., Bois, B. (2019). The longest homogeneous series of grape harvest dates, Beaune 1354–2018, and its significance for the understanding of past and present climate. *Climate of the Past* 15, 1485–1501. [Copernicus](https://cp.copernicus.org/articles/15/1485/2019/)
+- University of Maryland Extension. [Grapevine Frost/Freeze Damage I: Background and Prevention](https://extension.umd.edu/resource/grapevine-frostfreeze-damage-i-background-and-prevention)
+- Growing Produce. [How to Avoid Frost Injury in Vineyards](https://www.growingproduce.com/fruits/grapes/how-to-avoid-frost-injury-in-vineyards/) (cites Gardea 1987 LT50 values for Pinot noir)
+- Jones, G.V. (2010). Climate, grapes, and wine: structure and suitability in a variable and changing climate. *Proceedings of the VIII International Terroir Congress*, Soave, Italy. [PDF](https://ives-openscience.eu/wp-content/uploads/2021/11/Climate_Grape_Wine_Jones.pdf)
