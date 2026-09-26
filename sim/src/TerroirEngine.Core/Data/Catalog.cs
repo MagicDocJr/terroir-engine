@@ -134,7 +134,7 @@ public sealed class GameData
 {
     public string DataRoot { get; }
     public PlotsFile Plots { get; }
-    public static double NapaSoilK = 1.3;
+    public static double NapaSoilK = 1.2;
     public double StartingCapital => Plots.StartingCapitalEur;
 
     public GameData(string dataRoot)

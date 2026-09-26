@@ -117,6 +117,8 @@ if (cmd == "play")
         foreach (var lot in g.Lots.Where(l => l.Phase == LotPhase.Stuck).ToList()) g.Apply(new TerroirEngine.Game.Command { Type = "restart", A = lot.Id });
     }
     Console.WriteLine($"Finished {g.FinishedDate} after {stops} stops, {sw.ElapsedMilliseconds} ms. Inbox {g.Inbox.Count} messages.");
+    var snapOut = Environment.GetEnvironmentVariable("TE_SNAPSHOT");
+    if (!string.IsNullOrEmpty(snapOut)) File.WriteAllText(snapOut, TerroirEngine.Game.Snapshot.Json(g));
     foreach (var b in g.Blocks)
     {
         var pv = g.Provenance.GetValueOrDefault(b.LotId ?? "");

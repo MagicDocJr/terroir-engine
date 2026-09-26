@@ -360,6 +360,8 @@ public sealed partial class GameSession
             if (Region.Id != "mosel") { Set("Vessel", Region.Id == "napa" ? 4 : 3); Set("Lees", 2); Set("Ageing", 2); Set("Temperature", 2); }   // barrel-fermented Chardonnay runs warmer (18 °C)
         }
         else { Set("MLF", 0); Set("Vessel", Region.Id == "mosel" ? 0 : 0); }   // Riesling: steel, no MLF
+        // Napa winemakers routinely add tartaric acid to high-pH musts (legal in California; acid-ph-so2.md)
+        if (Region.Id == "napa") { double ph = Chemistry.MustFromBlock(b).Ph; if (ph > 3.8) Set("Acidification", 2); else if (ph > 3.6) Set("Acidification", 1); }
     }
 
     private Provenance CaptureProvenance(BlockState b)

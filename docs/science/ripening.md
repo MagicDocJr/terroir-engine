@@ -99,7 +99,7 @@ TA (g/L as tartaric) ≈ tartaric + malic × 1.12, because malic acid's equivale
 
 Berry potassium accumulates during ripening. High soil K, vigorous rootstocks, shaded canopies and hot conditions give **high-K, high-pH** musts. Warm sites combine that with low malic acid, so Napa Cabernet reaches pH 3.6–3.9 at harvest, while Mosel Riesling stays around 2.9–3.2.
 
-**Game calibration (`UNVERIFIED`):** Napa soils get a potassium-supply factor of 1.3 relative to the other Regions. Without it, the simulated Napa Cabernet harvest pH was 3.4–3.5, below the calibration target. With it, pH is 3.57–3.77 and TA 4.9–5.7 g/L across 2010–2021. Replace this with measured soil or petiole K data when available.
+**Game calibration (`UNVERIFIED`):** Napa soils get a potassium-supply factor of 1.2 relative to the other Regions. Without it, the simulated Napa Cabernet harvest pH was 3.2–3.5, below the calibration target. With it, pH is 3.30–3.68 (mostly ≥ 3.5) and TA 5.2–6.7 g/L across 2010–2021. A factor of 1.3 reached pH 3.6–3.8 but pushed TA below 5.5, so 1.2 is the compromise. Replace this with measured soil or petiole K data when available.
 
 ```
 K_berry(t) = K_veraison · (1 + k_k · TT_from_veraison) · rootstockKFactor · soilK
