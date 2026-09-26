@@ -1,0 +1,244 @@
+# Canopy, fruit set, yield and vineyard labour
+
+Status: draft, science pass (M1). Terms follow `CONTEXT.md`. `UNVERIFIED` marks numbers I could not confirm against a source in this pass.
+
+## 1. Purpose
+
+Model per Block:
+- how much leaf area the vines carry and how exposed the fruit is (which drives ripening, aroma precursors, sunburn and disease)
+- how many grapes set and grow (yield)
+- how water stress changes both
+- how many labour hours each vineyard task costs (for the labour and canopy Programmes)
+
+## 2. Canopy
+
+### 2.1 Leaf area
+
+Leaf area per vine grows with shoot number and thermal time after budburst:
+
+```
+shoots          = buds_retained · budburst_fraction                       (budburst_fraction ≈ 0.85–0.95, UNVERIFIED)
+leafArea_shoot  = LAmax_shoot · (1 − exp(−k_la · GDD_since_budburst))      m² per shoot (GDD base 10 °C)
+leafArea_vine   = shoots · leafArea_shoot · (1 − defoliation) · (1 − diseaseLeafLoss) − hedgingRemoved
+LAI             = leafArea_vine · vines_per_ha / 10 000                   m² leaf per m² ground
+```
+
+| Parameter | Value | Status |
+|---|---|---|
+| LAmax_shoot (primary + laterals, vigorous site) | 0.25–0.45 m² per shoot | `UNVERIFIED`; scales with vigour (soil water, rootstock) |
+| k_la | ≈ 0.004 per °C·day | `UNVERIFIED`; tune so shoot growth levels off after flowering |
+| Typical LAI, VSP / Einzelpfahl | 1–3 | `UNVERIFIED`, standard range |
+
+**Vigour** multiplies `LAmax_shoot`: deep, fertile, moist soil or a vigorous rootstock (1103 Paulsen, 140 Ruggeri) raises it; shallow slate, drought, or a low-vigour rootstock (3309C, 101-14) lowers it (`UNVERIFIED` multipliers 0.7–1.3). The rootstock table lives in the Planting doc.
+
+### 2.2 Leaf area to fruit ratio (the ripening capacity)
+
+For single-canopy training systems (VSP, Guyot, Cordon, Einzelpfahl), **0.8–1.2 m² of leaf area per kg of fruit** gives maximum sugar, berry weight and colour at harvest. Horizontally divided canopies need 0.5–0.8 m²/kg (Kliewer & Dokoozlian 2005). The ripening doc scales sugar loading with this ratio:
+
+```
+LAFR = effectiveLeafArea_vine / crop_kg_vine
+ripeningCapacity = clamp(LAFR / 1.0, 0.4, 1.1)          (1.0 m²/kg ≈ middle of the single-canopy range)
+```
+
+`ripeningCapacity` below 1 slows sugar loading and lowers the sugar plateau. That's why over-cropping ripens poorly, a core WSET lesson.
+
+### 2.3 Fruit exposure and fruit-zone microclimate
+
+Light reaching the bunches follows canopy density (Beer–Lambert extinction):
+
+```
+exposure = exp(−k_ext · LAI_fruitzone)        k_ext ≈ 0.5–0.7 (UNVERIFIED), LAI_fruitzone = leaf layers around the bunches
+```
+
+`exposure` (0–1) feeds:
+- **Ripening doc:** TDN precursors (↑ with exposure), IBMP (↓ with pre-veraison exposure), anthocyanins (↑ with moderate exposure, ↓ when berries overheat), malic acid (↓ faster in exposed, warmer fruit)
+- **Disease doc:** fruit-zone wetness multiplier `= 1 + 0.5 · (1 − exposure)` (`UNVERIFIED`)
+- **Sunburn** (§2.5)
+
+### 2.4 Canopy Programme tiers
+
+**Game simplification:** one tier per Block bundles shoot thinning, shoot positioning and tying, hedging and fruit-zone leaf removal (spec §5.1). Leaf removal **side** and **timing** are explicit choices, since they're classic WSET decisions.
+
+| Tier | Shoot thinning | Hedging | Fruit-zone leaf removal | Effect | Labour multiplier |
+|---|---|---|---|---|---|
+| Low | none | once | none | dense canopy, low exposure (~0.2), more disease, lower TDN, higher IBMP | 0.6 |
+| Medium | light | twice | one side, moderate | exposure ~0.45 | 1.0 |
+| High | thorough | as needed | both sides or targeted, early | exposure ~0.7, driest fruit zone, highest sunburn risk | 1.6 |
+
+Exposure values and multipliers are `UNVERIFIED` placeholders for calibration.
+
+**Leaf removal choices:**
+- **Side.** In the northern hemisphere, the **morning (east) side** gets gentle morning sun, which is safe. The **afternoon (west) side** faces the hottest part of the day and carries the sunburn risk. On north–south rows this matters most. On east–west rows the exposed side is south-facing.
+- **Timing.** Early (pre-bloom to fruit set) or late (around veraison). Early removal lets berries acclimate, with thicker skins and more protective compounds, so they tolerate exposure later. Late removal on shade-grown fruit before a heatwave is the classic sunburn scenario (Gambetta et al. 2021). Early removal also increases Riesling TDN potential more than late removal (Kwasniewski et al. 2010; ripening doc §7).
+
+### 2.5 Sunburn
+
+Sunburn is a heat-induced disorder that needs **direct exposure** plus a **high berry surface temperature**. Susceptibility depends on the berry's acclimation and the cultivar (Gambetta et al. 2021). Experiments found that for shade-grown berries early in development, a surface temperature of about **46–47 °C for > 60 min** was enough to cause damage. Longer exposure needed lower temperatures, but 60 and 90 minutes differed only marginally (47.8 vs 47.1 °C). Wind lowers bunch temperature, and vines under water deficit were *less* susceptible after defoliation (Frontiers in Plant Science 2023, 14:1145274).
+
+**Game formula** (per sunny hour on the exposed side):
+
+```
+T_berry   = T_air + ΔT_sun · exposure_side · (1 − 0.08 · wind_ms)                 ΔT_sun ≈ 10–15 °C in full sun (UNVERIFIED)
+threshold = 46 °C  (not acclimated)   |   48.5 °C  (acclimated by early leaf removal or since fruit set)     (UNVERIFIED acclimation offset)
+damage   += fraction of exposed bunches · clamp((hours above threshold) / 2, 0, 1)
+```
+
+Sunburned berries lose weight and give bitter, "cooked" and phenolic off-characters. **Game rule:** they carry a quality penalty into the Lot unless sorted out.
+
+## 3. Yield components
+
+```
+crop_kg_vine = shoots · clusters_per_shoot · berries_per_cluster · berry_weight_g / 1000
+yield_kg_ha  = crop_kg_vine · vines_per_ha · (1 − bunchLoss_disease) · (1 − sunburnLoss) · youngVineFactor
+wine_hl_ha   ≈ yield_kg_ha · juice_yield_L_per_kg / 100             juice_yield ≈ 0.65–0.75 L/kg (UNVERIFIED; winemaking doc owns press yields)
+```
+
+### 3.1 Bud load at pruning (explicit choice, spec §5.2)
+
+| Training system | Typical buds per vine | Notes |
+|---|---|---|
+| Einzelpfahl (single stake, two bows) | 2 bows × 8–12 buds | Mosel steep slopes; `UNVERIFIED` range |
+| Guyot (cane, VSP) | single: 1 cane × 8–12 + 1–2 spur buds; double: 2 canes | `UNVERIFIED` |
+| Cordon (spur, VSP) | 6–10 spurs × 2 buds | `UNVERIFIED` |
+
+The player picks **Low / Balanced / High** bud load, translated into buds per vine for the Block's density and system. Higher bud load means more yield, a lower leaf-area-to-fruit ratio (§2.2), and slower, lower sugar.
+
+### 3.2 Fruitfulness (clusters per shoot)
+
+Inflorescence primordia form in the latent buds **during the previous season**, around flowering. Temperature and light on the buds then set next year's fruitfulness. **Game simplification (MVP):** fruitfulness is an initial condition per Variety, scaled ±15 % by the previous season's weather once multi-vintage play exists (backlog).
+
+### 3.3 Variety table
+
+| Variety | Clusters per shoot | Berries per cluster | Berry weight at harvest (g) | Cluster weight (g) | Compactness | Status |
+|---|---|---|---|---|---|---|
+| Riesling | 1.5–2.0 | 70–110 | 1.2–1.5 | 80–150 | compact | `UNVERIFIED` |
+| Chardonnay | 1.5–2.0 | 80–120 | 1.2–1.6 | 100–180 | medium-compact | `UNVERIFIED` |
+| Pinot Noir | 1.5–2.0 | 70–110 | 1.0–1.4 | 80–130 | compact | `UNVERIFIED` |
+| Cabernet Sauvignon | 1.3–1.8 | 90–130 | 0.9–1.2 | 100–150 | loose | `UNVERIFIED` |
+
+These are standard-reference orders of magnitude, cited from memory (Robinson, Harding & Vouillamoz, *Wine Grapes*; Keller, *The Science of Grapevines*). The qualitative points are standard WSET knowledge: Cabernet has small, thick-skinned berries; Pinot Noir has thin skins and compact bunches.
+
+### 3.4 Fruit set, coulure and millerandage
+
+A normal share of flowers set as berries. Poor weather during flowering causes:
+- **Coulure:** flowers or young berries drop. It follows cold, cloudy, rainy weather (or out-of-season heat) that leaves the vine short of carbohydrate during flowering.
+- **Millerandage:** berries set but stay small and seedless ("hens and chicks"), giving clusters with mixed berry sizes. Yield falls, but the small berries concentrate sugar, acid and phenolics.
+
+Flowering goes best at around 15 °C or warmer and dry (the coulure summaries cited below).
+
+**Game formula** (over the flowering window from the phenology doc):
+
+```
+set_fraction = base_set_variety · f_temp · f_rain · f_carb
+f_temp  = clamp((T_mean_flowering − 10) / (17 − 10), 0.3, 1.0)                 (UNVERIFIED shape: poor below ~15 °C, good ≥ 17 °C)
+f_rain  = 1 − 0.04 · rain_days_in_window  (floor 0.6)                          (UNVERIFIED)
+f_carb  = clamp(0.6 + 0.4 · leafArea_at_flowering / leafArea_needed, 0.6, 1) (UNVERIFIED)
+berries_per_cluster = nominal · set_fraction / base_set_variety
+millerandage_share  = 0.5 · (1 − f_temp) · (variety_millerandage_prone)       (shot berries: ~⅓ normal weight, higher sugar, UNVERIFIED)
+```
+
+| Variety | base_set | Prone to coulure / millerandage | Status |
+|---|---|---|---|
+| Riesling | 0.5 | low / low | `UNVERIFIED` |
+| Chardonnay | 0.45 | medium / **high** (millerandage is well known in Chardonnay) | `UNVERIFIED` |
+| Pinot Noir | 0.45 | medium / medium | `UNVERIFIED` |
+| Cabernet Sauvignon | 0.5 | low / low | `UNVERIFIED` (classic coulure varieties are Merlot and Grenache, not in the MVP) |
+
+### 3.5 Young vines (Establishment)
+
+Leaf 1 is the planting year. **Game simplification** (spec §3.1), using typical grower practice (`UNVERIFIED`):
+
+| Leaf | youngVineFactor (share of full crop) | Quality modifier |
+|---|---|---|
+| 1–2 | 0 (fruit removed) | – |
+| 3 | 0.3–0.5 (the first crop is often thinned) | concentration −10 % |
+| 4 | 0.8 | concentration −5 %, flagged "young vines" |
+| ≥ 5 | 1.0 | quality improves slowly with vine age (multi-vintage, backlog) |
+
+A drought in the planting year kills a share of the young vines (`UNVERIFIED`: 10–30 % losses without irrigation in a dry first summer). Replanting costs money and delays those vines.
+
+## 4. Water stress
+
+Vine water status comes from the soil water balance (weather/soil doc). Measured as midday **stem water potential (Ψstem)**, it is the best field indicator (Choné et al. 2001). The classification for wine grapes (van Leeuwen et al. 2009):
+
+| Ψstem (MPa) | Water constraint |
+|---|---|
+| > −0.6 | none |
+| −0.6 to −0.9 | weak |
+| −0.9 to −1.1 | weak to moderate |
+| −1.1 to −1.4 | moderate to severe |
+| < −1.4 | severe |
+
+**Effects by timing (Game formula; the directions are standard viticulture, the multipliers `UNVERIFIED`):**
+
+| Period | Effect of stress | Multiplier |
+|---|---|---|
+| Flowering → veraison | Berry cell expansion is reduced, so **berries stay smaller for good**. Shoot growth slows (less vigour, more open canopy) | final berry weight × (1 − 0.25 · stressIndex_pre) |
+| Veraison → harvest, weak to moderate | Little effect on sugar loading; red Varieties gain colour and concentration; balance improves | anthocyanin × (1 + 0.15 · stressIndex_post), until stress turns severe |
+| Any time, severe (< −1.4 MPa) | Stomata close, **photosynthesis and sugar loading stall**, leaves yellow and drop, sunburn risk rises with less canopy cover | ripeningCapacity × 0.4; leaf loss 1 %/day |
+
+```
+stressIndex = clamp((−0.6 − Ψstem) / (1.4 − 0.6), 0, 1)       0 at −0.6 MPa, 1 at −1.4 MPa
+```
+
+Irrigation (where legal) is the lever. Napa can irrigate; Mosel and Côte d'Or are effectively rain-fed in the MVP, and the law doc owns the exact rules.
+
+## 5. Inputs
+
+Budburst and phenology dates, daily weather, soil water (Ψstem), rootstock and vigour, Planting density and training system, bud load, canopy Programme tier with leaf-removal side and timing, disease leaf loss, Variety parameters, vine age (leaf).
+
+## 6. Labour (for the labour Programme)
+
+Steep-slope viticulture is far more labour-intensive. A German study reports about **1,600 h/ha per year for terraced steep slopes vs about 400 h/ha where tractors can work in direct traction**. Direct traction stops at around 60 % slope even in good conditions (Olejnizak, FH Mainz diploma thesis, via landentwicklung.de). That gap is why the "very steep slate terraces" Plot is expensive to run.
+
+**Per-task breakdown (Game model; the totals are anchored to the source, the split is `UNVERIFIED`):**
+
+| Task | Flat, mechanised (h/ha) | Steep, manual Einzelpfahl (h/ha) |
+|---|---|---|
+| Winter pruning + removing prunings | 60 | 250 |
+| Tying bows or canes | 25 | 150 |
+| Shoot thinning, positioning, tying up | 50 | 300 |
+| Hedging / topping | 10 | 120 |
+| Leaf removal (Medium tier) | 15 | 100 |
+| Spraying (10 passes; steep: monorack, helicopter or drone) | 15 | 120 |
+| Floor / weed management | 25 | 150 |
+| Harvest, hand picking | 150 | 350 |
+| Harvest, machine (flat only) | 5 | – |
+| Maintenance (stakes, wires, repairs) | 50 | 60 |
+| **Total (hand harvest)** | **≈ 400** | **≈ 1,600** |
+
+Crew hours available per week come from the labour Programme tier. When a task isn't finished in its window, the model applies the consequences the spec describes (spec §5.1):
+- late shoot thinning → denser canopy (lower exposure) and less effective spraying
+- slow harvest → grapes hang longer (dehydration, acid loss, botrytis risk)
+
+Staff level scales efficiency (Junior −10 %, Senior +10 %, `UNVERIFIED`).
+
+## 7. Calibration
+
+| Target | Range | Status |
+|---|---|---|
+| Leaf-area-to-fruit ratio for full ripening, single canopy | 0.8–1.2 m²/kg | Kliewer & Dokoozlian 2005 (verified) |
+| Mosel Riesling, balanced bud load, 4th leaf+ | ≈ 60–110 hl/ha (steep slopes lower than flat riverbank) | `UNVERIFIED`; the law doc sets the legal maximum |
+| Côte d'Or Premier Cru Pinot Noir | ≈ 35–50 hl/ha | `UNVERIFIED` (AOC yield rules in the law doc) |
+| Napa valley-floor Cabernet | ≈ 3–5 short tons/acre (≈ 7–11 t/ha) | `UNVERIFIED` |
+| Sunburn onset (shade-grown berries, > 60 min) | ≈ 46–47 °C berry surface | verified, Frontiers 2023 |
+| Coulure year (cold, wet flowering) | yield −20 to −50 % in prone Varieties | `UNVERIFIED` |
+
+## 8. Game simplifications
+
+1. One canopy Programme tier bundles several operations; leaf-removal side and timing are separate choices.
+2. Fruitfulness is an initial condition in the MVP.
+3. Young-vine yields follow a fixed table.
+4. Labour per task uses fixed hours per hectare anchored to published totals.
+
+## Sources
+
+- Kliewer WM, Dokoozlian NK (2005). *Leaf area/crop weight ratios of grapevines: influence on fruit composition and wine quality.* American Journal of Enology and Viticulture 56(2):170–181. doi:10.5344/ajev.2005.56.2.170. https://www.ajevonline.org/content/56/2/170
+- van Leeuwen C, Tregoat O, Choné X, Bois B, Pernet D, Gaudillère JP (2009). *Vine water status is a key factor in grape ripening and vintage quality for red Bordeaux wine. How can it be assessed for vineyard management purposes?* Journal International des Sciences de la Vigne et du Vin 43(3):121–134. https://oeno-one.eu/article/view/798 (the thresholds are verified; the full author list is cited from memory)
+- Choné X, van Leeuwen C, Dubourdieu D, Gaudillère JP (2001). *Stem water potential is a sensitive indicator of grapevine water status.* Annals of Botany 87:477–483. (Volume and pages cited from memory.)
+- Gambetta JM, Holzapfel BP, Stoll M, Friedel M (2021). *Sunburn in grapes: a review.* Frontiers in Plant Science 11:604691. https://pmc.ncbi.nlm.nih.gov/articles/PMC7819898/
+- *Wind speed, sun exposure and water status alter sunburn susceptibility of grape berries* (2023). Frontiers in Plant Science 14:1145274. https://www.frontiersin.org/journals/plant-science/articles/10.3389/fpls.2023.1145274/full
+- Kwasniewski MT, Vanden Heuvel JE, Pan BS, Sacks GL (2010). *Timing of cluster light environment manipulation during grape development affects C13 norisoprenoid and carotenoid concentrations in Riesling.* Journal of Agricultural and Food Chemistry 58(11):6841–6849. https://pubs.acs.org/doi/abs/10.1021/jf904555p
+- Olejnizak S. Diploma thesis, Fachhochschule Mainz (Geoinformatik und Vermessung), on terracing in steep-slope viticulture. https://www.landentwicklung.de/fileadmin/sites/Landentwicklung/Dateien/Forschung/Diplomarbeit_Stephan_Olejnizak.pdf (1,600 h/ha terraced steep slope vs 400 h/ha direct traction; 60 % slope limit for direct traction)
+- Coulure and millerandage summaries: https://en.wikipedia.org/wiki/Coulure (definitions and weather causes; a tertiary source to replace with a primary one, see open questions)
+- Standard references, cited from memory: Keller M., *The Science of Grapevines* (3rd ed., 2020); Smart R., Robinson M., *Sunlight into Wine* (1991); Robinson J., Harding J., Vouillamoz J., *Wine Grapes* (2012).
