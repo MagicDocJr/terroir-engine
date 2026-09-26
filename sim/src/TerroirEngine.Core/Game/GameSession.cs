@@ -1,0 +1,489 @@
+using System.Text.Json;
+using TerroirEngine.Data;
+using TerroirEngine.Tasting;
+using TerroirEngine.Util;
+using TerroirEngine.Vineyard;
+using TerroirEngine.Weather;
+using TerroirEngine.Winery;
+
+namespace TerroirEngine.Game;
+
+public enum GamePhase { Establishment, Vintage, Cellar, Finished }
+
+public sealed class GameSetup
+{
+    public string EstateName { get; set; } = "Weingut";
+    public string PlotId { get; set; } = "mosel-blauschiefer";
+    public int PlantingYear { get; set; } = 2015;
+    public ulong Seed { get; set; } = 2025;
+    public StaffLevel VineyardManager { get; set; } = StaffLevel.Junior;
+    public StaffLevel CellarMaster { get; set; } = StaffLevel.Junior;
+    public Dictionary<string, PlantingChoice> Planting { get; set; } = new();
+}
+
+public sealed class Command
+{
+    public int Day { get; set; }
+    public string Type { get; set; } = "";
+    public string A { get; set; } = "";
+    public string B { get; set; } = "";
+    public string C { get; set; } = "";
+    public string D { get; set; } = "";
+    public string E { get; set; } = "";
+}
+
+public sealed class Message
+{
+    public int Id { get; set; }
+    public DateOnly Date { get; set; }
+    public string From { get; set; } = "";
+    public string Role { get; set; } = "";
+    public string Subject { get; set; } = "";
+    public string Body { get; set; } = "";
+    public string Why { get; set; } = "";
+    public string Priority { get; set; } = "normal";
+    public string Kind { get; set; } = "";
+    public string BlockId { get; set; } = "";
+    public bool Stop { get; set; }
+    public bool Read { get; set; }
+    public List<(string Label, string Action, string Arg)> Actions { get; } = new();
+}
+
+public sealed class SaveFile { public GameSetup Setup { get; set; } = new(); public List<Command> Commands { get; set; } = new(); public string Date { get; set; } = ""; }
+
+/// <summary>One game: an Estate on one Plot, from bare land through Establishment and one fully played Vintage to bottling (spec §3).</summary>
+public sealed partial class GameSession
+{
+    public GameData Data { get; }
+    public GameSetup Setup { get; }
+    public PlotData Plot { get; }
+    public RegionData Region => Plot.Region;
+    public RegionWeather Weather { get; }
+    public Forecaster Forecaster { get; }
+    public List<BlockState> Blocks { get; } = new();
+    public List<Lot> Lots { get; } = new();
+    public Dictionary<string, Provenance> Provenance { get; } = new();
+    public List<Wine> Wines { get; } = new();
+    public Ledger Ledger { get; } = new();
+    public List<Message> Inbox { get; } = new();
+    public VineyardContext Ctx { get; } = new();
+    public StaffLevel VineyardManager { get; private set; }
+    public StaffLevel CellarMaster { get; private set; }
+    public DateOnly Date { get; private set; }
+    public GamePhase Phase { get; private set; } = GamePhase.Establishment;
+    public int Vintage => Setup.PlantingYear + 3;
+    public List<Command> Commands { get; } = new();
+    public List<(DateOnly Date, double Cash)> CashSeries { get; } = new();
+    public List<string> EstablishmentReports { get; } = new();
+    public List<(DateOnly Date, double Downy, double Powdery, double Botrytis)> RiskSeries { get; } = new();
+    public string MentorName => Region.Id switch { "mosel" => "Klaus Weber", "cote-dor" => "Hélène Morot", _ => "Ray Castellanos" };
+    public bool MentorRetired { get; private set; }
+    public DateOnly? FinishedDate { get; private set; }
+    public DailyWeather Today { get; private set; }
+    private readonly HashSet<string> _gates = new();
+    private int _msgId;
+    private bool _replaying;
+    private int _lotCounter;
+
+    public GameSession(GameData data, GameSetup setup)
+    {
+        Data = data; Setup = setup;
+        Plot = data.Plot(setup.PlotId);
+        var archive = new WeatherArchive(data.DataRoot, Plot.Region.WeatherFile);
+        Weather = new RegionWeather(archive, setup.Seed);
+        Forecaster = new Forecaster(Weather, setup.Seed);
+        VineyardManager = setup.VineyardManager; CellarMaster = setup.CellarMaster;
+        foreach (var bd in Plot.Blocks)
+        {
+            var b = new BlockState(Plot, bd, new BlockClimate(Plot, bd, archive.GridElevationM)) { Planted = true, PlantingYear = setup.PlantingYear };
+            b.Planting = setup.Planting.TryGetValue(bd.Id, out var pc) ? pc : DefaultPlanting(Plot, bd);
+            Blocks.Add(b);
+        }
+        Ctx.IrrigationLegal = Region.Id == "napa";
+        Ctx.DownyInoculum = Region.Id == "napa" ? 0.1 : Region.Id == "cote-dor" ? 0.65 : 0.7;
+        Ctx.PowderyInoculum = Region.Id == "napa" ? 0.9 : 0.6;
+        Ctx.BotrytisInoculum = Region.Id == "napa" ? 0.4 : 0.7;
+        Ctx.Irrigation = Region.Id == "napa" ? Tier.Medium : Tier.Low;
+        Ctx.VineyardManager = VineyardManager;
+        Date = new DateOnly(setup.PlantingYear, 1, 1);
+        Today = Weather.Get(Date);
+        Ledger.Post(Date, "Capital", data.StartingCapital, "Starting capital");
+        Ledger.Post(Date, "Land", -Plot.Price, $"Bought {Plot.Name} ({Plot.AreaHa:0.0} ha)");
+        double planting = Blocks.Sum(b => EconomyTables.PlantingCostPerHa(Plot, b.Planting.Training) * b.AreaHa);
+        Ledger.Post(Date, "Planting", -planting, "Planting: vines, rootstocks, stakes/trellis, labour");
+        RunEstablishment();
+    }
+
+    public static PlantingChoice DefaultPlanting(PlotData p, BlockData b)
+    {
+        var v = p.Region.Id switch { "mosel" => VarietyId.Riesling, "cote-dor" => b.Soil.ClayPct > 30 ? VarietyId.PinotNoir : VarietyId.Chardonnay, _ => p.Id == "napa-carneros" ? VarietyId.PinotNoir : VarietyId.CabernetSauvignon };
+        var t = Enum.Parse<TrainingSystem>(p.TrainingAllowed[0]);
+        int density = p.Region.Id switch { "cote-dor" => 10000, "napa" => 3800, _ => t == TrainingSystem.Einzelpfahl ? 8000 : 5000 };
+        var rs = b.Soil.ActiveLimePct > 12 ? RootstockId.Fercal : b.Soil.TawMm < 90 ? RootstockId.R1103P : RootstockId.SO4;
+        return new PlantingChoice { Variety = v, Rootstock = rs, Training = t, Rows = p.SlopePct >= 30 ? RowOrientation.DownSlope : RowOrientation.NorthSouth, DensityVinesHa = density };
+    }
+
+    // ================================================================================== Establishment
+    private void RunEstablishment()
+    {
+        Ctx.AutoManage = true;
+        var saved = (Ctx.Spray, Ctx.Canopy, Ctx.Floor, Ctx.Labour);
+        Ctx.Spray = Tier.Medium; Ctx.Canopy = Tier.Medium; Ctx.Floor = Tier.Medium; Ctx.Labour = Tier.Medium;
+        for (int year = Setup.PlantingYear; year < Vintage; year++)
+        {
+            double survivalBefore = Blocks.Average(b => b.VineSurvival);
+            int frostNights = 0; double severe = 0;
+            for (var d = new DateOnly(year, 1, 1); d.Year == year; d = d.AddDays(1))
+            {
+                Date = d;
+                var w = Weather.Get(d);
+                foreach (var b in Blocks) VineyardModel.Step(b, w, Ctx, Setup.Seed);
+                frostNights += Ctx.Events.Count(e => e.Kind == "frost");
+                Ctx.Events.Clear();
+                severe += Blocks.Average(b => b.PsiStem < -1.4 ? 1 : 0);
+            }
+            double survivalAfter = Blocks.Average(b => b.VineSurvival);
+            int leaf = year - Setup.PlantingYear + 1;
+            double cost = Blocks.Sum(b => b.AreaHa * (EconomyTables.LabourHoursPerHa(Plot) * EconomyTables.LabourRate(Region.Id) * 0.5 + EconomyTables.MaterialsPerHaYear(Region.Id) * 0.6 + EconomyTables.TaxAndDuesPerHaYear(Plot)));
+            Ledger.Post(new DateOnly(year, 12, 31), "Establishment", -cost, $"Establishment year {leaf}: care of the young vines (managed by {MentorName})");
+            double lost = survivalBefore - survivalAfter;
+            double replant = lost * Blocks.Sum(b => b.Planting.DensityVinesHa * b.AreaHa) * 3.5;
+            if (lost > 0.005)
+            {
+                Ledger.Post(new DateOnly(year, 12, 31), "Establishment", -replant, $"Replanting {lost * 100:0} % of vines lost to drought");
+                foreach (var b in Blocks) b.VineSurvival = Math.Min(1, b.VineSurvival + lost * 0.9);
+            }
+            var bA = Blocks[0];
+            string report = $"{year} — leaf {leaf}. Season heat {bA.Winkler:0} degree-days (Winkler), rain {bA.RainSeason:0} mm. " +
+                (leaf == 1 ? "The young vines put down roots; I kept the soil clear so they don't compete for water. " : leaf == 2 ? "We trained the first shoots onto the " + (bA.Planting.Training == TrainingSystem.Einzelpfahl ? "stakes" : "wires") + " and removed all flowers so the vines build roots, not fruit. " : "Third leaf: a small first crop set, but I dropped it so the vines stay balanced for next year. ") +
+                (severe > 20 ? $"A dry summer: {severe:0} days of severe water stress. " : "") +
+                (lost > 0.005 ? $"Drought killed {lost * 100:0} % of the young vines; we replanted them (€{replant:N0}). " : "") +
+                (frostNights > 0 ? $"{frostNights} spring frost night(s) touched the young shoots. " : "");
+            EstablishmentReports.Add(report);
+        }
+        (Ctx.Spray, Ctx.Canopy, Ctx.Floor, Ctx.Labour) = saved;
+        Ctx.AutoManage = false;
+        Phase = GamePhase.Vintage;
+        Date = new DateOnly(Vintage, 1, 15);
+        // simulate 1–14 Jan quietly so the new season has begun
+        for (var d = new DateOnly(Vintage, 1, 1); d < Date; d = d.AddDays(1)) foreach (var b in Blocks) VineyardModel.Step(b, Weather.Get(d), Ctx, Setup.Seed);
+        Ctx.Events.Clear();
+        Today = Weather.Get(Date);
+        IntroMessages();
+    }
+
+    private void IntroMessages()
+    {
+        string est = string.Join("\n\n", EstablishmentReports);
+        Post("mentor", "Welcome — three years of Establishment are behind us", $"Your vines are now in their fourth leaf. Here is what happened while they grew:\n\n{est}\n\nThis year is the first real vintage. I will guide you through it — every decision, and why it matters — until the wine is in bottle. Then I retire, and the Estate is yours.",
+            "Young vines crop lightly and give less concentrated fruit; the 4th leaf is the first near-full crop (flagged 'young vines').", "high", "intro", stop: false);
+        var pr = Post("mentor", "Winter pruning: choose the bud load for each Block",
+            $"January is pruning time. The number of buds you leave per vine sets this year's crop — and how well it ripens.\n\n• Low bud load: fewer, better-ripened grapes (≈6 buds/m²).\n• Balanced: the usual compromise (≈8 buds/m²).\n• High: a big crop that ripens slowly and may taste diluted (≈11 buds/m²).\n\n{(Region.Id == "cote-dor" ? "Remember: Village and Premier Cru rules allow at most 8 buds per vine." : Region.Id == "mosel" ? "Steep Einzelpfahl vines carry two bows; the buds are shared between them." : "On the valley floor vigour is high: too few buds and the canopy runs wild.")}",
+            "Bud load balances yield against ripening capacity: over ~1 kg of fruit per m² of leaf area ripens poorly (Kliewer & Dokoozlian 2005).", "high", "pruning", stop: true);
+        pr.Actions.Add(("Open Plot & Blocks", "goto", "plot"));
+        Post("mentor", "Set your Programmes for the season", "Your Vineyard manager runs the spray, canopy, floor, frost-protection and labour Programmes every day at the tier you choose. Low saves money but lets problems through; High costs more. You can change them any time.",
+            "Tiers bundle many real operations; the costs follow the economy study for this Region.", "normal", "programmes", stop: false).Actions.Add(("Open Programmes", "goto", "programmes"));
+    }
+
+    // ================================================================================== commands
+    public void Apply(Command c, bool record = true)
+    {
+        c.Day = Date.DayNumber;
+        ApplyInternal(c);
+        if (record && !_replaying) Commands.Add(c);
+    }
+
+    private void ApplyInternal(Command c)
+    {
+        switch (c.Type)
+        {
+            case "programme":
+                var tier = Enum.Parse<Tier>(c.B);
+                switch (c.A)
+                {
+                    case "spray": Ctx.Spray = tier; break;
+                    case "canopy": Ctx.Canopy = tier; break;
+                    case "floor": Ctx.Floor = tier; break;
+                    case "irrigation": if (Ctx.IrrigationLegal) Ctx.Irrigation = tier; break;
+                    case "frost": Ctx.Frost = tier; break;
+                    case "labour": Ctx.Labour = tier; break;
+                }
+                break;
+            case "block":
+                var b = Blocks.First(x => x.Data.Id == c.A);
+                if (c.B == "budload") b.BudLoad = Enum.Parse<BudLoad>(c.C);
+                else if (c.B == "leafside") b.LeafSide = Enum.Parse<LeafRemovalSide>(c.C);
+                else if (c.B == "leaftiming") b.LeafTiming = Enum.Parse<LeafRemovalTiming>(c.C);
+                else if (c.B == "thinning") { b.CropThinning = Math.Clamp(int.Parse(c.C), 0, 2); if (b.Veraison != null && !b.Harvested) VineyardModel.ApplyCropThinning(b); }
+                break;
+            case "harvest":
+                var hb = Blocks.First(x => x.Data.Id == c.A);
+                if (hb.Harvested || hb.Picking || hb.Veraison == null) break;
+                hb.Order = new HarvestOrder { HandPick = c.B != "machine", Sorting = Enum.Parse<SortingLevel>(string.IsNullOrEmpty(c.C) ? "Table" : c.C) };
+                if (!hb.Order.HandPick && (Plot.SlopePct >= 30 || hb.Planting.Training == TrainingSystem.Einzelpfahl)) hb.Order.HandPick = true;
+                hb.Picking = true; hb.PickedKg = 0; hb.PickTargetKg = hb.CropKg;
+                break;
+            case "lot":
+                var lot = Lots.First(x => x.Id == c.A);
+                var ch = CellarOptions.Get(c.B);
+                bool started = lot.Phase is not (LotPhase.Received or LotPhase.ColdSoak);
+                if (ch.LockedAfterFermentStart && started) break;
+                lot.Choices[c.B] = Math.Clamp(int.Parse(c.C), 0, ch.Options.Length - 1);
+                break;
+            case "restart":
+                var sl = Lots.FirstOrDefault(x => x.Id == c.A);
+                if (sl != null) WineryModel.Restart(sl, Date);
+                break;
+            case "staff":
+                var lvl = Enum.Parse<StaffLevel>(c.B);
+                if (c.A == "vineyard") { VineyardManager = lvl; Ctx.VineyardManager = lvl; } else CellarMaster = lvl;
+                break;
+            case "wine": CreateWine(c); break;
+            case "read":
+                var m = Inbox.FirstOrDefault(x => x.Id.ToString() == c.A); if (m != null) m.Read = true;
+                break;
+        }
+    }
+
+    // ================================================================================== time
+    /// <summary>Advance up to <paramref name="maxDays"/> days, stopping early at the first Alert that needs attention. Returns days advanced.</summary>
+    public int Advance(int maxDays, bool stopAtAlerts = true)
+    {
+        int n = 0;
+        while (n < maxDays && Phase != GamePhase.Finished)
+        {
+            bool stop = StepDay();
+            n++;
+            if (stop && stopAtAlerts) break;
+        }
+        return n;
+    }
+
+    private bool StepDay()
+    {
+        int before = Inbox.Count(m => m.Stop);
+        var w = Weather.Get(Date);
+        Today = w;
+        bool vineYear = Date.Year == Vintage;
+        Ctx.LabourFactor = Ctx.Labour switch { Tier.Low => 0.85, Tier.High => 1.2, _ => 1.0 };
+        Ctx.SprayPassesToday = 0; Ctx.FrostProtectionNights = 0;
+        if (vineYear) foreach (var b in Blocks) VineyardModel.Step(b, w, Ctx, Setup.Seed);
+        HarvestProgress();
+        // a Lot received today waits until tomorrow, so the player can set its cellar choices first
+        foreach (var lot in Lots.Where(l => l.Phase != LotPhase.Blended && l.Harvested < Date)) WineryModel.Step(lot, Date, CellarMaster, Ctx.Events);
+        DailyCosts();
+        HandleEvents();
+        Advisor();
+        if (Date.DayOfWeek == DayOfWeek.Monday) CashSeries.Add((Date, Ledger.Cash));
+        if (vineYear && Date.Month >= 4 && Date.Month <= 10)
+            RiskSeries.Add((Date, Blocks.Average(b => b.Disease.DownyRiskToday), Blocks.Average(b => b.Disease.PowderyIndex), Blocks.Average(b => b.Disease.BotrytisRiskToday)));
+        UpdatePhase();
+        Date = Date.AddDays(1);
+        return Inbox.Count(m => m.Stop) > before;
+    }
+
+    private void UpdatePhase()
+    {
+        if (Phase == GamePhase.Vintage && Blocks.All(b => b.Harvested)) { Phase = GamePhase.Cellar; }
+        if (Phase == GamePhase.Cellar && Lots.Count > 0 && Lots.All(l => l.Phase == LotPhase.Blended))
+        {
+            Phase = GamePhase.Finished; FinishedDate = Date; MentorRetired = true;
+            var rev = Wines.Sum(x => x.Revenue);
+            Post("mentor", "The wine is in bottle — and I am retiring", $"Every Lot of the {Vintage} vintage is now bottled. {Wines.Count} Wine(s), {Wines.Sum(x => x.Bottles):N0} bottles, €{rev:N0} in sales.\n\nIt has been a pleasure. From now on the Estate is yours — hire good people, or learn it all yourself. Look at your Tasting sheets: every descriptor tells you which of your decisions caused it.",
+                "The MVP ends at bottling (spec §3.1). Multi-vintage play is the first planned expansion.", "high", "finished", stop: true).Actions.Add(("Open Wines", "goto", "wines"));
+        }
+    }
+
+    // ================================================================================== harvest
+    private void HarvestProgress()
+    {
+        double crew = EconomyTables.CrewHoursPerDay(Ctx.Labour);
+        foreach (var b in Blocks.Where(x => x.Picking && !x.Harvested))
+        {
+            double hpk = EconomyTables.HarvestHoursPerKg(Plot, b.Order!.HandPick);
+            double kgToday = crew / hpk;
+            double remaining = Math.Max(0, b.CropKg - b.PickedKg);
+            double picked = Math.Min(kgToday, remaining);
+            b.PickedKg += picked;
+            double hours = picked * hpk;
+            Ledger.Post(Date, "Harvest", -hours * EconomyTables.LabourRate(Region.Id) - (b.Order.HandPick ? 0 : 400 * b.AreaHa), $"Harvest crew, Block {b.Data.Id}");
+            if (b.PickedKg >= b.CropKg - 1 || b.CropKg < 1)
+            {
+                b.Harvested = true; b.Picking = false; b.HarvestDate = Date; b.Stage = Stage.Harvested;
+                var lotId = $"{Vintage % 100:00}-{b.Data.Id}";
+                var lot = WineryModel.FromBlock(b, lotId, Date, b.PickedKg, b.Order.Sorting);
+                DefaultCellarChoices(lot, b);
+                b.LotId = lotId;
+                Lots.Add(lot);
+                Provenance[lotId] = CaptureProvenance(b);
+                Ledger.Post(Date, "Cellar", -lot.GrapeKg * 0.7 / 100 * 10, $"Cellar consumables, Lot {lotId}");
+                var must = Chemistry.MustFromBlock(b);
+                var msg = Post("cellar", $"Block {b.Data.Id} is in: Lot {lotId} received",
+                    $"{lot.GrapeKg:N0} kg at {must.Oe:0} °Oe ({must.Brix:0.0} °Brix, potential {must.PotentialAlcohol:0.0} % vol), TA {must.TaGL:0.0} g/L, pH {must.Ph:0.00}, YAN {must.YanMgL:0} mg/L." +
+                    (b.Disease.GreyRot > 0.02 ? $" Grey rot {b.Disease.GreyRot * 100:0} % — {b.Order.Sorting.ToString().ToLowerInvariant()} sorting." : "") +
+                    $"\n\nSet the cellar choices for this Lot now: {(lot.Red ? "destemming, cold soak, yeast, temperature, cap management" : "pressing, settling, yeast, temperature, sweetness")} are locked once fermentation starts.",
+                    lot.Red ? "Red wine ferments on the skins: colour and tannin come from how long and how hard you extract." : "White juice is pressed off the skins straight away; the cellar choices shape fruit, texture and sweetness.",
+                    "high", "lot-received", stop: true, blockId: b.Data.Id);
+                msg.Actions.Add(("Open Winery", "goto", "winery"));
+            }
+        }
+    }
+
+    /// <summary>Regional house style as the starting point for the player's cellar choices (all editable before fermentation).</summary>
+    private void DefaultCellarChoices(Lot lot, BlockState b)
+    {
+        void Set(string k, int i) => lot.Choices[k] = i;
+        if (lot.Red)
+        {
+            Set("MLF", 1);                                                          // inoculate: reds almost always complete MLF
+            Set("Lees", 1);                                                         // reds are racked off the gross lees
+            if (b.Variety.Id == VarietyId.PinotNoir) { Set("Cap management", 1); Set("Destemming", Region.Id == "cote-dor" ? 1 : 0); Set("Vessel", Region.Id == "mosel" ? 1 : 3); Set("Ageing", 2); }
+            else { Set("Vessel", Region.Id == "napa" ? 4 : 2); Set("Ageing", Region.Id == "napa" ? 3 : 2); Set("Maceration", Region.Id == "napa" ? 1 : 0); }
+        }
+        else if (b.Variety.Id == VarietyId.Chardonnay)
+        {
+            Set("MLF", Region.Id == "mosel" ? 0 : 1);
+            if (Region.Id != "mosel") { Set("Vessel", Region.Id == "napa" ? 4 : 3); Set("Lees", 2); Set("Ageing", 2); }
+        }
+        else { Set("MLF", 0); Set("Vessel", Region.Id == "mosel" ? 0 : 0); }   // Riesling: steel, no MLF
+    }
+
+    private Provenance CaptureProvenance(BlockState b)
+    {
+        var must = Chemistry.MustFromBlock(b);
+        double hl = b.PickedKg * (b.Variety.Red ? 0.72 : 0.62) / 100.0 / Math.Max(0.01, b.AreaHa);
+        return new Provenance
+        {
+            BlockId = b.Data.Id, BlockName = b.Data.Name, Soil = b.Data.Soil.Texture, Variety = b.Variety.Name, Rootstock = b.Rootstock.Name, Training = b.Planting.Training.ToString(),
+            Vintage = Vintage, Leaf = b.Leaf(Vintage), ExposureEarly = b.ExposureEarlyDays > 0 ? b.ExposureEarlySum / b.ExposureEarlyDays : b.Exposure,
+            ExposureLate = b.ExposureLateDays > 0 ? b.ExposureLateSum / b.ExposureLateDays : b.Exposure, StressPost = b.StressPostDays > 0 ? b.StressPostSum / b.StressPostDays : 0,
+            YieldKgHa = b.PickedKg / Math.Max(0.01, b.AreaHa), YieldHlHa = hl, WinklerBlock = b.Winkler, SeasonTemp = VineyardModel.SeasonMeanTemp(b), BudsPerVine = b.BudsPerVine,
+            DensityVinesHa = b.Planting.DensityVinesHa, LeafSide = b.LeafSide.ToString(), LeafTiming = b.LeafTiming.ToString(), CanopyTier = Ctx.Canopy.ToString(), SprayTier = Ctx.Spray.ToString(),
+            BudLoad = b.BudLoad.ToString(), Sorting = b.Order?.Sorting.ToString() ?? "", Picking = b.Order?.HandPick == false ? "machine" : "hand", HarvestDate = Date,
+            HarvestOe = must.Oe, HarvestTa = must.TaGL, HarvestPh = must.Ph, SeedMaturity = b.SeedMaturity, FrostLoss = b.FrostShootLoss, SunburnPct = b.SunburnFraction * 100,
+            GreyRotPct = b.Disease.GreyRot * 100, NobleRotPct = b.Disease.NobleRot * 100, DownyLeafPct = b.Disease.DownyLeaf, IbmpNgL = b.Ibmp,
+        };
+    }
+
+    // ================================================================================== wines
+    private void CreateWine(Command c)
+    {
+        var parts = new List<(Lot lot, Provenance prov, double litres)>();
+        foreach (var token in c.E.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = token.Split(':');
+            var lot = Lots.FirstOrDefault(l => l.Id == kv[0] && l.Phase == LotPhase.Ready);
+            if (lot == null) continue;
+            double litres = kv.Length > 1 && double.TryParse(kv[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var l0) ? Math.Min(l0, lot.VolumeL) : lot.VolumeL;
+            parts.Add((lot, Provenance[lot.Id], litres));
+        }
+        if (parts.Count == 0) return;
+        var wine = new Wine
+        {
+            Id = $"W{Wines.Count + 1}", Name = string.IsNullOrWhiteSpace(c.A) ? $"Wine {Wines.Count + 1}" : c.A,
+            Closure = Enum.TryParse<Closure>(c.B, out var cl) ? cl : Closure.Screwcap,
+            Filtration = Enum.TryParse<Filtration>(c.C, out var fi) ? fi : Filtration.Sterile,
+            Fining = Enum.TryParse<Fining>(c.D, out var fn) ? fn : Fining.Bentonite,
+        };
+        foreach (var p in parts) wine.Components.Add(new Component(p.lot.Id, p.litres));
+        wine.Blend = Blending.Combine(parts.Select(p => (p.lot, p.litres)), wine.Id);
+        if (wine.Fining == Fining.BentoniteGelatine && wine.Blend.Red) { wine.Blend.SeedTannin *= 0.88; wine.Blend.SkinTannin *= 0.93; wine.Blend.Anthocyanin *= 0.95; }
+        if (wine.Filtration == Filtration.Unfiltered) wine.Blend.LeesMonths += 0.5;
+        wine.Bottled = Date;
+        double litresTotal = parts.Sum(p => p.litres);
+        wine.Bottles = (int)(litresTotal * 0.98 / 0.75);
+        wine.Legal = Law.Evaluate(wine, parts, Plot, Date);
+        wine.Sheet = TastingSheetGenerator.Generate(wine, parts, Date.AddMonths(3));
+        wine.Sheet.Label = wine.Legal.Label; wine.Sheet.Category = wine.Legal.Category;
+        wine.PricePerBottle = Math.Round(wine.Legal.BasePrice * Law.QualityMultiplier(wine.Sheet.Quality) * (wine.Blend.Harvested.Year == Vintage && Blocks.Any(b => b.Leaf(Vintage) == 4) ? 0.95 : 1), 2);
+        wine.BottlingCost = wine.Bottles * EconomyTables.BottleCost(wine.Closure) + 150;
+        wine.Revenue = wine.Sheet.Quality == "Faulty" ? wine.Bottles * 1.0 : wine.Bottles * wine.PricePerBottle;
+        Ledger.Post(Date, "Bottling", -wine.BottlingCost, $"Bottling {wine.Name}: {wine.Bottles:N0} bottles ({wine.Closure})");
+        Ledger.Post(Date, "Sales", wine.Revenue, $"{wine.Name}: {wine.Bottles:N0} × €{(wine.Sheet.Quality == "Faulty" ? 1.0 : wine.PricePerBottle):0.00} ({wine.Legal.Category}, {wine.Sheet.Quality}){(wine.Sheet.Quality == "Faulty" ? " — sold off in bulk" : "")}");
+        foreach (var p in parts)
+        {
+            p.lot.VolumeL -= p.litres;
+            if (p.lot.VolumeL < 5) { p.lot.Phase = LotPhase.Blended; p.lot.VolumeL = 0; }
+        }
+        Wines.Add(wine);
+        Post("cellar", $"{wine.Name} is bottled: {wine.Legal.Label}", $"{wine.Bottles:N0} bottles. Legal category: {wine.Legal.Category}. Quality: {wine.Sheet.Quality}. Price €{wine.PricePerBottle:0.00} per bottle.\n{string.Join("\n", wine.Legal.Notes)}",
+            "Open the Tasting sheet: every descriptor links back to the decision or condition that caused it.", "high", "bottled", stop: false).Actions.Add(("Open Wines", "goto", "wines"));
+    }
+
+    // ================================================================================== costs
+    private void DailyCosts()
+    {
+        double ha = Blocks.Sum(b => b.AreaHa);
+        string region = Region.Id;
+        bool season = Date.Month >= 3 && Date.Month <= 10 && Date.Year == Vintage;
+        if (season)
+        {
+            double hours = EconomyTables.LabourHoursPerHa(Plot) * ha / 245.0;
+            double canopyShare = 0.35 * (Ctx.Canopy switch { Tier.Low => 0.6, Tier.High => 1.6, _ => 1.0 });
+            double labourMult = Ctx.Labour switch { Tier.Low => 0.85, Tier.High => 1.2, _ => 1.0 };
+            Ledger.Post(Date, "Vineyard labour", -hours * (0.65 + canopyShare) * labourMult * EconomyTables.LabourRate(region), "Vineyard crew (pruning, canopy, floor, maintenance)");
+            double materials = EconomyTables.MaterialsPerHaYear(region) * ha / 245.0 * (Ctx.Floor switch { Tier.Low => 0.8, Tier.High => 1.2, _ => 1.0 });
+            Ledger.Post(Date, "Materials", -materials, "Canopy and floor materials, repairs, fuel");
+        }
+        if (Ctx.SprayPassesToday > 0 && Date.Year == Vintage)
+        {
+            double perPass = EconomyTables.SprayCostPerHaYear(Ctx.Spray, Plot.SlopePct >= 30) / EconomyTables.TypicalPasses(region, Ctx.Spray);
+            double passFraction = (double)Ctx.SprayPassesToday / Math.Max(1, Blocks.Count);
+            Ledger.Post(Date, "Sprays", -perPass * ha * passFraction, "Spray pass (materials + application)");
+        }
+        if (Ctx.FrostProtectionNights > 0) Ledger.Post(Date, "Frost protection", -600 * ha * Math.Min(1, (double)Ctx.FrostProtectionNights / Blocks.Count) * (Ctx.Frost == Tier.High ? 1.5 : 1), "Frost protection night (candles / wind machine)");
+        if (Ctx.IrrigationLegal && Date.Year == Vintage)
+        {
+            double mm = Blocks.Sum(b => b.IrrigationMmSeason);
+            if (Date.Month == 10 && Date.Day == 31) Ledger.Post(Date, "Irrigation", -(300 * ha + 0.8 * mm), $"Irrigation water and system ({mm / Math.Max(1, Blocks.Count):0} mm per Block)");
+        }
+        if (Date.Day == 1)
+        {
+            Ledger.Post(Date, "Staff", -(EconomyTables.Salary("vineyard", VineyardManager) + EconomyTables.Salary("cellar", CellarMaster)) / 12.0, $"Salaries: Vineyard manager ({VineyardManager}), Cellar master ({CellarMaster})");
+            if (Date.Month == 1) Ledger.Post(Date, "Overheads", -EconomyTables.TaxAndDuesPerHaYear(Plot) * ha, "Property tax, insurance, dues");
+            // monthly cellar running costs
+            foreach (var lot in Lots.Where(l => l.Phase is not (LotPhase.Blended or LotPhase.Received)))
+                Ledger.Post(Date, "Cellar", -(lot.VolumeL / 100.0 * 3 + lot.VolumeL / 1000.0 * 6 * EconomyTables.SkilledRate(region) / 10), "Cellar running costs (cooling, labour)");
+        }
+        // barrels bought when a Lot goes into oak
+        foreach (var lot in Lots.Where(l => l.Phase == LotPhase.Ageing && l.PhaseDay == 1))
+        {
+            var vp = WineryModel.Vessel(lot);
+            if (vp.Litres > 0)
+            {
+                int n = (int)Math.Ceiling(lot.VolumeL / vp.Litres);
+                Ledger.Post(Date, "Barrels", -n * vp.PricePer, $"{n} × {lot.Opt("Vessel").ToLowerInvariant()} for Lot {lot.Id}");
+            }
+        }
+    }
+
+    // ================================================================================== save / load
+    public string Save() => JsonSerializer.Serialize(new SaveFile { Setup = Setup, Commands = Commands, Date = Dates.Iso(Date) }, new JsonSerializerOptions { WriteIndented = true });
+    public static GameSession Load(GameData data, string json)
+    {
+        var sf = JsonSerializer.Deserialize<SaveFile>(json)!;
+        var s = new GameSession(data, sf.Setup);
+        var target = DateOnly.Parse(sf.Date, System.Globalization.CultureInfo.InvariantCulture);
+        s._replaying = true;
+        var queue = new Queue<Command>(sf.Commands.OrderBy(c => c.Day));
+        while (s.Date < target && s.Phase != GamePhase.Finished)
+        {
+            while (queue.Count > 0 && queue.Peek().Day <= s.Date.DayNumber) s.ApplyInternal(queue.Dequeue());
+            s.StepDay();
+        }
+        while (queue.Count > 0) s.ApplyInternal(queue.Dequeue());
+        s._replaying = false;
+        s.Commands.AddRange(sf.Commands);
+        return s;
+    }
+
+    // ================================================================================== messages
+    public Message Post(string role, string subject, string body, string why, string priority, string kind, bool stop, string blockId = "")
+    {
+        string from = role switch { "mentor" => $"Mentor · {MentorName}", "vineyard" => $"Vineyard manager ({VineyardManager})", "cellar" => $"Cellar master ({CellarMaster})", "weather" => "Weather service", _ => role };
+        if (role == "mentor" && MentorRetired) from = $"{MentorName} (retired)";
+        var m = new Message { Id = ++_msgId, Date = Date, From = from, Role = role, Subject = subject, Body = body, Why = why, Priority = priority, Kind = kind, Stop = stop, BlockId = blockId };
+        Inbox.Add(m);
+        return m;
+    }
+}

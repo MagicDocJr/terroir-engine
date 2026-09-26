@@ -1,0 +1,214 @@
+using TerroirEngine.Util;
+using TerroirEngine.Winery;
+
+namespace TerroirEngine.Tasting;
+
+public sealed record Descriptor(string Category, string Family, string Terms, string Intensity, string Because);
+public sealed record StructureLine(string Attribute, string Level, string Because);
+
+public sealed class TastingSheet
+{
+    public string WineName = "", Label = "", Category = "";
+    public string Clarity = "clear", ColourIntensity = "", Colour = "", AppearanceBecause = "";
+    public string NoseCondition = "clean", NoseIntensity = "", Development = "";
+    public List<Descriptor> Aromas { get; } = new();
+    public List<StructureLine> Palate { get; } = new();
+    public string FlavourIntensity = "", Finish = "";
+    public List<string> Faults { get; } = new();
+    public string Quality = "", QualityBecause = "", Readiness = "";
+    public List<(string Criterion, bool Met, string Why)> Blic { get; } = new();
+    public List<string> Chemistry { get; } = new();
+}
+
+/// <summary>Turns chemistry and history into a structured tasting sheet in our own wording (docs/science/tasting-sheet.md;
+/// aroma-and-faults.md odour-activity model OAV = C / threshold, perceived = log10(OAV) + 1 when OAV ≥ 1).</summary>
+public static class TastingSheetGenerator
+{
+    private static double Perceived(double c, double threshold) { double oav = c / threshold; return oav < 1 ? 0 : Math.Log10(oav) + 1; }
+    private static string IntensityWord(double p) => p <= 0 ? "" : p < 1.3 ? "light" : p < 1.7 ? "medium" : "pronounced";
+    private static readonly string[] Five = { "low", "medium(−)", "medium", "medium(+)", "high" };
+
+    public static TastingSheet Generate(Wine wine, IList<(Lot lot, Provenance prov, double litres)> parts, DateOnly tastingDate)
+    {
+        var b = wine.Blend;
+        var s = new TastingSheet { WineName = wine.Name, Label = wine.Legal?.Label ?? "", Category = wine.Legal?.Category ?? "" };
+        var p0 = parts.OrderByDescending(p => p.litres).First().prov;
+        double ageYears = Math.Max(0, (tastingDate.DayNumber - b.Harvested.DayNumber) / 365.0);
+        double ph = b.Ph, ta = b.Ta, alc = b.AlcoholPct, rs = b.Rs;
+        bool red = b.Red;
+        string v = b.VarietyName;
+        double avgExpEarly = parts.Average(p => p.prov.ExposureEarly), yieldT = parts.Average(p => p.prov.YieldKgHa) / 1000.0;
+        double harvestOe = b.NaturalOe;
+        s.Chemistry.Add($"{alc:0.0} % vol · residual sugar {rs:0.0} g/L · TA {ta:0.0} g/L · pH {ph:0.00} · free SO₂ {b.FreeSo2:0} mg/L (molecular {b.MolecularSo2:0.00})");
+        if (red) s.Chemistry.Add($"Tannin {b.TotalTannin:0} mg/L · anthocyanins {b.Anthocyanin:0} mg/L · polymeric pigment {b.PolymericPigment:0} · malic {b.Malic:0.0} g/L");
+        else s.Chemistry.Add($"Malic {b.Malic:0.0} g/L · lactic {b.Lactic:0.0} g/L · VA {b.Acetic:0.00} g/L");
+
+        // ---------------- appearance
+        if (!red)
+        {
+            double colourScore = 0.2 * ageYears + b.Acetaldehyde / 120 + (b.OakTannin > 40 ? 0.35 : 0) + b.NobleRotShare * 1.5 + (b.Choices["Pressing"] == 2 ? 0.25 : 0) + b.Laccase * 3 + (b.SunburnIndex * 1.5);
+            s.Colour = colourScore < 0.25 ? "lemon-green" : colourScore < 0.8 ? "lemon" : colourScore < 1.6 ? "gold" : "amber";
+            s.ColourIntensity = colourScore < 0.35 && alc < 11.5 ? "pale" : colourScore < 1.0 ? "medium" : "deep";
+            s.AppearanceBecause = s.Colour switch
+            {
+                "lemon-green" => "young, protected from oxygen, no oak",
+                "lemon" => "young; " + (b.OakTannin > 40 ? "oak contact deepens the colour" : "normal for the style"),
+                "gold" => b.NobleRotShare > 0.1 ? "noble rot concentrates and deepens colour" : b.OakTannin > 40 ? "barrel ageing and oxygen deepen the colour" : "oxygen exposure and age",
+                _ => "oxidation (browning) — " + (b.Laccase > 0.05 ? "laccase from grey-rotten grapes" : "too much oxygen"),
+            };
+        }
+        else
+        {
+            double colour = b.Anthocyanin + b.PolymericPigment * 1.4;
+            s.ColourIntensity = colour < 150 ? "pale" : colour < 350 ? "medium" : "deep";
+            s.Colour = ph > 3.75 || ageYears > 4 ? "garnet" : ageYears < 1.5 && ph < 3.5 && colour > 250 ? "purple" : "ruby";
+            s.AppearanceBecause = s.ColourIntensity switch
+            {
+                "pale" => v == "Pinot Noir" ? "Pinot Noir has few, unstable anthocyanins (no acylated forms)" : "little colour extracted — short maceration, rot or unripe skins",
+                "deep" => "thick skins and good extraction" + (b.PolymericPigment > 60 ? "; stable polymeric pigments formed with tannin" : ""),
+                _ => "moderate colour extraction",
+            } + (s.Colour == "garnet" ? "; higher pH shifts colour towards garnet" : "");
+        }
+        if (b.Choices["Pressing"] == 0 && !red && b.Opt("Settling").StartsWith("None")) s.Clarity = "clear (slight haze before fining)";
+
+        // ---------------- aromas
+        var fam = new List<(string cat, string family, string terms, double p, string because)>();
+        double ripeness = M.Clamp((harvestOe - (red ? 85 : 75)) / 25.0, -1, 1.2);
+        double concentration = M.Clamp(1.2 - (yieldT - 6) / 10.0, 0.5, 1.4) * (1 + b.NobleRotShare);
+        double fruitP = (1.2 + 0.4 * ripeness) * concentration;
+        string fruitTerms; string fruitBecause;
+        switch (v)
+        {
+            case "Riesling":
+                fruitTerms = ripeness < 0.1 ? "green apple, lime, lemon" : ripeness < 0.6 ? "green apple, lemon, white peach" : "peach, apricot, pineapple";
+                fruitBecause = $"Riesling picked at {harvestOe:0} °Oe: {(ripeness < 0.1 ? "early, so citrus and green fruit" : ripeness < 0.6 ? "balanced ripeness" : "very ripe, so stone and tropical fruit")}; yield {yieldT:0.0} t/ha {(yieldT > 11 ? "dilutes flavour" : yieldT < 6 ? "concentrates flavour" : "")}";
+                break;
+            case "Chardonnay":
+                fruitTerms = ripeness < 0.1 ? "green apple, lemon" : ripeness < 0.6 ? "apple, pear, citrus" : "peach, melon, pineapple";
+                fruitBecause = $"Chardonnay is fairly neutral; ripeness ({harvestOe:0} °Oe) moves it from citrus to stone and tropical fruit";
+                break;
+            case "Pinot Noir":
+                fruitTerms = ripeness < 0.1 ? "redcurrant, cranberry, sour cherry" : ripeness < 0.6 ? "red cherry, raspberry, strawberry" : "black cherry, plum";
+                fruitBecause = $"Pinot Noir at {harvestOe:0} °Oe gives {(ripeness < 0.1 ? "tart red fruit" : ripeness < 0.6 ? "fresh red fruit" : "riper, darker fruit")}";
+                break;
+            default:
+                fruitTerms = ripeness < 0.1 ? "redcurrant, blackcurrant leaf" : ripeness < 0.6 ? "blackcurrant, black cherry" : "blackberry, black plum, jammy blackcurrant";
+                fruitBecause = $"Cabernet Sauvignon picked at {harvestOe:0} °Oe";
+                break;
+        }
+        fam.Add(("Primary", red ? "red and black fruit" : "fruit", fruitTerms, fruitP, fruitBecause));
+        if (v == "Pinot Noir") fam.Add(("Primary", "earthy", "forest floor, mushroom", 0.9 + 0.4 * Math.Max(0, ripeness) + 0.3 * b.WholeBunchShare, "Pinot Noir's savoury side, more pronounced from ripe fruit and whole bunches"));
+        if (v == "Cabernet Sauvignon" && b.Ibmp < 15) fam.Add(("Primary", "herbal", "mint, cedar, graphite", 0.9 + 0.3 * Math.Max(0, ripeness), "Cabernet Sauvignon's herbal-savoury character without green pyrazine"));
+        if (b.NobleRotShare > 0.05) fam.Add(("Primary", "noble rot", "honey, marmalade, dried apricot", 1.2 + b.NobleRotShare * 3, $"{b.NobleRotShare * 100:0} % noble rot (botrytis on ripe, intact berries in misty-then-dry weather)"));
+        double floral = Perceived(b.Linalool, 25) + Perceived(b.Damascenone, 0.05) * 0.3;
+        if (floral > 0.3) fam.Add(("Primary", "floral", v == "Riesling" ? "blossom, citrus flower" : red ? "violet, rose" : "blossom, honeysuckle", floral * 0.8, v == "Riesling" ? $"Riesling terpenes (linalool {b.Linalool:0} µg/L){(avgExpEarly > 0.5 ? ", raised by sun-exposed bunches" : "")}" : "β-damascenone and terpenes"));
+        double thiol = Perceived(b.Thiol3mh, 60);
+        if (thiol > 0) fam.Add(("Primary", "tropical (thiols)", v == "Riesling" ? "grapefruit, citrus zest" : "grapefruit, passion fruit", thiol, $"3MH {b.Thiol3mh:0} ng/L released from grape precursors by the yeast{(b.Choices["Pressing"] == 2 ? "; skin contact raised the precursors" : "")}"));
+        double herb = Perceived(b.Ibmp, red ? 15 : 8) + b.WholeBunchShare * (1 - b.SeedMaturity) * 1.5;
+        if (herb > 0.2) fam.Add(("Primary", "herbaceous", b.Ibmp > (red ? 15 : 8) ? "green bell pepper, leafy" : "stalky, herbal", herb, b.Ibmp > (red ? 15 : 8) ? $"methoxypyrazine (IBMP {b.Ibmp:0} ng/L, threshold {(red ? 15 : 8)}): {(p0.ExposureEarly < 0.35 ? "shaded fruit before véraison" : "cool season")} and harvest before the pyrazines broke down" : "whole bunches with unripe stems"));
+        // secondary
+        double ester = Perceived(b.IsoamylAcetate, red ? 250 : 30) * (ageYears > 2 ? 0.5 : 1);   // red matrix masks esters
+        if (ester > 1.2) fam.Add(("Secondary", "fermentation", "banana, pear drop", (ester - 1) * 0.9, $"fruity esters (isoamyl acetate {b.IsoamylAcetate / 1000:0.0} mg/L) from a {(b.MaxTempC < 18 ? "cool" : "moderate")}, clean fermentation{(b.WholeBunchShare > 0.2 ? " and intact whole-bunch berries" : "")}"));
+        double mlf = Perceived(b.Diacetyl, red ? 2.8 : 1.0);
+        if (mlf > 0) fam.Add(("Secondary", "malolactic", "butter, cream", mlf, $"diacetyl from malolactic fermentation ({(b.Choices["MLF"] == 2 ? "spontaneous, which makes more" : "inoculated")})"));
+        double lees = b.LeesMonths / 9.0 * (1 + 1.5 * (b.BatonnageMonths / Math.Max(0.01, b.LeesMonths)));
+        if (lees > 0.6) fam.Add(("Secondary", "lees", "bread, biscuit, yeast", Math.Min(2, lees), $"{b.LeesMonths:0} months on fine lees{(b.BatonnageMonths > 0.5 ? " with bâtonnage" : "")}"));
+        double oak = Perceived(b.Vanillin, 60) + Perceived(b.OakLactone, red ? 74 : 20) + Perceived(b.Guaiacol, 10) * 0.8 + Perceived(b.Eugenol, 6) * 0.6;
+        if (oak > 0.3)
+        {
+            var t = new List<string>();
+            if (b.Vanillin > 60) t.Add("vanilla");
+            if (b.OakLactone > (red ? 74 : 20)) t.Add(b.Choices["Vessel"] == 5 || b.OakLactone > (red ? 300 : 80) ? "coconut" : "cedar, sweet spice");
+            if (b.Guaiacol > 10) t.Add("smoke, toast");
+            if (b.Eugenol > 6) t.Add("clove");
+            if (b.Furfural > 15000) t.Add("caramel");
+            if (t.Count == 0) t.Add("sweet spice");
+            fam.Add(("Secondary", "oak", string.Join(", ", t), oak * 0.8, $"{b.Opt("Vessel").ToLowerInvariant()}, {b.Opt("Toast").ToLowerInvariant()} toast, {b.AgeingMonthsTarget} months{(b.Choices["Vessel"] == 5 ? "; American oak is rich in oak lactone (coconut)" : "")}"));
+        }
+        // tertiary
+        double tdn = b.TdnPotential * 0.55 * (1 + 0.6 * ageYears) * Math.Clamp(3.1 / Math.Max(2.8, ph), 0.8, 1.2);
+        double tdnP = Perceived(tdn, 2.0);
+        if (tdnP > 0) fam.Add(("Tertiary", "bottle age (petrol)", "petrol, kerosene", tdnP, $"TDN {tdn:0.0} µg/L (detection 2 µg/L): carotenoid precursors from {(avgExpEarly > 0.5 ? "sun-exposed bunches after early leaf removal" : "a sunny, warm season")}; grows with bottle age"));
+        if (ageYears > 3 && red) fam.Add(("Tertiary", "bottle age", "dried fruit, leather, forest floor", 1 + ageYears / 8, "several years of development in bottle"));
+        if (b.Acetaldehyde > 40 && b.Acetaldehyde <= 100) fam.Add(("Tertiary", "oxidative", "nutty, bruised apple", 1.1, $"acetaldehyde {b.Acetaldehyde:0} mg/L from oxygen exposure"));
+        if (b.FourEp > 230 && b.FourEp <= 425) fam.Add(("Tertiary", "animal", "leather, barnyard", 1.1, $"Brettanomyces (4-EP {b.FourEp:0} µg/L): high pH, low molecular SO₂, used barrels"));
+
+        // ---------------- faults
+        double vaLimit = red ? 1.20 : 1.08;
+        if (b.Acetic > vaLimit) s.Faults.Add($"Volatile acidity {b.Acetic:0.00} g/L exceeds the EU legal limit ({vaLimit} g/L): vinegar, nail varnish.");
+        else if (b.Acetic > 0.75) fam.Add(("Secondary", "volatile", "nail varnish lift", 1.0, $"volatile acidity {b.Acetic:0.00} g/L"));
+        if (b.H2sIndex > 1.0) s.Faults.Add("Reduction: rotten egg / struck match (H₂S) — the yeast ran short of nitrogen and the wine was not aerated.");
+        else if (b.H2sIndex > 0.5) fam.Add(("Secondary", "reductive", "struck match, flint", 1.0, "slight reduction (H₂S) from a nitrogen-poor fermentation"));
+        if (b.FourEp > 425) s.Faults.Add($"Brettanomyces taint (4-EP {b.FourEp:0} µg/L): sticking plaster, barnyard, sweaty saddle.");
+        if (b.Acetaldehyde > 100) s.Faults.Add($"Oxidised: acetaldehyde {b.Acetaldehyde:0} mg/L — bruised apple, flat, browning.");
+        if (b.MustyIndex > 0.06) s.Faults.Add("Musty, mouldy notes from powdery-mildew-infected grapes.");
+        else if (b.MustyIndex > 0.025) fam.Add(("Primary", "musty", "dusty, slightly mouldy", 1.0, $"{b.MustyIndex * 100:0.#} % powdery-mildew-infected berries reached the press"));
+        if (b.GreyRotShare > 0.06) s.Faults.Add($"Mouldy, earthy off-flavour: {b.GreyRotShare * 100:0} % grey-rotten fruit reached the press.");
+        if (wine.Closure == Closure.NaturalCork) s.Chemistry.Add("Natural cork: about 3 % of bottles will show cork taint (TCA) — a closure risk, not a fault of this wine as made.");
+        if (rs > 4 && wine.Filtration != Filtration.Sterile) s.Faults.Add($"Refermentation risk: {rs:0} g/L sugar in bottle without sterile filtration.");
+        if (b.SunburnIndex > 0.08) fam.Add(("Primary", "cooked", "cooked fruit, bitter phenolics", 1.0 + b.SunburnIndex * 3, $"{b.SunburnIndex * 100:0} % sunburned berries (exposed bunches in a heatwave)"));
+
+        foreach (var f in fam.Where(f => f.p > 0.25).OrderBy(f => f.cat == "Primary" ? 0 : f.cat == "Secondary" ? 1 : 2).ThenByDescending(f => f.p))
+            s.Aromas.Add(new Descriptor(f.cat, f.family, f.terms, IntensityWord(Math.Max(1, f.p)), f.because));
+        var ps = fam.Where(f => f.p > 0.25).Select(f => f.p).OrderByDescending(x => x).ToList();
+        double intensity = ps.Count == 0 ? 0 : 0.55 * ps[0] + 0.17 * ps.Skip(1).Take(3).Sum();
+        s.NoseIntensity = intensity < 0.9 ? "light" : intensity < 1.25 ? "medium(−)" : intensity < 1.6 ? "medium" : intensity < 1.95 ? "medium(+)" : "pronounced";
+        s.NoseCondition = s.Faults.Count > 0 ? "unclean" : "clean";
+        bool tertiary = s.Aromas.Any(a => a.Category == "Tertiary");
+        s.Development = ageYears > 6 ? "fully developed" : (tertiary && ageYears > 1) || ageYears > 3 ? "developing" : "youthful";
+
+        // ---------------- palate
+        double perceivedSweet = rs - (ta - 6) * 2;
+        string sweet = rs < 4 ? "dry" : perceivedSweet < 12 ? "off-dry" : perceivedSweet < 30 ? "medium-dry" : perceivedSweet < 45 ? "medium-sweet" : rs < 120 ? "sweet" : "luscious";
+        s.Palate.Add(new("Sweetness", sweet, rs < 4 ? "fermented to dryness" : b.Stopped ? $"fermentation stopped at {rs:0} g/L by chilling and SO₂" : $"{rs:0} g/L of sugar left{(b.MaxTempC > 32 ? " after the fermentation overheated and stuck" : "")}"));
+        double acidScore = ta - (red ? 0.5 : 0) + (3.3 - ph) * 2;
+        string acid = acidScore < 5 ? Five[0] : acidScore < 6 ? Five[1] : acidScore < 7 ? Five[2] : acidScore < 8.5 ? Five[3] : Five[4];
+        s.Palate.Add(new("Acidity", acid, $"TA {ta:0.0} g/L, pH {ph:0.00}: {(b.Malic < 0.3 && b.Lactic > 0.5 ? "softened by malolactic fermentation; " : "")}{(p0.SeasonTemp < 15.5 ? "cool site and season kept malic acid" : p0.SeasonTemp > 18 ? "warm season burned malic acid off" : "moderate climate")}{(b.AcidAdded > 0 ? $"; acidified +{b.AcidAdded:0} g/L" : "")}"));
+        if (red)
+        {
+            double tan = b.TotalTannin;
+            string tl = tan < 300 ? Five[0] : tan < 500 ? Five[1] : tan < 750 ? Five[2] : tan < 1000 ? Five[3] : Five[4];
+            double seedShare = (b.SeedTannin + b.StemTannin) / Math.Max(1, tan);
+            string nature = b.SeedMaturity < 0.62 && seedShare > 0.35 || b.WholeBunchShare > 0.5 && b.SeedMaturity < 0.65 ? "green, coarse" : seedShare > 0.5 ? "firm, grippy" : b.PolymericPigment > 60 ? "ripe, fine-grained" : "soft";
+            s.Palate.Add(new("Tannin", $"{tl}, {nature}", $"{tan:0} mg/L: skins {b.SkinTannin:0}, seeds {b.SeedTannin:0}{(b.StemTannin > 5 ? $", stems {b.StemTannin:0}" : "")}{(b.OakTannin > 5 ? $", oak {b.OakTannin:0}" : "")}. Seeds were {(b.SeedMaturity < 0.62 ? "still green" : "brown and ripe")} at harvest; {b.Opt("Cap management").ToLowerInvariant()}, {b.Opt("Maceration").ToLowerInvariant()}"));
+        }
+        s.Palate.Add(new("Alcohol", alc < 11 ? "low" : alc < 14 ? "medium" : "high", $"{alc:0.0} % vol from {harvestOe:0} °Oe must{(b.ChaptalSugarAdded > 0 ? $" plus chaptalisation (+{b.ChaptalSugarAdded / 16.83:0} % vol)" : "")}{(b.Stopped ? "; stopped with sugar left" : "")}"));
+        double bodyScore = (alc - 8) / 5 + rs / 60 + (b.Glycerol - 6) / 12 + b.TotalTannin / 2000 + b.LeesMonths * 0.01 + b.NobleRotShare;
+        string body = bodyScore < 0.8 ? "light" : bodyScore < 1.05 ? "medium(−)" : bodyScore < 1.35 ? "medium" : bodyScore < 1.8 ? "medium(+)" : "full";
+        s.Palate.Add(new("Body", body, $"alcohol {alc:0.0} %, glycerol {b.Glycerol:0} g/L{(rs > 10 ? $", sugar {rs:0} g/L" : "")}{(b.LeesMonths > 3 ? ", lees texture" : "")}{(red ? $", tannin {b.TotalTannin:0} mg/L" : "")}"));
+        double flav = intensity + (rs > 20 ? 0.2 : 0) + (red && b.TotalTannin > 700 ? 0.2 : 0);
+        s.FlavourIntensity = flav < 0.9 ? "light" : flav < 1.25 ? "medium(−)" : flav < 1.6 ? "medium" : flav < 1.95 ? "medium(+)" : "pronounced";
+        s.Palate.Add(new("Flavour intensity", s.FlavourIntensity, "as on the nose; " + (concentration > 1.1 ? "low yields concentrate flavour" : concentration < 0.8 ? "high yields dilute flavour" : "average concentration")));
+        double finishScore = flav * 0.7 + bodyScore * 0.45 + (acidScore > 6.5 ? 0.2 : 0) + (red ? b.TotalTannin / 2500 : 0) + b.NobleRotShare;
+        s.Finish = finishScore < 1.3 ? "short" : finishScore < 1.6 ? "medium(−)" : finishScore < 1.9 ? "medium" : finishScore < 2.2 ? "medium(+)" : "long";
+        s.Palate.Add(new("Finish", s.Finish, "length follows flavour concentration, extract and acidity"));
+
+        // ---------------- quality (balance, length, intensity, complexity)
+        bool faulty = s.Faults.Any(f => !f.StartsWith("Refermentation"));
+        double perceivedAcid = acidScore - rs / 12;
+        bool hot = alc >= 14.5 && body != "full";
+        bool flabby = perceivedAcid < 4.2;
+        bool tart = perceivedAcid > 10.5 && rs < 10;
+        bool green = red && s.Palate.Any(pl => pl.Attribute == "Tannin" && pl.Level.Contains("green"));
+        bool thin = !red && body == "light" && s.FlavourIntensity is "light" or "medium(−)" && acidScore > 8.5;
+        bool balance = !(hot || flabby || tart || green || thin);
+        string balWhy = balance ? "sugar, acidity, alcohol" + (red ? " and tannin" : "") + " in harmony" :
+            hot ? "alcohol is hot and not carried by the body" : flabby ? "too little acidity for the sweetness and ripeness (flabby)" : tart ? "acidity is sharp and unripe" : green ? "green, coarse tannins" : "thin and tart";
+        bool length = s.Finish is "medium(+)" or "long";
+        bool inten = s.FlavourIntensity is "medium(+)" or "pronounced";
+        var clear = fam.Where(f => f.p >= 1.25).ToList();   // clearly perceived families only
+        int families = clear.Select(a => a.family).Distinct().Count();
+        int cats = clear.Select(a => a.cat).Distinct().Count();
+        bool complexity = families >= 3 && cats >= 2;
+        s.Blic.Add(("Balance", balance, balWhy));
+        s.Blic.Add(("Length", length, $"finish is {s.Finish}"));
+        s.Blic.Add(("Intensity", inten, $"flavour intensity is {s.FlavourIntensity}"));
+        s.Blic.Add(("Complexity", complexity, $"{families} clearly defined aroma families across {cats} categor{(cats == 1 ? "y" : "ies")}"));
+        int met = s.Blic.Count(x => x.Met);
+        s.Quality = faulty ? "Faulty" : met switch { 0 => "Poor", 1 => "Acceptable", 2 => "Good", 3 => "Very good", _ => "Outstanding" };
+        s.QualityBecause = faulty ? "a fault dominates the wine" : $"{met} of 4 quality criteria met: " + string.Join("; ", s.Blic.Select(x => $"{x.Criterion} {(x.Met ? "✓" : "✗")} ({x.Why})"));
+        bool ageWorthy = (acidScore > 7 || (red && b.TotalTannin > 700) || rs > 30) && inten;
+        s.Readiness = faulty ? "not for sale as it is" : ageWorthy ? "can drink now, but has potential for ageing" : "drink now; not designed for long ageing";
+        return s;
+    }
+}

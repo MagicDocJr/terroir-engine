@@ -14,3 +14,7 @@ prototypes/*/godot/.godot/
 
 # Agent worktrees
 .claude/worktrees/
+
+# .NET build output
+bin/
+obj/

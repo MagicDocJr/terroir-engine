@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TerroirEngine.Cli/TerroirEngine.Cli.csproj" />
+    <Project Path="src/TerroirEngine.Core/TerroirEngine.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TerroirEngine.Core.Tests/TerroirEngine.Core.Tests.csproj" />
+  </Folder>
+</Solution>
