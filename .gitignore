@@ -18,3 +18,9 @@ prototypes/*/godot/.godot/
 # .NET build output
 bin/
 obj/
+
+# Godot
+game/.godot/
+game/assets3d/
+*.import
+!game/fonts/*.import
