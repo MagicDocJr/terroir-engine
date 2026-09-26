@@ -8,7 +8,7 @@
 import bpy, bmesh, math, random, json, sys, os, struct
 from mathutils import Vector, Matrix, Quaternion, noise
 
-OUT = sys.argv[sys.argv.index("--") + 1]
+OUT = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv else os.getcwd()
 os.makedirs(OUT, exist_ok=True)
 
 # --------------------------------------------------------------------------- terrain function
@@ -665,19 +665,24 @@ def write_leaf_texture(size=512):
     print("exported leaf_detail.png")
 
 # --------------------------------------------------------------------------- main
-bpy.ops.wm.read_factory_settings(use_empty=True)
-write_leaf_texture()
-write_far_albedo()
-for i in range(4): export(build_vine(i), f"vine_{i}.glb")
-LOD = 1
-for i in range(4):
-    ob = build_vine(i); ob.name = f"vine_{i}_lod1"; export(ob, f"vine_{i}_lod1.glb")
-LOD = 0
-for i in range(2): export(build_vine_lod2(i), f"vine_lod2_{i}.glb")
-for i in range(5): export(build_slate(i), f"slate_{i}.glb")
-for i in range(3): export(build_grass(i), f"grass_{i}.glb")
-export(build_near(), "terrain_near.glb")
-export(build_far(), "terrain_far.glb")
-export(build_water(), "water.glb")
-build_layout()
-print("DONE")
+def main():
+    global LOD
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    write_leaf_texture()
+    write_far_albedo()
+    for i in range(4): export(build_vine(i), f"vine_{i}.glb")
+    LOD = 1
+    for i in range(4):
+        ob = build_vine(i); ob.name = f"vine_{i}_lod1"; export(ob, f"vine_{i}_lod1.glb")
+    LOD = 0
+    for i in range(2): export(build_vine_lod2(i), f"vine_lod2_{i}.glb")
+    for i in range(5): export(build_slate(i), f"slate_{i}.glb")
+    for i in range(3): export(build_grass(i), f"grass_{i}.glb")
+    export(build_near(), "terrain_near.glb")
+    export(build_far(), "terrain_far.glb")
+    export(build_water(), "water.glb")
+    build_layout()
+    print("DONE")
+
+if __name__ == "__main__" and not globals().get("R2_IMPORT"):
+    main()

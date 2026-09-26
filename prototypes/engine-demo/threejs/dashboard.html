@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Terroir Engine — Vineyard</title>
+  <link rel="stylesheet" href="/src/dash/dash.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo">◆</span><div><b id="estate"></b><small id="plot"></small></div></div>
+    <div class="date"><b id="date"></b><small id="stage"></small></div>
+    <div class="timectl">
+      <button data-step="day">+1 day</button><button data-step="week">+1 week</button><button class="go">Continue ▸</button>
+    </div>
+    <div class="cash"><small>Cash</small><b id="cash"></b></div>
+    <button class="alerts" title="Alerts"><span>🔔</span><i id="alertCount"></i></button>
+  </header>
+  <nav class="side">
+    <a>Inbox <i id="navInbox"></i></a><a>Estate</a><a class="on">Plot &amp; Blocks</a><a>Weather</a><a>Programmes</a><a>Ripeness</a>
+    <a>Winery</a><a>Blending</a><a>Wines</a><a>Glossary</a>
+    <hr /><small>3D views</small>
+    <a href="/r2.html?scene=vineyard">Vineyard 3D</a><a href="/r2.html?scene=cellar">Barrel cellar</a><a href="/r2.html?scene=hall">Fermentation hall</a>
+  </nav>
+  <main>
+    <section class="panel blocks">
+      <div class="phead"><h2>Blocks</h2><span class="sub">Sampled this morning · 200 berries per Block · click a column to sort</span></div>
+      <table id="blockTable"></table>
+    </section>
+    <section class="panel ripe">
+      <div class="phead"><h2>Ripeness</h2><div class="chips" id="chips"></div></div>
+      <svg id="ripeChart" viewBox="0 0 760 420" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="legend"><span class="l oe"></span>Must weight °Oe <span class="l ta"></span>Titratable acidity g/L <span class="l ref"></span>Mosel minimum must weights</div>
+    </section>
+    <section class="panel fc">
+      <div class="phead"><h2>7-day forecast</h2><span class="sub">Bernkastel · rain mm / RH %</span></div>
+      <div id="forecast" class="forecast"></div>
+    </section>
+    <section class="panel inbox">
+      <div class="phead"><h2>Inbox</h2></div>
+      <div id="inbox"></div>
+    </section>
+  </main>
+  <div id="tip" class="tip"></div>
+  <script type="module" src="/src/dash/dash.js"></script>
+</body>
+</html>

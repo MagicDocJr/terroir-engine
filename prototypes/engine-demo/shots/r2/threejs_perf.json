@@ -1,0 +1,52 @@
+{
+  "rain_row": {
+    "avgFps": 44.9,
+    "low1Fps": 31.6,
+    "frames": 225
+  },
+  "rain_close": {
+    "avgFps": 41.5,
+    "low1Fps": 30.7,
+    "frames": 208
+  },
+  "mist_valley": {
+    "avgFps": 51.7,
+    "low1Fps": 36.6,
+    "frames": 259
+  },
+  "sunrise_drone": {
+    "avgFps": 55,
+    "low1Fps": 35.6,
+    "frames": 275
+  },
+  "dusk_uphill": {
+    "avgFps": 47.5,
+    "low1Fps": 32.9,
+    "frames": 238
+  },
+  "cellar_aisle": {
+    "avgFps": 72.3,
+    "low1Fps": 45.5,
+    "frames": 362
+  },
+  "cellar_heads": {
+    "avgFps": 78,
+    "low1Fps": 46.5,
+    "frames": 390
+  },
+  "cellar_fuder": {
+    "avgFps": 80.1,
+    "low1Fps": 50.3,
+    "frames": 401
+  },
+  "hall_overview": {
+    "avgFps": 197.3,
+    "low1Fps": 84.7,
+    "frames": 987
+  },
+  "hall_panel": {
+    "avgFps": 234.1,
+    "low1Fps": 106.4,
+    "frames": 1171
+  }
+}

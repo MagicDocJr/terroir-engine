@@ -1,0 +1,57 @@
+{
+  "cellar_aisle": {
+    "avg_fps": 144.1,
+    "frames": 721.0,
+    "low1_fps": 120.0
+  },
+  "cellar_fuder": {
+    "avg_fps": 127.2,
+    "frames": 637.0,
+    "low1_fps": 94.8
+  },
+  "cellar_heads": {
+    "avg_fps": 143.6,
+    "frames": 718.0,
+    "low1_fps": 120.0
+  },
+  "dashboard": {
+    "avg_fps": 160.5,
+    "frames": 803,
+    "low1_fps": 160.0
+  },
+  "dusk_uphill": {
+    "avg_fps": 57.2,
+    "frames": 286.0,
+    "low1_fps": 54.2
+  },
+  "hall_overview": {
+    "avg_fps": 153.4,
+    "frames": 767.0,
+    "low1_fps": 144.0
+  },
+  "hall_panel": {
+    "avg_fps": 155.6,
+    "frames": 779.0,
+    "low1_fps": 140.0
+  },
+  "mist_valley": {
+    "avg_fps": 64.2,
+    "frames": 321.0,
+    "low1_fps": 60.0
+  },
+  "rain_close": {
+    "avg_fps": 55.5,
+    "frames": 278.0,
+    "low1_fps": 48.0
+  },
+  "rain_row": {
+    "avg_fps": 56.6,
+    "frames": 284.0,
+    "low1_fps": 55.1
+  },
+  "sunrise_drone": {
+    "avg_fps": 59.9,
+    "frames": 300.0,
+    "low1_fps": 55.4
+  }
+}

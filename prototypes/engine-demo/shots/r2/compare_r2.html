@@ -1,0 +1,41 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Engine demo round 2</title><style>
+:root{--bg:#f6f4ef;--fg:#1d1c1a;--muted:#6b675f;--card:#fff;--line:#e2ddd2;--accent:#5b6b2e}
+@media (prefers-color-scheme:dark){:root{--bg:#161614;--fg:#ecebe6;--muted:#a19d93;--card:#20201d;--line:#34332e;--accent:#a9bd6b}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif} main{max-width:1500px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:26px;margin:0 0 4px} h2{font-size:18px;margin:32px 0 10px} .sub{color:var(--muted);margin:0 0 20px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px} @media(max-width:900px){.pair{grid-template-columns:1fr}}
+figure{margin:0;background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden} figure img{width:100%;display:block;cursor:zoom-in}
+figcaption{padding:8px 12px;display:flex;justify-content:space-between;font-size:13px} figcaption b{color:var(--accent)} .fps{color:var(--muted);font-variant-numeric:tabular-nums}
+table{border-collapse:collapse;width:100%;background:var(--card);border:1px solid var(--line);font-variant-numeric:tabular-nums} th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line)}
+dialog{padding:0;border:0;background:transparent;max-width:98vw} dialog img{max-width:98vw;max-height:96vh;display:block}
+</style></head><body><main>
+<h1>Engine demo, round 2: the hard scenes</h1>
+<p class="sub">Weather, time of day, the barrel cellar, the fermentation hall and a Football Manager-style dashboard. Identical shared assets in both engines. 1920×1080 on the RTX 5080, vsync off, each engine measured alone. Frame rates are average / slowest 1 %. Click an image to enlarge it.</p>
+<h2>Frame rate</h2><table><tr><th>Shot</th><th>Three.js (WebGPU)</th><th>Godot 4.7 (Vulkan)</th></tr><tr><td>Rain: standing in the aisle</td><td>45 / 32 fps</td><td>57 / 55 fps</td></tr><tr><td>Rain: close-up of wet vine and slate</td><td>42 / 31 fps</td><td>56 / 48 fps</td></tr><tr><td>Misty sunrise over the valley</td><td>52 / 37 fps</td><td>64 / 60 fps</td></tr><tr><td>Sunrise drone view through mist</td><td>55 / 36 fps</td><td>60 / 55 fps</td></tr><tr><td>Dusk, looking uphill</td><td>48 / 33 fps</td><td>57 / 54 fps</td></tr><tr><td>Barrel cellar: the aisle</td><td>72 / 46 fps</td><td>144 / 120 fps</td></tr><tr><td>Barrel cellar: chalk labels on the barrel heads</td><td>78 / 46 fps</td><td>144 / 120 fps</td></tr><tr><td>Barrel cellar: Mosel Fuder casks</td><td>80 / 50 fps</td><td>127 / 95 fps</td></tr><tr><td>Fermentation hall: overview</td><td>197 / 85 fps</td><td>153 / 144 fps</td></tr><tr><td>Fermentation hall: live tank readout</td><td>234 / 106 fps</td><td>156 / 140 fps</td></tr></table>
+<h2>Rain: standing in the aisle</h2><div class="pair">
+<figure><img src="threejs_rain_row.png" alt="Three.js: Rain: standing in the aisle"><figcaption><b>Three.js</b><span class="fps">45 / 32 fps</span></figcaption></figure>
+<figure><img src="godot_rain_row.png" alt="Godot: Rain: standing in the aisle"><figcaption><b>Godot</b><span class="fps">57 / 55 fps</span></figcaption></figure></div><h2>Rain: close-up of wet vine and slate</h2><div class="pair">
+<figure><img src="threejs_rain_close.png" alt="Three.js: Rain: close-up of wet vine and slate"><figcaption><b>Three.js</b><span class="fps">42 / 31 fps</span></figcaption></figure>
+<figure><img src="godot_rain_close.png" alt="Godot: Rain: close-up of wet vine and slate"><figcaption><b>Godot</b><span class="fps">56 / 48 fps</span></figcaption></figure></div><h2>Misty sunrise over the valley</h2><div class="pair">
+<figure><img src="threejs_mist_valley.png" alt="Three.js: Misty sunrise over the valley"><figcaption><b>Three.js</b><span class="fps">52 / 37 fps</span></figcaption></figure>
+<figure><img src="godot_mist_valley.png" alt="Godot: Misty sunrise over the valley"><figcaption><b>Godot</b><span class="fps">64 / 60 fps</span></figcaption></figure></div><h2>Sunrise drone view through mist</h2><div class="pair">
+<figure><img src="threejs_sunrise_drone.png" alt="Three.js: Sunrise drone view through mist"><figcaption><b>Three.js</b><span class="fps">55 / 36 fps</span></figcaption></figure>
+<figure><img src="godot_sunrise_drone.png" alt="Godot: Sunrise drone view through mist"><figcaption><b>Godot</b><span class="fps">60 / 55 fps</span></figcaption></figure></div><h2>Dusk, looking uphill</h2><div class="pair">
+<figure><img src="threejs_dusk_uphill.png" alt="Three.js: Dusk, looking uphill"><figcaption><b>Three.js</b><span class="fps">48 / 33 fps</span></figcaption></figure>
+<figure><img src="godot_dusk_uphill.png" alt="Godot: Dusk, looking uphill"><figcaption><b>Godot</b><span class="fps">57 / 54 fps</span></figcaption></figure></div><h2>Barrel cellar: the aisle</h2><div class="pair">
+<figure><img src="threejs_cellar_aisle.png" alt="Three.js: Barrel cellar: the aisle"><figcaption><b>Three.js</b><span class="fps">72 / 46 fps</span></figcaption></figure>
+<figure><img src="godot_cellar_aisle.png" alt="Godot: Barrel cellar: the aisle"><figcaption><b>Godot</b><span class="fps">144 / 120 fps</span></figcaption></figure></div><h2>Barrel cellar: chalk labels on the barrel heads</h2><div class="pair">
+<figure><img src="threejs_cellar_heads.png" alt="Three.js: Barrel cellar: chalk labels on the barrel heads"><figcaption><b>Three.js</b><span class="fps">78 / 46 fps</span></figcaption></figure>
+<figure><img src="godot_cellar_heads.png" alt="Godot: Barrel cellar: chalk labels on the barrel heads"><figcaption><b>Godot</b><span class="fps">144 / 120 fps</span></figcaption></figure></div><h2>Barrel cellar: Mosel Fuder casks</h2><div class="pair">
+<figure><img src="threejs_cellar_fuder.png" alt="Three.js: Barrel cellar: Mosel Fuder casks"><figcaption><b>Three.js</b><span class="fps">80 / 50 fps</span></figcaption></figure>
+<figure><img src="godot_cellar_fuder.png" alt="Godot: Barrel cellar: Mosel Fuder casks"><figcaption><b>Godot</b><span class="fps">127 / 95 fps</span></figcaption></figure></div><h2>Fermentation hall: overview</h2><div class="pair">
+<figure><img src="threejs_hall_overview.png" alt="Three.js: Fermentation hall: overview"><figcaption><b>Three.js</b><span class="fps">197 / 85 fps</span></figcaption></figure>
+<figure><img src="godot_hall_overview.png" alt="Godot: Fermentation hall: overview"><figcaption><b>Godot</b><span class="fps">153 / 144 fps</span></figcaption></figure></div><h2>Fermentation hall: live tank readout</h2><div class="pair">
+<figure><img src="threejs_hall_panel.png" alt="Three.js: Fermentation hall: live tank readout"><figcaption><b>Three.js</b><span class="fps">234 / 106 fps</span></figcaption></figure>
+<figure><img src="godot_hall_panel.png" alt="Godot: Fermentation hall: live tank readout"><figcaption><b>Godot</b><span class="fps">156 / 140 fps</span></figcaption></figure></div><h2>Dashboard (web UI vs Godot's own UI)</h2><div class="pair">
+<figure><img src="threejs_dashboard.png" alt="Three.js: Dashboard (web UI vs Godot's own UI)"><figcaption><b>Three.js</b><span class="fps">web page</span></figcaption></figure>
+<figure><img src="godot_dashboard.png" alt="Godot: Dashboard (web UI vs Godot's own UI)"><figcaption><b>Godot</b><span class="fps">Godot UI</span></figcaption></figure></div>
+</main><dialog id="z"><img alt=""></dialog><script>
+const d=document.getElementById('z');document.querySelectorAll('figure img').forEach(i=>i.onclick=()=>{d.querySelector('img').src=i.src;d.showModal()});d.onclick=()=>d.close();
+</script></body></html>
