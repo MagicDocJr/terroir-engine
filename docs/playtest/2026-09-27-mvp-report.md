@@ -6,7 +6,7 @@ You can play the MVP from start to finish. Pick a Region, compare its Plots, pla
 
 Everything runs through the headless C# simulation (22 tests pass). The Godot dashboard only displays snapshots and sends commands. I played scripted games on all 12 Plots, and played the full game through the real UI in all three Regions. A robot also pressed every button on every screen across a whole Vintage, with no script errors. Save and load reproduce the game exactly.
 
-The 3D walkaround is being built separately. See [3D status](#3d-status).
+The 3D vineyard and winery are merged in and follow the game state. Press Tab to open them. See [3D status](#3d-status).
 
 ## How to run
 
@@ -26,7 +26,7 @@ The game autosaves after every time step. **Load** on the title screen picks up 
 | Space | +1 day |
 | P | Play / pause. Time runs at 4, 8 or 16 days a second and stops at the next Alert |
 | Enter | Continue: run until the next Alert (at most 60 days) |
-| Tab | 3D view (once it is merged) |
+| Tab | 3D view (Tab or Esc again to leave) |
 | Ctrl+S | Save |
 
 ### A good first session (about 30 minutes)
@@ -107,8 +107,7 @@ Most of these need a decision or a source from you. None of them block play.
 
 **Missing against the spec**
 - The only single-event override is **Spray today**, from the Programmes screen and from disease alerts. Other overrides (for example "skip this pass") are not built.
-- No sound yet.
-- The 3D view is still in progress (see below).
+- No sound yet (spec milestone 9).
 - Nothing caps the number of Wines at the spec's "about three". You can bottle each Lot on its own.
 
 **UI**
@@ -117,7 +116,21 @@ Most of these need a decision or a source from you. None of them block play.
 
 ## 3D status
 
-*(filled in when the 3D agent's work is merged)*
+The 3D views are merged and part of the game. Press **Tab**, or use the buttons on Plot & Blocks ("Walk the vineyard in 3D") and on the Winery ("See the hall in 3D", "Barrel cellar in 3D").
+
+In the 3D view: click to look around, WASD to move, Shift to run, 1/2/3 to switch between vineyard, barrel cellar and fermentation hall, and Tab or Esc to go back.
+
+**What the 3D shows:**
+- **Vineyard:** your real Plot on its real slope and aspect, one area per Block, trained as Einzelpfahl, Guyot or Cordon. The vines follow the growth stage from pruned wood to leaf fall. Bunches change colour with ripeness and disappear when picked. Disease, chlorosis, drought droop and rot are visible, and the weather and sun follow the simulated day.
+- **Winery:** tank screens with the real Lots (temperature, sugar, curve) and chalk labels on the barrels.
+
+**Assets:** the 3D assets (CC0 textures from Poly Haven, plus models built with headless Blender) sit in `game/assets3d/` and are not in git. Rebuild them with `game/tools/sync_assets3d.sh`. They are already in place on your machine.
+
+**Limits:**
+- Full-summer Mosel close-ups ran at 53–59 fps, measured while another process was using the GPU. Please check the FPS on an idle machine.
+- The far landscape is generic per Region.
+- Light rain (1 mm) draws puddles that are too big.
+- 3D screenshots: `game/shots/*_08b_3d_vineyard.png`, `*_10b_3d_hall.png`, plus the agent's set in `.claude/worktrees/agent-a90e45a30d0593e03/game/shots/3d_*.png`.
 
 ## Feedback questions
 
