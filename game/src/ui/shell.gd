@@ -47,6 +47,7 @@ var busy := false
 var playing := false            # continuous play: advances every tick until an Alert
 var play_speed := 1             # days per 0.25 s tick (4 days a second)
 var play_timer: Timer
+var sfx: Node
 
 func _ready() -> void:
 	theme = UI.make_theme()
@@ -67,7 +68,15 @@ func _ready() -> void:
 	body.add_child(host)
 	statusbar = PanelContainer.new(); root_box.add_child(statusbar)
 	_make_toast()
+	sfx = load("res://src/ui/sfx.gd").new(); add_child(sfx)
+	if capture: sfx.enabled = false
+	get_tree().node_added.connect(_on_node_added)
 	play_timer = Timer.new(); play_timer.wait_time = 0.25; play_timer.timeout.connect(_play_tick); add_child(play_timer)
+	if "--sfxcheck" in args:
+		var fx = load("res://src/ui/sfx.gd").new(); add_child(fx)
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://shots/sfx"))
+		for n in fx.players: (fx.players[n].stream as AudioStreamWAV).save_to_wav(ProjectSettings.globalize_path("res://shots/sfx/%s.wav" % n))
+		print("SFX saved"); get_tree().quit(); return
 	if "--avatars" in args: capture = true; _avatar_sheet.call_deferred(); return
 	if "--fuzz" in args: capture = true; _run_fuzz.call_deferred()
 	elif capture: _run_capture.call_deferred()
@@ -82,6 +91,9 @@ func refresh() -> void:
 
 func command(type: String, a := "", b := "", c := "", d := "", e := "", stay := true) -> void:
 	var ok: bool = Sim.Command(type, a, b, c, d, e)
+	if ok and sfx:
+		if type == "wine": sfx.play("cork")
+		elif type == "harvest": sfx.play("harvest")
 	if not ok: notify("That didn't work: " + String(Sim.LastError()).left(160))
 	if stay: refresh()
 
@@ -104,6 +116,7 @@ func advance(days: int, stop := true, quiet := false) -> bool:
 		if m.get("stop", false) and not before.has(int(m["id"])): new_alerts.append(m)
 	_build_chrome()
 	if new_alerts.size() > 0:
+		if sfx: sfx.play("alert")
 		state["inbox_sel"] = int(new_alerts[-1]["id"])   # the oldest of the new Alerts (the list is newest first)
 		show_screen("inbox")
 		notify("%d day%s later — %s" % [n, "" if n == 1 else "s", String(new_alerts[-1]["subject"])])
@@ -168,6 +181,7 @@ func start_game(setup_json: Dictionary) -> void:
 func show_screen(id: String) -> void:
 	if not SCREENS.has(id): id = "inbox"
 	if not Sim.HasGame() and not (id in PREGAME): id = "title"
+	if id != current and sfx: sfx.play("page")
 	current = id
 	for c in host.get_children(): c.queue_free()
 	var pre: bool = id in PREGAME
@@ -218,6 +232,7 @@ func _unhandled_input(e: InputEvent) -> void:
 	elif k == KEY_TAB: toggle_3d()
 	elif k == KEY_SPACE: advance(1, false)
 	elif k == KEY_P: toggle_play()
+	elif k == KEY_M: notify("Sound " + ("on" if sfx.toggle() else "off") + ".")
 	elif k == KEY_ENTER or k == KEY_KP_ENTER: advance(continue_days(), true)
 
 # ------------------------------------------------------------------ 3D
@@ -393,7 +408,7 @@ func _statusbar() -> void:
 			("Mentor: %s (retired)" % mentor.get("name", "")) if mentor.get("retired", false) else ("Mentor: %s, retires after bottling" % mentor.get("name", "")), String(D.get("weatherMode", ""))]:
 		h.add_child(UI.label(txt, 13, UI.MUTED))
 	h.add_child(UI.spacer())
-	h.add_child(UI.label("1–0 screens · Space +1 day · P play/pause · Enter Continue · Tab 3D · Ctrl+S save", 13, UI.MUTED))
+	h.add_child(UI.label("1–0 screens · Space +1 day · P play/pause · Enter Continue · Tab 3D · M sound · Ctrl+S save", 13, UI.MUTED))
 
 func _make_toast() -> void:
 	toast = PanelContainer.new()
@@ -405,7 +420,12 @@ func _make_toast() -> void:
 	toast.visible = false
 	add_child(toast)
 
+func _on_node_added(n: Node) -> void:
+	if n is BaseButton and not (n is OptionButton):
+		(n as BaseButton).pressed.connect(func(): if sfx: sfx.play("click"))
+
 func notify(text: String, ok := false) -> void:
+	if ok and sfx: sfx.play("confirm")
 	if toast == null or capture: return
 	toast.add_theme_stylebox_override("panel", UI.sb(Color("13201a") if ok else Color("11171c"), 6, UI.GOOD if ok else UI.GOLD.darkened(0.2), 2 if ok else 1, 16))
 	toast_label.text = ("✓  " if ok else "") + text
