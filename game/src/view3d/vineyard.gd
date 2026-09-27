@@ -747,7 +747,10 @@ func _vine_mmi(blk: Dictionary, xfs: Array, center: Vector3, lod: int, seed: int
 		4:
 			mmi.visibility_range_begin = SHADOW_END
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mmi.visibility_range_end_margin = 1.0
+	# no hysteresis margin: with fade disabled, a margin makes a LOD that is currently hidden wait until the
+	# camera is `margin` metres inside its range, while the neighbouring LOD already switched off at the exact
+	# threshold, so the vines nearest the camera vanished (the "disappearing trellis" bug). Adjacent LODs now
+	# share exact thresholds; see view3d_test.gd --trellis.
 	world.add_child(mmi)
 	blk["mm"].append({"mmi": mmi, "lod": lod, "seed": seed})
 

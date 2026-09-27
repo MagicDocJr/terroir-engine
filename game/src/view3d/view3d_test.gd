@@ -49,6 +49,9 @@ func _ready() -> void:
 		_manual()
 		return
 	perf = "--perf" in args
+	if "--trellis" in args:
+		_trellis_probe()
+		return
 	var only: PackedStringArray = []
 	if i + 1 < args.size() and not args[i + 1].begins_with("--"):
 		only = args[i + 1].split(",")
@@ -263,3 +266,91 @@ func _log_state(shot: Dictionary) -> void:
 	for l in snap.get("lots", []):
 		lots.append("%s %s %s v%s" % [l["id"], l["variety"], l["phase"], str(l.get("choices", {}).get("Vessel", "-"))])
 	print("  state: ", ", ".join(parts), " | lots: ", "; ".join(lots))
+
+
+# ------------------------------------------------------------------ LOD probe (trellis bug)
+## The picture at a place must not depend on the way you walked there. Walks the camera along an alley of
+## the VSP Block (Block E) towards a vine and back again, looking along the rows, at 35° and across them,
+## and compares the two frames at every step. With hysteresis on the vine LOD visibility ranges (the old
+## visibility_range_end_margin = 1.0), whole 6 m cells of vines vanished next to the camera while walking
+## towards them. `--trellis-old` puts the old margin back to show the bug.
+func _trellis_probe() -> void:
+	var shot: Dictionary = SHOTS[2]           # mosel_flowering (Block E = Guyot/VSP)
+	snap = _play(shot)
+	view.apply_snapshot(snap)
+	view.set_view("vineyard")
+	RenderingServer.global_shader_parameter_set("wind_strength", 0.0)
+	var vy: Node3D = view.get("vineyard")
+	var blk: Dictionary = vy.get("blocks")[4]
+	if "--trellis-old" in OS.get_cmdline_user_args():
+		for e in blk["mm"]:
+			(e["mmi"] as GeometryInstance3D).visibility_range_end_margin = 1.0
+	var f: Vector2 = blk["focus"]
+	var u: Vector2 = vy.call("_row_dir", blk)
+	var wv := Vector2(-u.y, u.x)
+	var sp: Vector2 = vy.call("_spacing", blk)
+	var path := []
+	for k in 80:
+		path.append(f + wv * sp.x * 0.5 - u * (24.0 - k * 0.3))
+	var bad := 0
+	var worst := 0.0
+	var total := 0
+	for look in [0.0, 0.6, 1.5]:
+		var runs := []
+		for dir in [1, -1]:
+			view.set_camera(Vector3(0, 400, 0), Vector3(1, 400, 0))      # far away first: every LOD is "far"
+			await _grab()
+			var order := range(path.size()) if dir > 0 else range(path.size() - 1, -1, -1)
+			var imgs := {}
+			if dir < 0:                                                   # start the return walk from the far end
+				for k in range(path.size() - 1, path.size() - 12, -1):
+					_probe_cam(vy, path[k], u, wv, look)
+					await _grab()
+			for k in order:
+				_probe_cam(vy, path[k], u, wv, look)
+				imgs[k] = await _grab()
+			runs.append(imgs)
+		for k in path.size():
+			var frac := _diff(runs[0][k], runs[1][k])
+			total += 1
+			worst = maxf(worst, frac)
+			if frac > 0.01:
+				bad += 1
+				var out := ProjectSettings.globalize_path("res://shots/probe_lod_%d_%02d" % [int(look * 10), k])
+				(runs[0][k] as Image).save_png(out + "_towards.png")
+				(runs[1][k] as Image).save_png(out + "_away.png")
+				print("PROBE look %.1f rad, %.1f m before the vine: %.2f %% of pixels differ" % [look, 24.0 - k * 0.3, frac * 100.0])
+	print("PROBE %s: %d of %d frames depend on the walking direction (worst %.2f %%)" % ["PASS" if bad == 0 else "FAIL", bad, total, worst * 100.0])
+	get_tree().quit()
+
+
+func _probe_cam(vy: Node, c2: Vector2, u: Vector2, wv: Vector2, look: float) -> void:
+	var p3 := Vector3(c2.x, float(vy.call("ground_height", c2.x, c2.y)) + 1.5, c2.y)
+	var d3 := u * cos(look) + wv * sin(look)
+	view.set_camera(p3, p3 + Vector3(d3.x, -0.35, d3.y))
+
+
+func _grab() -> Image:
+	for k in 4:
+		await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	return view.capture()
+
+
+func _diff(a0: Image, b0: Image) -> float:
+	var a := a0.duplicate() as Image
+	var b := b0.duplicate() as Image
+	a.resize(480, 270, Image.INTERPOLATE_BILINEAR)
+	b.resize(480, 270, Image.INTERPOLATE_BILINEAR)
+	var n := 0
+	var tot := 0
+	var w := a.get_width()
+	var h := a.get_height()
+	for y in h:
+		for x in w:
+			var ca := a.get_pixel(x, y)
+			var cb := b.get_pixel(x, y)
+			if absf(ca.r - cb.r) + absf(ca.g - cb.g) + absf(ca.b - cb.b) > 0.25:
+				n += 1
+			tot += 1
+	return float(n) / tot
