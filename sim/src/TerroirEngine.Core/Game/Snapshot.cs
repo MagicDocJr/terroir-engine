@@ -85,7 +85,7 @@ public static class Snapshot
         {
             ["id"] = p.Id, ["name"] = p.Name, ["region"] = g.Region.Name, ["ha"] = R(p.AreaHa, 2), ["blocks"] = p.Blocks.Count, ["classification"] = p.Classification,
             ["varieties"] = string.Join(", ", g.Blocks.Select(b => b.Variety.Name).Distinct()), ["leaf"] = $"{Ordinal(g.Vintage - g.Setup.PlantingYear + 1)} leaf (planted {g.Setup.PlantingYear})",
-            ["training"] = string.Join(", ", g.Blocks.Select(b => b.Planting.Training.ToString()).Distinct()), ["summary"] = p.Summary, ["slope"] = p.SlopePct, ["aspect"] = Aspect(p.AspectDeg),
+            ["training"] = string.Join(", ", g.Blocks.Select(b => b.Planting.Training.ToString()).Distinct()), ["summary"] = p.Summary, ["slope"] = p.SlopePct, ["aspect"] = Aspect(p.AspectDeg), ["aspectDeg"] = p.AspectDeg,
             ["elevation"] = p.ElevationM, ["lat"] = p.Lat, ["lon"] = p.Lon, ["price"] = R(p.Price, 0), ["mechanisation"] = p.Mechanisation,
         };
     }
@@ -103,7 +103,7 @@ public static class Snapshot
         {
             ["id"] = b.Data.Id, ["name"] = b.Data.Name, ["area"] = b.AreaHa, ["soil"] = $"{Cap(soil.Texture)}, {soil.StonesPctVol:0} % stones, {soil.RootingDepthCm:0} cm", ["slope"] = b.Data.Topography.SlopePct,
             ["aspect"] = Aspect(b.Data.Topography.AspectDeg), ["elevation"] = b.Data.Topography.ElevationM, ["variety"] = b.Variety.Name, ["red"] = b.Variety.Red, ["rootstock"] = b.Rootstock.Name,
-            ["training"] = b.Planting.Training.ToString(), ["density"] = b.Planting.DensityVinesHa, ["planted"] = b.PlantingYear, ["leaf"] = b.Leaf(g.Vintage), ["taw"] = R(b.Taw, 0),
+            ["training"] = b.Planting.Training.ToString(), ["rows"] = b.Planting.Rows.ToString(), ["density"] = b.Planting.DensityVinesHa, ["planted"] = b.PlantingYear, ["leaf"] = b.Leaf(g.Vintage), ["taw"] = R(b.Taw, 0),
             ["stage"] = b.Harvested ? "Harvested" : b.Picking ? "Picking" : StageName(b.Stage),
             ["budburst"] = D(b.Budburst), ["flowering"] = D(b.Flowering), ["veraison"] = D(b.Veraison), ["harvestDate"] = D(b.HarvestDate),
             ["health"] = R(health, 2), ["water"] = R(b.PsiStem, 2), ["stress"] = R(b.StressIndex, 2), ["waterClass"] = b.PsiStem > -0.6 ? "none" : b.PsiStem > -0.9 ? "weak" : b.PsiStem > -1.1 ? "weak–moderate" : b.PsiStem > -1.4 ? "moderate–severe" : "severe",
