@@ -124,7 +124,7 @@ static func build(D: Dictionary, shell) -> Control:
 		kl.custom_minimum_size = Vector2(150, 0); kl.tooltip_text = String(opt["why"]); kl.mouse_filter = Control.MOUSE_FILTER_PASS
 		h.add_child(kl)
 		var names: Array = opt["options"]
-		var ob := UI.option(names, String(names[cur]), func(x): shell.command("lot", lid3, key, str(names.find(x))), 360)
+		var ob := UI.option(names, String(names[cur]), func(x): shell.apply("lot", lid3, key, str(names.find(x)), "Lot %s: %s → %s. Your Cellar master will do it this way." % [lid3, key, x]), 360)
 		ob.disabled = locked
 		ob.tooltip_text = String(opt["why"])
 		h.add_child(ob)

@@ -84,16 +84,16 @@ static func build(D: Dictionary, shell) -> Control:
 	var cp: Array = UI.panel("Choices for Block %s" % B["id"], "the Vineyard manager carries them out")
 	var bid2: String = B["id"]
 	var done: bool = B["harvested"] or B["picking"]
-	_choice(cp[1], "Winter pruning (bud load)", ["Low", "Balanced", "High"], B["budLoad"], func(x): shell.command("block", bid2, "budload", x),
+	_choice(cp[1], "Winter pruning (bud load)", ["Low", "Balanced", "High"], B["budLoad"], func(x): shell.apply("block", bid2, "budload", x, "Block %s pruned to a %s bud load. Your crew prunes it this way." % [bid2, x.to_lower()]),
 		"%.0f buds per vine now. Fewer buds → fewer, better-ripened bunches; more buds → bigger crop, slower ripening. Only matters before budburst." % float(B["budsPerVine"]), done)
-	_choice(cp[1], "Leaf removal side", ["None", "Morning", "Afternoon", "Both"], B["leafSide"], func(x): shell.command("block", bid2, "leafside", x),
+	_choice(cp[1], "Leaf removal side", ["None", "Morning", "Afternoon", "Both"], B["leafSide"], func(x): shell.apply("block", bid2, "leafside", x, "Block %s: leaf removal on the %s side." % [bid2, x.to_lower()]),
 		"Opening the morning side dries bunches (less rot) with little sunburn risk; the afternoon side is hotter — more colour and TDN, more sunburn.", done)
-	_choice(cp[1], "Leaf removal timing", ["Early", "Late"], B["leafTiming"], func(x): shell.command("block", bid2, "leaftiming", x),
+	_choice(cp[1], "Leaf removal timing", ["Early", "Late"], B["leafTiming"], func(x): shell.apply("block", bid2, "leaftiming", x, "Block %s: leaf removal timing set to %s." % [bid2, x.to_lower()]),
 		"Early (at fruit set) lets berries harden to the sun; late (at véraison) exposes soft berries to sunburn.", done)
 	var thin := {"0": "None", "1": "Drop ~20 %", "2": "Drop ~40 %"}
 	var inv := {"None": "0", "Drop ~20 %": "1", "Drop ~40 %": "2"}
 	var cur_thin: String = thin.get(str(int(B.get("thinning", 0))), "None")
-	_choice(cp[1], "Green harvest (crop thinning)", ["None", "Drop ~20 %", "Drop ~40 %"], cur_thin, func(x): shell.command("block", bid2, "thinning", inv[x]),
+	_choice(cp[1], "Green harvest (crop thinning)", ["None", "Drop ~20 %", "Drop ~40 %"], cur_thin, func(x): shell.apply("block", bid2, "thinning", inv[x], "Block %s: green harvest set to %s." % [bid2, x.to_lower()]),
 		"Cutting off bunches at véraison concentrates the rest and ripens them faster. Costs crop — and in the Côte d'Or can keep you inside the AOC yield limit.", done)
 	c2.add_child(cp[0])
 	# harvest

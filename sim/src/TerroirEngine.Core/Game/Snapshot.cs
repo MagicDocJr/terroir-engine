@@ -37,8 +37,8 @@ public static class Snapshot
             ["plot"] = PlotObj(g),
             ["staff"] = new JsonObject
             {
-                ["vineyard"] = new JsonObject { ["level"] = g.VineyardManager.ToString(), ["salary"] = R(g.StaffCostYear("vineyard", g.VineyardManager), 0), ["post"] = R(EconomyTables.StaffPost("vineyard", g.Plot, g.WineHlEstimate) * 100, 0), ["forecastDays"] = g.ForecastSkill(g.VineyardManager).Horizon },
-                ["cellar"] = new JsonObject { ["level"] = g.CellarMaster.ToString(), ["salary"] = R(g.StaffCostYear("cellar", g.CellarMaster), 0), ["post"] = R(EconomyTables.StaffPost("cellar", g.Plot, g.WineHlEstimate) * 100, 0) },
+                ["vineyard"] = new JsonObject { ["name"] = g.StaffName("vineyard", g.VineyardManager), ["level"] = g.VineyardManager.ToString(), ["salary"] = R(g.StaffCostYear("vineyard", g.VineyardManager), 0), ["post"] = R(EconomyTables.StaffPost("vineyard", g.Plot, g.WineHlEstimate) * 100, 0), ["forecastDays"] = g.ForecastSkill(g.VineyardManager).Horizon },
+                ["cellar"] = new JsonObject { ["name"] = g.StaffName("cellar", g.CellarMaster), ["level"] = g.CellarMaster.ToString(), ["salary"] = R(g.StaffCostYear("cellar", g.CellarMaster), 0), ["post"] = R(EconomyTables.StaffPost("cellar", g.Plot, g.WineHlEstimate) * 100, 0) },
                 ["salaries"] = Arr(new[] { "Junior", "Experienced", "Senior" }.Select(l => (JsonNode)new JsonObject { ["level"] = l, ["vineyard"] = R(g.StaffCostYear("vineyard", Enum.Parse<StaffLevel>(l)), 0), ["cellar"] = R(g.StaffCostYear("cellar", Enum.Parse<StaffLevel>(l)), 0) })),
             },
             ["blocks"] = Arr(g.Blocks.Select(b => (JsonNode)BlockObj(g, b))),
@@ -217,6 +217,7 @@ public static class Snapshot
         JsonObject P(string id, string name, Tier cur, bool available, string notes, (string effect, double cost)[] tiers) => new()
         {
             ["id"] = id, ["name"] = name, ["current"] = cur.ToString(), ["available"] = available, ["notes"] = notes,
+            ["changed"] = g.Commands.LastOrDefault(c => c.Type == "programme" && c.A == id) is { } lc ? Dates.Short(DateOnly.FromDayNumber(lc.Day)) : null,
             ["tiers"] = new JsonObject { ["Low"] = T(tiers[0]), ["Medium"] = T(tiers[1]), ["High"] = T(tiers[2]) },
         };
         JsonObject T((string effect, double cost) t) => new() { ["effect"] = t.effect, ["cost"] = R(t.cost, 0) };
@@ -330,7 +331,7 @@ public static class Snapshot
 
     private static JsonObject MsgObj(Message m) => new()
     {
-        ["id"] = m.Id, ["date"] = Dates.Short(m.Date), ["from"] = m.From, ["role"] = m.Role, ["subject"] = m.Subject, ["body"] = m.Body, ["why"] = m.Why,
+        ["id"] = m.Id, ["date"] = Dates.Short(m.Date), ["from"] = m.From, ["sender"] = m.Sender, ["role"] = m.Role, ["subject"] = m.Subject, ["body"] = m.Body, ["why"] = m.Why,
         ["priority"] = m.Priority, ["kind"] = m.Kind, ["block"] = m.BlockId, ["read"] = m.Read, ["stop"] = m.Stop,
         ["actions"] = Arr(m.Actions.Select(a => (JsonNode)new JsonObject { ["label"] = a.Label, ["action"] = a.Action, ["arg"] = a.Arg })),
     };

@@ -43,7 +43,7 @@ var toast_label: Label
 var view3d: Node = null
 var busy := false
 var playing := false            # continuous play: advances every tick until an Alert
-var play_speed := 1             # days per 0.25 s tick
+var play_speed := 1             # days per 0.25 s tick (4 days a second)
 var play_timer: Timer
 
 func _ready() -> void:
@@ -66,6 +66,7 @@ func _ready() -> void:
 	statusbar = PanelContainer.new(); root_box.add_child(statusbar)
 	_make_toast()
 	play_timer = Timer.new(); play_timer.wait_time = 0.25; play_timer.timeout.connect(_play_tick); add_child(play_timer)
+	if "--avatars" in args: capture = true; _avatar_sheet.call_deferred(); return
 	if "--fuzz" in args: capture = true; _run_fuzz.call_deferred()
 	elif capture: _run_capture.call_deferred()
 	else: show_screen("title")
@@ -82,6 +83,11 @@ func command(type: String, a := "", b := "", c := "", d := "", e := "", stay := 
 	if not ok: notify("That didn't work: " + String(Sim.LastError()).left(160))
 	if stay: refresh()
 
+## A player choice that applies immediately, with a visible confirmation.
+func apply(type: String, a: String, b: String, c: String, message: String) -> void:
+	command(type, a, b, c)
+	notify(message, true)
+
 ## Advance time. stop=true runs until the next Alert (max `days`).
 func advance(days: int, stop := true, quiet := false) -> bool:
 	if busy or not Sim.HasGame(): return false
@@ -96,9 +102,9 @@ func advance(days: int, stop := true, quiet := false) -> bool:
 		if m.get("stop", false) and not before.has(int(m["id"])): new_alerts.append(m)
 	_build_chrome()
 	if new_alerts.size() > 0:
-		state["inbox_sel"] = int(new_alerts[0]["id"])
+		state["inbox_sel"] = int(new_alerts[-1]["id"])   # the oldest of the new Alerts (the list is newest first)
 		show_screen("inbox")
-		notify("%d day%s later — %s" % [n, "" if n == 1 else "s", String(new_alerts[0]["subject"])])
+		notify("%d day%s later — %s" % [n, "" if n == 1 else "s", String(new_alerts[-1]["subject"])])
 	else:
 		show_screen(current)
 		if n > 0 and not quiet: notify("%d day%s passed." % [n, "" if n == 1 else "s"])
@@ -126,8 +132,9 @@ func _alert_ids() -> Dictionary:
 ## Run an inbox action button: goto <screen>, harvest <block>, restart <lot>, programme "<id>:<tier>", block "<id>:<key>:<value>".
 func run_action(action: String, arg: String) -> void:
 	match action:
-		"goto": show_screen(arg)
+		"goto": state["return_to"] = "inbox"; show_screen(arg)
 		"harvest":
+			state["return_to"] = "inbox"
 			state["plot_sel"] = arg
 			show_screen("plot")
 			notify("Choose how to pick Block %s, then press Harvest." % arg)
@@ -135,9 +142,9 @@ func run_action(action: String, arg: String) -> void:
 		"spraynow": command("spraynow"); notify("Extra spray pass ordered for today — advance a day to carry it out.")
 		"acceptstuck": command("acceptstuck", arg); notify("Fermentation stopped; the Lot keeps its residual sugar.")
 		"programme":
-			var p := arg.split(":"); command("programme", p[0], p[1]); notify("%s set to %s." % [p[0].capitalize(), p[1]])
+			var p := arg.split(":"); command("programme", p[0], p[1]); notify("%s set to %s. Your Vineyard manager applies it from today." % [p[0].capitalize(), p[1]], true)
 		"block":
-			var q := arg.split(":"); command("block", q[0], q[1], q[2]); notify("Block %s: %s updated." % [q[0], q[1]])
+			var q := arg.split(":"); command("block", q[0], q[1], q[2]); notify("Block %s: %s updated." % [q[0], q[1]], true)
 
 func start_game(setup_json: Dictionary) -> void:
 	notify("Planting… the Mentor is looking after three years of Establishment.")
@@ -164,6 +171,18 @@ func show_screen(id: String) -> void:
 	var def: Array = SCREENS[id]
 	var mod = load(def[1])
 	var node: Control = mod.build(D, self, def[2]) if def[2] != "" else mod.build(D, self)
+	if state.get("return_to", "") == "inbox" and id != "inbox" and not pre:
+		# came here from a message's action button: offer the way back
+		var wrap := UI.vbox(10); wrap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		var bar := UI.hbox(12)
+		var back := UI.button("◂  Back to Inbox", true, 15); back.custom_minimum_size = Vector2(0, 38)
+		back.pressed.connect(func(): state.erase("return_to"); show_screen("inbox"))
+		bar.add_child(back)
+		bar.add_child(UI.label("Changes you make here apply straight away; there's nothing to confirm.", 14, UI.INK2))
+		wrap.add_child(bar)
+		node.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		wrap.add_child(node)
+		node = wrap
 	host.add_child(node)
 	if not pre: _refresh_nav()
 
@@ -174,7 +193,7 @@ func _unhandled_input(e: InputEvent) -> void:
 	var k: int = e.physical_keycode
 	if e.ctrl_pressed and k == KEY_S:
 		Sim.SaveGame("manual"); notify("Game saved."); return
-	if k >= KEY_1 and k <= KEY_9: show_screen(NAV[k - KEY_1])
+	if k >= KEY_1 and k <= KEY_9: state.erase("return_to"); show_screen(NAV[k - KEY_1])
 	elif k == KEY_0: show_screen("glossary")
 	elif k == KEY_TAB: toggle_3d()
 	elif k == KEY_SPACE: advance(1, false)
@@ -257,10 +276,8 @@ func _topbar() -> void:
 		b.tooltip_text = spec[3]; b.disabled = finished
 		b.pressed.connect(advance.bind(spec[1], spec[2])); h.add_child(b)
 	var pb := UI.button("❚❚ Pause" if playing else "▶ Play", playing, 15); pb.custom_minimum_size = Vector2(96, 40); pb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	pb.tooltip_text = "Let time run day by day; stops at the next Alert (P)"; pb.disabled = finished
+	pb.tooltip_text = "Let time run, 4 days a second; stops at the next Alert (P)"; pb.disabled = finished
 	pb.pressed.connect(toggle_play); h.add_child(pb)
-	var sp := UI.segmented(["1×", "2×", "4×"], "%d×" % play_speed, func(x): play_speed = int(x.left(1)); _topbar_refresh_count(), 44)
-	sp.size_flags_vertical = Control.SIZE_SHRINK_CENTER; sp.tooltip_text = "Play speed: 4, 8 or 16 days a second"; h.add_child(sp)
 	var cont := UI.button("Continue ▸", true, 16); cont.custom_minimum_size = Vector2(132, 42); cont.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	cont.tooltip_text = "Run day by day until the next Alert (Enter)"; cont.disabled = finished
 	cont.pressed.connect(advance.bind(60, true))
@@ -317,7 +334,7 @@ func _refresh_nav() -> void:
 		row.mouse_filter = Control.MOUSE_FILTER_STOP
 		row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		row.tooltip_text = "%s  (key %s)" % [SCREENS[id][0], str((i + 1) % 10)]
-		row.gui_input.connect(func(e): if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT: show_screen(id))
+		row.gui_input.connect(func(e): if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT: state.erase("return_to"); show_screen(id))
 		var h := UI.hbox(14); row.add_child(h)
 		var ic := UI.label(NAV_GLYPH[id], 17, UI.GOLD if active else UI.MUTED); ic.custom_minimum_size = Vector2(20, 0); h.add_child(ic)
 		h.add_child(UI.label(SCREENS[id][0], 17, UI.INK if active else UI.INK2, UI.f_body_b if active else null))
@@ -353,14 +370,15 @@ func _make_toast() -> void:
 	toast.add_theme_stylebox_override("panel", UI.sb(Color("11171c"), 6, UI.GOLD.darkened(0.2), 1, 16))
 	toast_label = UI.label("", 15, UI.INK, null, true)
 	toast.add_child(toast_label)
-	toast.position = Vector2(1920 - 640, 1080 - 120)
-	toast.custom_minimum_size = Vector2(600, 0)
+	toast.position = Vector2(960 - 330, 74)
+	toast.custom_minimum_size = Vector2(660, 0)
 	toast.visible = false
 	add_child(toast)
 
-func notify(text: String) -> void:
+func notify(text: String, ok := false) -> void:
 	if toast == null or capture: return
-	toast_label.text = text
+	toast.add_theme_stylebox_override("panel", UI.sb(Color("13201a") if ok else Color("11171c"), 6, UI.GOOD if ok else UI.GOLD.darkened(0.2), 2 if ok else 1, 16))
+	toast_label.text = ("✓  " if ok else "") + text
 	toast.visible = true
 	toast.modulate.a = 1.0
 	var tw := create_tween()
@@ -397,8 +415,17 @@ func _run_capture() -> void:
 	await start_game(load("res://src/ui/screens/pregame.gd").setup_json(self))
 	if not Sim.HasGame(): print("NEWGAME FAILED ", Sim.LastError()); get_tree().quit(); return
 	await _shot("%s_04_inbox_start" % prefix)
+	# read state must survive time passing (bug: Continue made everything unread again)
+	command("read", "all")
+	var read_ids := {}
+	for m in D["inbox"]: read_ids[int(m["id"])] = true
 	# exercise the real time controls once (Continue stops at the next Alert)
 	advance(60, true)
+	var reverted := 0
+	for m in D["inbox"]:
+		if read_ids.has(int(m["id"])) and not m["read"]: reverted += 1
+	print("READ STATE ", "ok" if reverted == 0 else "BROKEN (%d reverted)" % reverted)
+	show_screen("inbox"); await _shot("%s_04b_inbox_after_continue" % prefix)
 	print("advance ok: ", D["date"], " unread ", D["unreadAlerts"])
 	show_screen("programmes"); await _shot("%s_05_programmes" % prefix)
 	# spring → summer
@@ -511,4 +538,22 @@ func _run_fuzz() -> void:
 	print("FUZZ play: ", d0, " → ", D["date"], " still playing=", playing)
 	if playing: toggle_play()
 	print("FUZZ DONE date=", D["date"], " phase=", D["phase"])
+	get_tree().quit()
+
+# ------------------------------------------------------------------ avatar contact sheet (visual check)
+func _avatar_sheet() -> void:
+	var g := GridContainer.new(); g.columns = 7; g.position = Vector2(40, 40)
+	g.add_theme_constant_override("h_separation", 24); g.add_theme_constant_override("v_separation", 24)
+	add_child(g)
+	var people := [["Lukas Brandt", "vineyard"], ["Anja Meurer", "vineyard"], ["Heinz Schäfer", "vineyard"], ["Marie Kessler", "cellar"], ["Tobias Hahn", "cellar"], ["Ursula Lenz", "cellar"], ["Klaus Weber", "mentor"],
+		["Théo Garnier", "vineyard"], ["Claire Dumont", "vineyard"], ["Jean-Marc Rivière", "vineyard"], ["Léa Fontaine", "cellar"], ["Hugo Bernard", "cellar"], ["Sylvie Moreau", "cellar"], ["Hélène Morot", "mentor"],
+		["Diego Morales", "vineyard"], ["Kate Sullivan", "vineyard"], ["Walt Henning", "vineyard"], ["Priya Nair", "cellar"], ["Ben Carter", "cellar"], ["Linda Okafor", "cellar"], ["Ray Castellanos", "mentor"]]
+	for p in people:
+		var v := UI.vbox(4)
+		v.add_child(load("res://src/ui/avatar.gd").make(p[0], p[1], 150))
+		v.add_child(UI.label(p[0], 14, UI.INK2))
+		g.add_child(v)
+	var small := UI.hbox(10); small.position = Vector2(40, 700); add_child(small)
+	for p in people.slice(0, 7): small.add_child(load("res://src/ui/avatar.gd").make(p[0], p[1], 36))
+	await _shot("avatars")
 	get_tree().quit()

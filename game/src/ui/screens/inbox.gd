@@ -2,6 +2,7 @@
 extends RefCounted
 
 const UI := preload("res://src/ui/ui.gd")
+const Avatar := preload("res://src/ui/avatar.gd")
 
 static func build(D: Dictionary, shell) -> Control:
 	var msgs: Array = D.get("inbox", [])
@@ -23,15 +24,23 @@ static func build(D: Dictionary, shell) -> Control:
 	var sel = null
 	for m in shown:
 		if int(m["id"]) == sel_id: sel = m
+	# open on the OLDEST unread message, so a new player reads the welcome first and alerts in the order they happened
+	if sel == null:
+		for i in range(shown.size() - 1, -1, -1):
+			if not shown[i]["read"]: sel = shown[i]; break
 	if sel == null and shown.size() > 0: sel = shown[0]
+	var next_unread = null
+	if sel != null:
+		for i in range(shown.size() - 1, -1, -1):
+			if not shown[i]["read"] and shown[i]["id"] != sel["id"]: next_unread = shown[i]; break
 	if sel != null and not sel["read"]:
-		Sim.Command("read", str(sel["id"]), "", "", "", "")
+		Sim.Command("read", str(int(sel["id"])), "", "", "", "")
 		sel["read"] = true
 		sel["_was_unread"] = true
 		D["unreadAlerts"] = maxi(0, int(D.get("unreadAlerts", 0)) - (1 if sel["priority"] == "high" else 0))
 		shell.call_deferred("_topbar_refresh_count")
 	var hdr := UI.page_header("Inbox", "%d messages, %d unread. Alerts stop time until you've seen them." % [msgs.size(), unread - (1 if sel != null and sel.get("_was_unread", false) else 0)],
-		[UI.segmented(["All", "Unread", "Vineyard", "Cellar", "Mentor"], filt, func(x): shell.state["inbox_filter"] = x; shell.show_screen("inbox"), 90)])
+		[_mark_all_button(shell, unread), UI.segmented(["All", "Unread", "Vineyard", "Cellar", "Mentor"], filt, func(x): shell.state["inbox_filter"] = x; shell.show_screen("inbox"), 90)])
 	v.add_child(hdr); v.move_child(hdr, header_at)
 	var body := UI.hbox(16); body.size_flags_vertical = Control.SIZE_EXPAND_FILL; v.add_child(body)
 	# list
@@ -48,6 +57,7 @@ static func build(D: Dictionary, shell) -> Control:
 		var mark := "◆" if m["priority"] == "high" else ("●" if not m["read"] else "○")
 		var mcol := UI.CRIT if m["priority"] == "high" and not m["read"] else (UI.GOLD if not m["read"] else UI.MUTED)
 		var ml := UI.label(mark, 13, mcol); ml.custom_minimum_size = Vector2(16, 0); h.add_child(ml)
+		h.add_child(Avatar.make(String(m.get("sender", "")), String(m["role"]), 40))
 		var tv := UI.vbox(0); tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var top := UI.hbox(8)
 		top.add_child(UI.label(String(m["from"]), 13, UI.INK2))
@@ -71,8 +81,9 @@ static func build(D: Dictionary, shell) -> Control:
 	dp[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if sel != null:
 		var dv := UI.vbox(14)
-		var h := UI.hbox(10)
-		h.add_child(UI.label("%s · %s" % [sel["from"], sel["role"]], 15, UI.INK2))
+		var h := UI.hbox(12)
+		h.add_child(Avatar.make(String(sel.get("sender", "")), String(sel["role"]), 56))
+		h.add_child(UI.label(String(sel["from"]), 16, UI.INK2))
 		h.add_child(UI.spacer())
 		if sel["priority"] == "high": h.add_child(UI.chip("Alert", UI.CRIT))
 		h.add_child(UI.label(String(sel["date"]), 15, UI.MUTED))
@@ -94,9 +105,20 @@ static func build(D: Dictionary, shell) -> Control:
 				b.pressed.connect(func(): shell.run_action(act, arg))
 				ah.add_child(b)
 			dv.add_child(ah)
+		if next_unread != null:
+			var nb := UI.button("Next unread ▸  %s" % String(next_unread["subject"]).left(48), false, 15)
+			var nid := int(next_unread["id"])
+			nb.pressed.connect(func(): shell.state["inbox_sel"] = nid; shell.show_screen("inbox"))
+			dv.add_child(nb)
 		dp[1].add_child(UI.scroll(dv))
 	else:
 		dp[1].add_child(UI.label("No messages.", 16, UI.MUTED))
 	dp[1].size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_child(dp[0])
 	return v
+
+static func _mark_all_button(shell, unread: int) -> Button:
+	var b := UI.button("Mark all read", false, 15)
+	b.disabled = unread == 0
+	b.pressed.connect(func(): shell.command("read", "all"); shell.notify("All messages marked as read."))
+	return b

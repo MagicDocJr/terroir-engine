@@ -78,7 +78,7 @@ public partial class SimBridge : Node
         if (_game == null) return false;
         try
         {
-            _game.Apply(new TerroirEngine.Game.Command { Type = type, A = a ?? "", B = b ?? "", C = c ?? "", D = d ?? "", E = e ?? "" }, record: type != "read");
+            _game.Apply(new TerroirEngine.Game.Command { Type = type, A = a ?? "", B = b ?? "", C = c ?? "", D = d ?? "", E = e ?? "" }, record: true);   // "read" is recorded too, so read state survives save and load
             return true;
         }
         catch (Exception ex) { _lastError = ex.ToString(); GD.PushError("Terroir: command failed: " + ex); return false; }

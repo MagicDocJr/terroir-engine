@@ -37,6 +37,7 @@ public sealed class Message
     public int Id { get; set; }
     public DateOnly Date { get; set; }
     public string From { get; set; } = "";
+    public string Sender { get; set; } = "";   // person's name, for the portrait in the Inbox
     public string Role { get; set; } = "";
     public string Subject { get; set; } = "";
     public string Body { get; set; } = "";
@@ -77,6 +78,20 @@ public sealed partial class GameSession
     public List<string> EstablishmentReports { get; } = new();
     public List<(DateOnly Date, double Downy, double Powdery, double Botrytis)> RiskSeries { get; } = new();
     public string MentorName => Region.Id switch { "mosel" => "Klaus Weber", "cote-dor" => "Hélène Morot", _ => "Ray Castellanos" };
+    /// <summary>Each Staff level is a different person you hire (names are fictional).</summary>
+    public string StaffName(string role, StaffLevel l)
+    {
+        string[] names = (Region.Id, role) switch
+        {
+            ("mosel", "vineyard") => new[] { "Lukas Brandt", "Anja Meurer", "Heinz Schäfer" },
+            ("mosel", _) => new[] { "Marie Kessler", "Tobias Hahn", "Ursula Lenz" },
+            ("cote-dor", "vineyard") => new[] { "Théo Garnier", "Claire Dumont", "Jean-Marc Rivière" },
+            ("cote-dor", _) => new[] { "Léa Fontaine", "Hugo Bernard", "Sylvie Moreau" },
+            (_, "vineyard") => new[] { "Diego Morales", "Kate Sullivan", "Walt Henning" },
+            _ => new[] { "Priya Nair", "Ben Carter", "Linda Okafor" },
+        };
+        return names[(int)l];
+    }
     public bool MentorRetired { get; private set; }
     public DateOnly? FinishedDate { get; private set; }
     public DailyWeather Today { get; private set; }
@@ -248,7 +263,9 @@ public sealed partial class GameSession
                 break;
             case "wine": CreateWine(c); break;
             case "read":
-                var m = Inbox.FirstOrDefault(x => x.Id.ToString() == c.A); if (m != null) m.Read = true;
+                // "all" marks everything read; ids may arrive as "12" or "12.0" from the UI's JSON numbers
+                if (c.A == "all") foreach (var x in Inbox) x.Read = true;
+                else if (double.TryParse(c.A, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var rid)) { var m = Inbox.FirstOrDefault(x => x.Id == (int)rid); if (m != null) m.Read = true; }
                 break;
         }
     }
@@ -501,9 +518,10 @@ public sealed partial class GameSession
     // ================================================================================== messages
     public Message Post(string role, string subject, string body, string why, string priority, string kind, bool stop, string blockId = "")
     {
-        string from = role switch { "mentor" => $"Mentor · {MentorName}", "vineyard" => $"Vineyard manager ({VineyardManager})", "cellar" => $"Cellar master ({CellarMaster})", "weather" => "Weather service", _ => role };
-        if (role == "mentor" && MentorRetired) from = $"{MentorName} (retired)";
-        var m = new Message { Id = ++_msgId, Date = Date, From = from, Role = role, Subject = subject, Body = body, Why = why, Priority = priority, Kind = kind, Stop = stop, BlockId = blockId };
+        string from = role switch { "mentor" => $"{MentorName} · Mentor", "vineyard" => $"{StaffName("vineyard", VineyardManager)} · Vineyard manager ({VineyardManager})", "cellar" => $"{StaffName("cellar", CellarMaster)} · Cellar master ({CellarMaster})", "weather" => "Weather service", _ => role };
+        if (role == "mentor" && MentorRetired) from = $"{MentorName} · retired Mentor";
+        string sender = role switch { "mentor" => MentorName, "vineyard" => StaffName("vineyard", VineyardManager), "cellar" => StaffName("cellar", CellarMaster), _ => "" };
+        var m = new Message { Id = ++_msgId, Date = Date, From = from, Sender = sender, Role = role, Subject = subject, Body = body, Why = why, Priority = priority, Kind = kind, Stop = stop, BlockId = blockId };
         Inbox.Add(m);
         return m;
     }
