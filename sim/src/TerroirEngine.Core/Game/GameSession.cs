@@ -74,6 +74,8 @@ public sealed partial class GameSession
     public GamePhase Phase { get; private set; } = GamePhase.Establishment;
     public int Vintage => Setup.PlantingYear + 3;
     public List<Command> Commands { get; } = new();
+    /// <summary>UI progress flags (onboarding steps seen, screens visited). No effect on the simulation; saved via the command log.</summary>
+    public HashSet<string> Flags { get; } = new();
     public List<(DateOnly Date, double Cash)> CashSeries { get; } = new();
     public List<string> EstablishmentReports { get; } = new();
     public List<(DateOnly Date, double Downy, double Powdery, double Botrytis)> RiskSeries { get; } = new();
@@ -252,6 +254,7 @@ public sealed partial class GameSession
                 var sl = Lots.FirstOrDefault(x => x.Id == c.A);
                 if (sl != null) WineryModel.Restart(sl, Date);
                 break;
+            case "flag": if (!string.IsNullOrWhiteSpace(c.A)) Flags.Add(c.A); break;
             case "spraynow": if (Blocks.Any(b => b.Budburst != null && !b.Harvested)) Ctx.ForceSprayToday = true; break;
             case "acceptstuck":
                 var al = Lots.FirstOrDefault(x => x.Id == c.A);
@@ -305,6 +308,9 @@ public sealed partial class GameSession
         DailyCosts();
         HandleEvents();
         Advisor();
+        if (Ledger.Cash < 0 && Phase != GamePhase.Finished && Gate("overdrawn"))
+            Post("mentor", "You are overdrawn", $"Your cash is now {Ledger.Cash:N0} €. The biggest costs so far were {string.Join(", ", Ledger.ByCategory(DateOnly.MinValue, DateOnly.MaxValue).Where(kv => kv.Value < 0).OrderBy(kv => kv.Value).Take(3).Select(kv => $"{kv.Key} {-kv.Value:N0} €"))}. In this version the bank carries the debt until the wine is sold, but lower Programme tiers or cheaper staff reduce what you spend.",
+                "Game simplification: no loans or interest yet (backlog: full economics).", "high", "overdrawn", stop: true).Actions.Add(("Open Estate", "goto", "estate"));
         if (Date.DayOfWeek == DayOfWeek.Monday) CashSeries.Add((Date, Ledger.Cash));
         if (vineYear && Date.Month >= 4 && Date.Month <= 10)
             RiskSeries.Add((Date, Blocks.Average(b => b.Disease.DownyRiskToday), Blocks.Average(b => b.Disease.PowderyIndex), Blocks.Average(b => b.Disease.BotrytisRiskToday)));
@@ -352,12 +358,37 @@ public sealed partial class GameSession
                 var msg = Post("cellar", $"Block {b.Data.Id} is in: Lot {lotId} received",
                     $"{lot.GrapeKg:N0} kg at {must.Oe:0} °Oe ({must.Brix:0.0} °Brix, potential {must.PotentialAlcohol:0.0} % vol), TA {must.TaGL:0.0} g/L, pH {must.Ph:0.00}, YAN {must.YanMgL:0} mg/L." +
                     (b.Disease.GreyRot > 0.02 ? $" Grey rot {b.Disease.GreyRot * 100:0} % — {b.Order.Sorting.ToString().ToLowerInvariant()} sorting." : "") +
+                    $"\n\n{MentorsFirstRead(b, must)}" +
                     $"\n\nSet the cellar choices for this Lot now: {(lot.Red ? "destemming, cold soak, yeast, temperature, cap management" : "pressing, settling, yeast, temperature, sweetness")} are locked once fermentation starts.",
                     lot.Red ? "Red wine ferments on the skins: colour and tannin come from how long and how hard you extract." : "White juice is pressed off the skins straight away; the cellar choices shape fruit, texture and sweetness.",
                     "high", "lot-received", stop: true, blockId: b.Data.Id);
                 msg.Actions.Add(("Open Winery", "goto", "winery"));
             }
         }
+    }
+
+    /// <summary>Immediate feedback on the harvest decision (design review §3): what this fruit is likely to become, from the must alone.
+    /// It uses the same thresholds as the law module; the real category is only decided at bottling.</summary>
+    private string MentorsFirstRead(BlockState b, MustAnalysis must)
+    {
+        string acid = must.TaGL >= 8.5 ? "racy, high acidity" : must.TaGL >= 6.5 ? "fresh acidity" : must.TaGL >= 5.5 ? "moderate acidity" : "soft, low acidity";
+        string alc = $"about {must.PotentialAlcohol:0.0} % alcohol if fermented dry";
+        string cat;
+        if (Region.Id == "mosel")
+        {
+            bool rieslingLike = b.Variety.Id is VarietyId.Riesling or VarietyId.PinotNoir;
+            double spaet = rieslingLike ? 80 : 85, ausl = rieslingLike ? 88 : 93;
+            cat = must.Oe >= 110 ? (b.Disease.NobleRot >= 0.3 ? "Beerenauslese territory (and there is enough noble rot)" : "Auslese: the must weight reaches Beerenauslese, but that needs noble-rotten berries")
+                : must.Oe >= ausl ? "Auslese level" : must.Oe >= spaet ? "Spätlese level" : must.Oe >= 73 ? "Kabinett level" : must.Oe >= 55 ? "Qualitätswein (below Kabinett)" : "only Landwein or Deutscher Wein";
+        }
+        else if (Region.Id == "cote-dor")
+        {
+            int level = Plot.Id switch { "cotedor-premiercru" => 3, "cotedor-village" => 2, "cotedor-hautes" => 1, _ => 0 };
+            double minNat = level >= 3 ? 11.0 : level == 2 ? 10.5 : b.Variety.Red ? 10.0 : 10.5;
+            cat = must.PotentialAlcohol >= minNat ? $"ripe enough for {Plot.Classification.Split('(')[0].Trim()} (natural alcohol minimum {minNat} %)" : $"below the {minNat} % natural-alcohol minimum; chaptalisation can fix it within the AOC limits";
+        }
+        else cat = "Napa: no must-weight categories; ripeness shows in body and alcohol";
+        return $"The Mentor's first read: {cat}, {alc}, {acid}. The final category is decided when you bottle.";
     }
 
     /// <summary>Regional house style as the starting point for the player's cellar choices (all editable before fermentation).</summary>

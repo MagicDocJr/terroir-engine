@@ -7,6 +7,10 @@ Things deliberately left out of the MVP, to deep-dive once the core loop is lock
 
 ## Gameplay
 - Hands-on tasks in 3D (pull a leaf, taste berries, dig a soil pit, punch down, thief a barrel sample)
+- Staff-assigned tasks done in 3D: the Vineyard manager says "go out and prune Block B" (or pull leaves, green-harvest, punch down) and the player does it in the 3D world or delegates it (owner request, 27 Sep 2026)
+- 3D time-lapse with a speed control (watching the days pass is where 1×/2×/4× belongs)
+- Famous-vintage challenges (e.g. Burgundy 2021 frost, the hot 2003) as authored replay
+- Barrel-sample tasting notes during ageing, and a Senior's occasional "clever idea" messages
 - Tractors and machinery driven by the player
 - Buying an established estate (planted vines, higher price) instead of bare land
 - Top-grafting: change the Variety on existing roots, losing one vintage
