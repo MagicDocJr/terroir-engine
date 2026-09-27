@@ -328,7 +328,7 @@ public sealed partial class GameSession
             Phase = GamePhase.Finished; FinishedDate = Date; MentorRetired = true;
             var rev = Wines.Sum(x => x.Revenue);
             Post("mentor", "The wine is in bottle — and I am retiring", $"Every Lot of the {Vintage} vintage is now bottled. {Wines.Count} Wine(s), {Wines.Sum(x => x.Bottles):N0} bottles, €{rev:N0} in sales.\n\nIt has been a pleasure. From now on the Estate is yours — hire good people, or learn it all yourself. Look at your Tasting sheets: every descriptor tells you which of your decisions caused it.",
-                "This first version of the game ends when the first Vintage is in bottle. Playing on year after year is the first planned expansion.", "high", "finished", stop: true).Actions.Add(("Open Wines", "goto", "wines"));
+                "This first version of the game ends when the first Vintage is in bottle. Playing on year after year is the first planned expansion.", "high", "finished", stop: true).Actions.AddRange(new[] { ("Open the Vintage report", "goto", "report"), ("Open Wines", "goto", "wines") });
         }
     }
 

@@ -130,7 +130,10 @@ static func _finished(D: Dictionary, shell) -> Control:
 	for w in D.get("wines", []):
 		h.add_child(UI.tile(String(w["name"]), String(w["sheet"]["quality"]), "%s · %d bottles · €%.2f" % [w["category"], int(w["bottles"]), float(w["price"])]))
 	p[1].add_child(h)
-	var b := UI.button("Open the Tasting sheets", true, 16); b.pressed.connect(func(): shell.show_screen("wines"))
-	p[1].add_child(b)
+	var bh := UI.hbox(10)
+	var rb := UI.button("Open the Vintage report", true, 16); rb.pressed.connect(func(): shell.show_screen("report"))
+	var b := UI.button("Open the Tasting sheets", false, 16); b.pressed.connect(func(): shell.show_screen("wines"))
+	bh.add_child(rb); bh.add_child(b)
+	p[1].add_child(bh)
 	p[1].add_child(UI.label("This MVP ends after one Vintage. Later Vintages, more Plots and a continuing Timeline are on the backlog.", 14, UI.MUTED))
 	return p[0]

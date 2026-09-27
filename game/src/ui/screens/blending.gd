@@ -108,6 +108,11 @@ static func build(D: Dictionary, shell) -> Control:
 		shell.D = JSON.parse_string(Sim.Snapshot())
 		shell._build_chrome()
 		if shell.D.get("wines", []).size() > 0: shell.state["wine_sel"] = shell.D["wines"][-1]["id"]
+		if String(shell.D.get("phase", "")) == "Finished" and not shell.state.get("report_shown", false):
+			shell.state["report_shown"] = true
+			shell.show_screen("report")
+			shell.notify("That was the last Lot: here is your Vintage report.")
+			return
 		shell.show_screen("wines")
 		shell.notify("Bottled. Here is the Tasting sheet."))
 	bp[1].add_child(go)

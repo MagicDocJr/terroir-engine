@@ -21,6 +21,7 @@ const SCREENS := {
 	"blending": ["Blending", "res://src/ui/screens/blending.gd", ""],
 	"wines": ["Wines", "res://src/ui/screens/wines.gd", ""],
 	"glossary": ["Glossary", "res://src/ui/screens/glossary.gd", ""],
+	"report": ["Vintage report", "res://src/ui/screens/report.gd", ""],
 }
 const NAV := ["inbox", "estate", "plot", "weather", "programmes", "ripeness", "winery", "blending", "wines", "glossary"]
 const NAV_GLYPH := {"inbox": "▤", "estate": "◆", "plot": "▦", "weather": "☁", "programmes": "≡", "ripeness": "◔",
@@ -115,6 +116,10 @@ func advance(days: int, stop := true, quiet := false) -> bool:
 	D = JSON.parse_string(Sim.Snapshot())
 	Sim.SaveGame("autosave")
 	busy = false
+	if String(D.get("phase", "")) == "Finished" and not state.get("report_shown", false):
+		state["report_shown"] = true
+		_build_chrome(); show_screen("report")
+		return false
 	var new_alerts := []
 	for m in D.get("inbox", []):
 		if m.get("stop", false) and not before.has(int(m["id"])): new_alerts.append(m)
@@ -587,6 +592,10 @@ func _run_capture() -> void:
 			if l.get("stuck", false): Sim.Command("acceptstuck" if l.get("restarted", false) else "restart", l["id"], "", "", "", "")
 		D = JSON.parse_string(Sim.Snapshot())
 	_build_chrome()
+	show_screen("report"); await _shot("%s_13b_report" % prefix)
+	var rsc := _find_scroll(host)
+	if rsc: rsc.scroll_vertical = 700
+	await _shot("%s_13c_report_lower" % prefix)
 	show_screen("wines"); await _shot("%s_14_wines" % prefix)
 	show_screen("estate"); await _shot("%s_15_estate_end" % prefix)
 	show_screen("glossary"); await _shot("%s_16_glossary" % prefix)
