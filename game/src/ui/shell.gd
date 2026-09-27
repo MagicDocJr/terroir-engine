@@ -4,6 +4,7 @@
 extends Control
 
 const UI := preload("res://src/ui/ui.gd")
+const Onboarding := preload("res://src/ui/onboarding.gd")
 const Charts := preload("res://src/ui/charts.gd")
 const SCREENS := {
 	"title": ["Terroir Engine", "res://src/ui/screens/pregame.gd", "title"],
@@ -36,6 +37,7 @@ var root_box: VBoxContainer
 var topbar: Control
 var nav_panel: Control
 var nav_box: VBoxContainer
+var nav_plan: MarginContainer
 var host: MarginContainer
 var statusbar: Control
 var toast: PanelContainer
@@ -111,6 +113,10 @@ func advance(days: int, stop := true, quiet := false) -> bool:
 	if view3d != null and view3d.visible and view3d.has_method("apply_snapshot"): view3d.apply_snapshot(D)
 	return new_alerts.size() > 0
 
+## Continue jumps further once everything is in the cellar (design review §1: the ageing months have few decisions).
+func continue_days() -> int:
+	return 120 if String(D.get("phase", "")) == "Cellar" else 60
+
 ## Continuous play (spec §3.3): a day or more per tick, stopping at the first Alert.
 func toggle_play() -> void:
 	playing = not playing and String(D.get("phase", "")) != "Finished"
@@ -171,6 +177,20 @@ func show_screen(id: String) -> void:
 	var def: Array = SCREENS[id]
 	var mod = load(def[1])
 	var node: Control = mod.build(D, self, def[2]) if def[2] != "" else mod.build(D, self)
+	if not pre and Sim.HasGame():
+		var f := Onboarding.flags(D)
+		if not f.has("visited_" + id):
+			Sim.Command("flag", "visited_" + id, "", "", "", "")
+			(D["flags"] as Array).append("visited_" + id)
+			if Onboarding.enabled(D): call_deferred("_refresh_nav_card")
+		if Onboarding.enabled(D) and not f.has("intro_" + id):
+			var card := Onboarding.intro_card(id, self)
+			if card != null:
+				var iw := UI.vbox(12); iw.size_flags_vertical = Control.SIZE_EXPAND_FILL
+				iw.add_child(card)
+				node.size_flags_vertical = Control.SIZE_EXPAND_FILL
+				iw.add_child(node)
+				node = iw
 	if state.get("return_to", "") == "inbox" and id != "inbox" and not pre:
 		# came here from a message's action button: offer the way back
 		var wrap := UI.vbox(10); wrap.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -198,7 +218,7 @@ func _unhandled_input(e: InputEvent) -> void:
 	elif k == KEY_TAB: toggle_3d()
 	elif k == KEY_SPACE: advance(1, false)
 	elif k == KEY_P: toggle_play()
-	elif k == KEY_ENTER or k == KEY_KP_ENTER: advance(60, true)
+	elif k == KEY_ENTER or k == KEY_KP_ENTER: advance(continue_days(), true)
 
 # ------------------------------------------------------------------ 3D
 func toggle_3d(kind := "vineyard") -> void:
@@ -280,7 +300,7 @@ func _topbar() -> void:
 	pb.pressed.connect(toggle_play); h.add_child(pb)
 	var cont := UI.button("Continue ▸", true, 16); cont.custom_minimum_size = Vector2(132, 42); cont.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	cont.tooltip_text = "Run day by day until the next Alert (Enter)"; cont.disabled = finished
-	cont.pressed.connect(advance.bind(60, true))
+	cont.pressed.connect(func(): advance(continue_days(), true))
 	h.add_child(cont)
 	var unread := int(D.get("unreadAlerts", 0))
 	var bell := PanelContainer.new(); bell.add_theme_stylebox_override("panel", UI.sb(UI.CRIT if unread > 0 else UI.RAISED, 14, Color(0, 0, 0, 0), 0, 10))
@@ -308,6 +328,10 @@ func _nav() -> void:
 	v.add_child(UI.spacer(false, 12))
 	nav_box = UI.vbox(2); v.add_child(nav_box)
 	v.add_child(UI.spacer(false))
+	nav_plan = MarginContainer.new()
+	for side in ["left", "right", "bottom"]: nav_plan.add_theme_constant_override("margin_" + side, 12)
+	v.add_child(nav_plan)
+	_refresh_nav_card()
 	var plot_card := MarginContainer.new()
 	for side in ["left", "right", "bottom"]: plot_card.add_theme_constant_override("margin_" + side, 16)
 	var pv := UI.vbox(2); plot_card.add_child(pv)
@@ -317,6 +341,12 @@ func _nav() -> void:
 	pv.add_child(UI.label(String(P.get("leaf", "")), 13, UI.MUTED))
 	pv.add_child(UI.label(String(P.get("varieties", "")), 13, UI.MUTED))
 	v.add_child(plot_card)
+
+func _refresh_nav_card() -> void:
+	if nav_plan == null or not is_instance_valid(nav_plan): return
+	for c in nav_plan.get_children(): c.queue_free()
+	var card := Onboarding.nav_card(D, self)
+	if card != null: nav_plan.add_child(card)
 
 func _refresh_nav() -> void:
 	if nav_box == null or not is_instance_valid(nav_box): return

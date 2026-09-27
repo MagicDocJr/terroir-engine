@@ -42,6 +42,11 @@ static func build(D: Dictionary, shell) -> Control:
 	var hdr := UI.page_header("Inbox", "%d messages, %d unread. Alerts stop time until you've seen them." % [msgs.size(), unread - (1 if sel != null and sel.get("_was_unread", false) else 0)],
 		[_mark_all_button(shell, unread), UI.segmented(["All", "Unread", "Vineyard", "Cellar", "Mentor"], filt, func(x): shell.state["inbox_filter"] = x; shell.show_screen("inbox"), 90)])
 	v.add_child(hdr); v.move_child(hdr, header_at)
+	# the Mentor's plan: open by default for the first steps, collapsible, hidden for good from its own button
+	var OB = load("res://src/ui/onboarding.gd")
+	var nxt: int = OB.next_step(D)
+	if OB.enabled(D) and nxt >= 0 and shell.state.get("plan_open", nxt <= 4):
+		v.add_child(OB.plan_panel(D, shell))
 	var body := UI.hbox(16); body.size_flags_vertical = Control.SIZE_EXPAND_FILL; v.add_child(body)
 	# list
 	var lp: Array = UI.panel("", "", 2)

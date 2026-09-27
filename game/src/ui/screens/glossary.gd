@@ -5,7 +5,16 @@ const UI := preload("res://src/ui/ui.gd")
 
 static func build(_D: Dictionary, shell) -> Control:
 	var v := UI.vbox(14)
-	v.add_child(UI.page_header("Glossary", "The words the game uses, and what they mean here."))
+	var hidden: bool = "plan_hidden" in _D.get("flags", [])
+	var pb := UI.button("Show the Mentor's plan again" if hidden else "Show all screen intros again", false, 14)
+	pb.pressed.connect(func():
+		if hidden: shell.command("unflag", "plan_hidden")
+		else:
+			for f in _D.get("flags", []):
+				if String(f).begins_with("intro_"): Sim.Command("unflag", String(f), "", "", "", "")
+			shell.refresh()
+		shell.notify("Done.", true))
+	v.add_child(UI.page_header("Glossary", "The words the game uses, and what they mean here.", [pb]))
 	var terms := _terms()
 	var g := GridContainer.new(); g.columns = 2; g.add_theme_constant_override("h_separation", 16); g.add_theme_constant_override("v_separation", 16)
 	for section in terms:

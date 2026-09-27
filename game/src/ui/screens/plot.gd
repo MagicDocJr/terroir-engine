@@ -84,8 +84,12 @@ static func build(D: Dictionary, shell) -> Control:
 	var cp: Array = UI.panel("Choices for Block %s" % B["id"], "the Vineyard manager carries them out")
 	var bid2: String = B["id"]
 	var done: bool = B["harvested"] or B["picking"]
-	_choice(cp[1], "Winter pruning (bud load)", ["Low", "Balanced", "High"], B["budLoad"], func(x): shell.apply("block", bid2, "budload", x, "Block %s pruned to a %s bud load. Your crew prunes it this way." % [bid2, x.to_lower()]),
+	_choice(cp[1], "Winter pruning (bud load)", ["Low", "Balanced", "High"], B["budLoad"], func(x): Sim.Command("flag", "pruning_ok", "", "", "", ""); shell.apply("block", bid2, "budload", x, "Block %s pruned to a %s bud load. Your crew prunes it this way." % [bid2, x.to_lower()]),
 		"%.0f buds per vine now. Fewer buds → fewer, better-ripened bunches; more buds → bigger crop, slower ripening. Only matters before budburst." % float(B["budsPerVine"]), done)
+	if not ("pruning_ok" in D.get("flags", [])) and String(B["stage"]) == "Dormant":
+		var keep := UI.button("Keep the Mentor's pruning for all Blocks", true, 14)
+		keep.pressed.connect(func(): shell.apply("flag", "pruning_ok", "", "", "Pruning settled: the crew prunes every Block as the Mentor planned."))
+		cp[1].add_child(keep)
 	_choice(cp[1], "Leaf removal side", ["None", "Morning", "Afternoon", "Both"], B["leafSide"], func(x): shell.apply("block", bid2, "leafside", x, "Block %s: leaf removal on the %s side." % [bid2, x.to_lower()]),
 		"Opening the morning side dries bunches (less rot) with little sunburn risk; the afternoon side is hotter — more colour and TDN, more sunburn.", done)
 	_choice(cp[1], "Leaf removal timing", ["Early", "Late"], B["leafTiming"], func(x): shell.apply("block", bid2, "leaftiming", x, "Block %s: leaf removal timing set to %s." % [bid2, x.to_lower()]),

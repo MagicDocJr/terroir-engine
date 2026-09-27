@@ -255,6 +255,7 @@ public sealed partial class GameSession
                 if (sl != null) WineryModel.Restart(sl, Date);
                 break;
             case "flag": if (!string.IsNullOrWhiteSpace(c.A)) Flags.Add(c.A); break;
+            case "unflag": Flags.Remove(c.A); break;
             case "spraynow": if (Blocks.Any(b => b.Budburst != null && !b.Harvested)) Ctx.ForceSprayToday = true; break;
             case "acceptstuck":
                 var al = Lots.FirstOrDefault(x => x.Id == c.A);

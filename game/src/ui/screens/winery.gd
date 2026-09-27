@@ -112,7 +112,20 @@ static func build(D: Dictionary, shell) -> Control:
 	cp[0].custom_minimum_size = Vector2(560, 0)
 	var lid3: String = L["id"]
 	var bottled: bool = L["ready"] == false and String(L["phase"]) == "Blended"
+	# design review §2: 3–4 key choices up front, the rest under "More choices" (the Cellar master's plan is a fine default)
+	var key_set: Array = ["Destemming", "Cap management", "Red temperature", "Vessel"] if L["red"] else ["Pressing", "Temperature", "Sweetness", "Vessel"]
+	var show_more: bool = shell.state.get("winery_more", false)
+	cp[1].add_child(UI.label("Your Cellar master's plan for this Lot is already set. These are the choices that shape it most:", 14, UI.INK2, null, true))
+	var opts: Array = []
 	for opt in D.get("cellarOptions", []):
+		if opt["key"] in key_set: opts.append(opt)
+	var rest: Array = []
+	for opt in D.get("cellarOptions", []):
+		if not (opt["key"] in key_set): rest.append(opt)
+	var more_btn := UI.button(("▾ Fewer choices" if show_more else "▸ More choices (%d)" % rest.size()), false, 14)
+	more_btn.pressed.connect(func(): shell.state["winery_more"] = not show_more; shell.show_screen("winery"))
+	if show_more: opts.append_array(rest)
+	for opt in opts:
 		if opt["whiteOnly"] and L["red"]: continue
 		if opt["redOnly"] and not L["red"]: continue
 		var key: String = opt["key"]
@@ -129,6 +142,7 @@ static func build(D: Dictionary, shell) -> Control:
 		ob.tooltip_text = String(opt["why"])
 		h.add_child(ob)
 		cp[1].add_child(h)
-	cp[1].add_child(UI.label("Hover a choice for what it does. Your Cellar master applies them; defaults are the Mentor's suggestion for this Lot.", 13, UI.MUTED, null, true))
+	cp[1].add_child(more_btn)
+	cp[1].add_child(UI.label("Hover a choice for what it does. Changes apply straight away; there's nothing to confirm.", 13, UI.MUTED, null, true))
 	row.add_child(cp[0])
 	return UI.scroll(v)
