@@ -50,6 +50,11 @@ const SHOTS := [
 	{"name": "napa_estate_high", "game": NAPA, "until": "date:09-12", "dry": true, "view": "vineyard", "cam": "estate_high"},
 	{"name": "napa_track", "game": NAPA, "until": "date:09-12", "dry": true, "view": "vineyard", "cam": "track"},
 	{"name": "napa_cellar", "game": NAPA, "until": "date:09-12", "dry": true, "view": "cellar", "cam": "cellar"},
+	# the steepest Plots: Mosel terraces (winery at the foot) and the Napa mountain site (winery beside the Plot)
+	{"name": "terrassen_estate", "game": {"plotId": "mosel-terrassen", "plantingYear": 2012, "seed": 3}, "until": "date:07-10", "dry": true, "view": "vineyard", "cam": "estate"},
+	{"name": "terrassen_estate_high", "game": {"plotId": "mosel-terrassen", "plantingYear": 2012, "seed": 3}, "until": "date:07-10", "dry": true, "view": "vineyard", "cam": "estate_high"},
+	{"name": "napa_mountain_estate_high", "game": {"plotId": "napa-mountain", "plantingYear": 2012, "seed": 4}, "until": "date:07-10", "dry": true, "view": "vineyard", "cam": "estate_high"},
+	{"name": "napa_mountain_track", "game": {"plotId": "napa-mountain", "plantingYear": 2012, "seed": 4}, "until": "date:07-10", "dry": true, "view": "vineyard", "cam": "track"},
 ]
 
 var view: Control
@@ -428,7 +433,9 @@ func _walk_test() -> void:
 	var i := args.find("--walktest")
 	if i + 1 < args.size() and not args[i + 1].begins_with("--"):
 		which = args[i + 1]
-	var game: Dictionary = {"mosel": MOSEL, "cotedor": COTEDOR, "napa": NAPA}[which]
+	var game: Dictionary = {"mosel": MOSEL, "cotedor": COTEDOR, "napa": NAPA,
+		"terrassen": {"plotId": "mosel-terrassen", "plantingYear": 2012, "seed": 3},
+		"napa-mountain": {"plotId": "napa-mountain", "plantingYear": 2012, "seed": 4}}[which]
 	snap = _play({"game": game, "until": "winery" if which == "mosel" else "date:09-10"})
 	view.apply_snapshot(snap)
 	view.set_view("vineyard")

@@ -53,7 +53,7 @@ var block_delta := PackedFloat32Array()   # per-x slope offset table (x from ban
 var bd_x0 := 0.0
 
 # estate: winery pad, yard and farm track (see _layout_estate)
-const PAD_BLEND := 9.0
+var pad_blend := 9.0              # banks round the levelled pad: longer on sloping ground so they stay walkable
 var estate := {}                  # origin (building frame in this node's frame), building/cellar/yard rects, door
 var pad_on := false
 var pad_y := 0.0
@@ -400,8 +400,8 @@ func H(x: float, z: float) -> float:
 	y += 0.09 * noise.get_noise_2d(x * 9.0, z * 9.0)
 	if pad_on:
 		var d := _rect_dist(pad_rect, x, z)
-		if d < PAD_BLEND:
-			y = lerpf(y, pad_y, 1.0 - smoothstep(0.0, PAD_BLEND, d))
+		if d < pad_blend:
+			y = lerpf(y, pad_y, 1.0 - smoothstep(0.0, pad_blend, d))
 		y = maxf(y, pad_y + 0.35 - 0.6 * _rect_dist(cellar_rect, x, z))    # keep the vaulted cellar under ground
 	if river.x < INF and z > river.x - 12.0 and z < river.y + 12.0:
 		var t := minf(smoothstep(river.x - 12.0, river.x + 4.0, z), smoothstep(river.y + 12.0, river.y - 4.0, z))
@@ -481,6 +481,7 @@ func _layout_estate() -> void:
 	var door := Vector2(c.x + float(ext[1]), c.y)
 	pad_on = false
 	pad_y = H(c.x, c.y)
+	pad_blend = 9.0 if steep else clampf(9.0 + sv * 60.0, 9.0, 30.0)
 	bld_rect = Rect2(c.x + float(ext[0]), c.y + float(ext[2]), float(ext[1]) - float(ext[0]), float(ext[3]) - float(ext[2]))
 	cellar_rect = Rect2(c.x + float(cex[0]), c.y + float(cex[2]), float(cex[1]) - float(cex[0]), float(cex[3]) - float(cex[2]))
 	var yard := Rect2(door.x, c.y - 9.0, 11.0 if steep else 9.0, 18.0)
