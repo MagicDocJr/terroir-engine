@@ -62,7 +62,15 @@ void fragment() {
 	float block_b = mix(1.0, mix(0.75, 1.25, gm.g), inside);
 	ra = mix(ra, vec3(lum), soil_desat) * soil_tint * soil_bright * macro * block_b;
 	vec3 ga = texture(grass_alb, guv).rgb * grass_tint * mix(0.8, 1.1, texture(soil_ao, wpos.xz / 23.0).r);
-	ga *= mix(vec3(1.0), vec3(0.42, 0.55, 0.36), COLOR.b * (1.0 - inside));        // scrub on fallow slopes
+	// grass that is not one flat colour: clumps, drier and lusher patches (scales 7-60 m)
+	float gv1 = texture(grass_ao, wpos.xz / 7.3 + vec2(0.13, 0.71)).r;
+	float gv2 = texture(soil_ao, wpos.xz / 29.0 + vec2(0.37, 0.19)).r;
+	float gv3 = texture(soil_ao, wpos.xz / 61.0 + vec2(0.71, 0.53)).r;
+	ga *= mix(0.78, 1.16, gv1) * mix(0.86, 1.12, gv2);
+	ga = mix(ga, ga * vec3(1.28, 1.12, 0.62), smoothstep(0.52, 0.78, gv3) * 0.55);      // dry, yellower patches
+	ga = mix(ga, ga * vec3(0.8, 1.08, 0.78), smoothstep(0.55, 0.25, gv3) * 0.4);        // lusher, greener patches
+	float scrub = COLOR.b * (1.0 - inside) * mix(0.55, 1.0, gv2);
+	ga *= mix(vec3(1.0), vec3(0.5, 0.6, 0.4), scrub);                                   // scrub on fallow slopes
 	float mask = mix(COLOR.r, gm.r, inside);
 	// farm track: two bare wheel ruts with grass between them; the winery yard is bare gravel
 	float td = 1e6;

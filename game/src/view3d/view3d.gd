@@ -3,10 +3,11 @@
 #
 # Contract with the UI (game/src/ui):
 #   apply_snapshot(D)  D = parsed Sim.Snapshot() JSON; call on entry and after every advance
-#   set_view(kind)     "vineyard" | "cellar" | "hall": teleports the walker to that place in the one world
+#   set_view(kind)     "vineyard" | "cellar" | "hall": teleports the walker to that place in the one world;
+#                      "drone": a free-flying camera above the Estate (the walker waits where it is)
 #   exit_requested     emitted on Tab, or Esc while the mouse is not captured
 # Input is handled only while this node is visible: click to capture the mouse, WASD walk, Shift run,
-# 1/2/3 jump to vineyard/cellar/hall, M sound on/off. The 3D world renders in its own SubViewport (own World3D);
+# 1/2/3 jump to vineyard/cellar/hall, 4 drone on/off, M sound on/off. The 3D world renders in its own SubViewport (own World3D);
 # rendering and sound stop while this Control is hidden.
 extends Control
 
@@ -42,6 +43,14 @@ var hint_label: Label
 var missing := false
 var placed_key := ""
 var has_view := false
+# drone: orbit camera round a centre point (drag to orbit, WASD pan, wheel height/zoom, Shift faster)
+var drone := false
+var drone_cam: Camera3D
+var drone_center := Vector3.ZERO
+var drone_yaw := 0.6
+var drone_pitch := -0.62
+var drone_dist := 120.0
+var dragging := false
 
 
 func _ready() -> void:
@@ -73,6 +82,12 @@ func _ready() -> void:
 	viewport.add_child(player)
 	player.cam.current = true
 	vineyard.set("cam", player.cam)
+	drone_cam = Camera3D.new()
+	drone_cam.name = "DroneCam"
+	drone_cam.fov = 60.0
+	drone_cam.near = 0.2
+	drone_cam.far = 6000.0
+	viewport.add_child(drone_cam)
 	player.set("ground_fn", Callable(vineyard, "ground_height"))
 	player.set("indoors_fn", func(p: Vector3) -> bool: return winery.call("zone_at", winery.to_local(p)) != "")
 	ambience = _make(viewport, "res://src/view3d/ambience.gd", "Ambience")
@@ -120,8 +135,11 @@ func _build_hud() -> void:
 
 
 func _update_hint() -> void:
+	if drone:
+		hint_label.text = "Drone · drag to orbit · WASD pan · wheel height · Shift faster · 4 or 1/2/3 back to walking · M sound %s · Tab back" % ["on" if sound_on else "off"]
+		return
 	var where: String = {"": "Follow the track to the winery", "hall": "Stairs to the cellar at the far end", "cellar": "Stairs up to the hall by the door"}.get(zone, "")
-	hint_label.text = "Click to look around · WASD walk · Shift run · 1 vineyard  2 cellar  3 hall (jump) · M sound %s · Tab back%s" % [
+	hint_label.text = "Click to look around · WASD walk · Shift run · 1 vineyard  2 cellar  3 hall (jump) · 4 drone · M sound %s · Tab back%s" % [
 		"on" if sound_on else "off", ("   —   " + where) if where != "" else ""]
 
 
@@ -150,6 +168,12 @@ func apply_snapshot(snap: Dictionary) -> void:
 
 
 func set_view(kind: String) -> void:
+	if kind == "drone":
+		if not missing and placed_key != "":
+			_drone_on()
+		return
+	if drone:
+		_drone_off(false)
 	if not kind in VIEWS or missing or placed_key == "":
 		current = kind if kind in VIEWS else current
 		return
@@ -170,6 +194,8 @@ func set_view(kind: String) -> void:
 
 ## Put the eye exactly at pos looking at target (capture harness, cut-aways). The walker waits there.
 func set_camera(pos: Vector3, target: Vector3) -> void:
+	if drone:
+		_drone_off(false)
 	player.call("place_camera", pos, target)
 	ambience.call("snap")
 	_update_zone(true)
@@ -179,6 +205,9 @@ func set_camera(pos: Vector3, target: Vector3) -> void:
 ## "estate" | "estate_high" | "track". Winery: "hall" | "hall_panel" | "hall_stairs" | "stairs_down" |
 ## "stairs_up" | "cellar" | "cellar_heads" | "cellar_fuder" | "cellar_door" | "door".
 func camera_preset(name: String, bi := 0) -> void:
+	if name == "drone":
+		set_view("drone")
+		return
 	var pt: Array = winery.call("camera_preset", name)
 	if not pt.is_empty():
 		set_camera(winery.to_global(pt[0]), winery.to_global(pt[1]))
@@ -192,8 +221,12 @@ func capture() -> Image:
 
 
 # ------------------------------------------------------------------ zones
+func _cam() -> Camera3D:
+	return drone_cam if drone else player.cam
+
+
 func _zone_now() -> String:
-	return String(winery.call("zone_at", winery.to_local(player.cam.global_position)))
+	return String(winery.call("zone_at", winery.to_local(_cam().global_position)))
 
 
 ## Camera environment, interior lights/GI, sun, rain and sound follow where the eye is.
@@ -201,13 +234,13 @@ func _update_zone(force := false) -> void:
 	if placed_key == "":
 		return
 	var z := _zone_now()
-	var n: bool = z != "" or player.cam.global_position.distance_to(winery.global_position) < NEAR_WINERY
+	var n: bool = z != "" or _cam().global_position.distance_to(winery.global_position) < NEAR_WINERY
 	if z == zone and n == near and not force:
 		return
 	var changed := z != zone
 	zone = z
 	near = n
-	var cam: Camera3D = player.cam
+	var cam: Camera3D = _cam()
 	match zone:
 		"hall":
 			cam.environment = winery.get("env_hall")
@@ -252,7 +285,7 @@ func _on_visibility_changed() -> void:
 	set_process(on)
 	set_process_input(on)
 	if player:
-		player.set("enabled", on and not missing)
+		player.set("enabled", on and not missing and not drone)
 		player.set_physics_process(on)
 	if viewport:
 		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
@@ -266,6 +299,9 @@ func _input(e: InputEvent) -> void:
 	if not is_visible_in_tree() or missing:
 		return
 	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
+	if drone and _drone_input(e):
+		get_viewport().set_input_as_handled()
+		return
 	if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT and not captured:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		accept_event()
@@ -289,6 +325,12 @@ func _input(e: InputEvent) -> void:
 				set_view("cellar"); get_viewport().set_input_as_handled()
 			KEY_3:
 				set_view("hall"); get_viewport().set_input_as_handled()
+			KEY_4:
+				if drone:
+					_drone_off(true)
+				else:
+					set_view("drone")
+				get_viewport().set_input_as_handled()
 			KEY_M:
 				sound_on = not sound_on
 				_update_hint()
@@ -298,10 +340,98 @@ func _input(e: InputEvent) -> void:
 func _process(delta: float) -> void:
 	if missing or placed_key == "":
 		return
+	if drone:
+		_drone_step(delta)
 	_update_zone()
-	ambience.call("update", delta, zone, player.cam.global_position, near)
+	ambience.call("update", delta, zone, _cam().global_position, near)
 	if show_hud:
-		var p: Vector3 = player.cam.global_position
+		var p: Vector3 = _cam().global_position
 		hud_label.text = String(winery.call("hud_text", zone)) if zone != "" else String(vineyard.call("hud_text", p))
 	hud_label.visible = show_hud
 	hint_label.visible = show_hud
+
+
+# ------------------------------------------------------------------ drone
+func _drone_on() -> void:
+	if not drone:
+		var b0: float = vineyard.get("band_x0")
+		var b1: float = vineyard.get("band_x1")
+		drone_center = Vector3((b0 + b1) * 0.5, 0.0, 0.0)
+		drone_center.y = float(vineyard.call("ground_height", drone_center.x, drone_center.z))
+		drone_dist = clampf((b1 - b0) * 0.62, 60.0, 180.0)
+		drone_pitch = -0.72
+		drone_yaw = float(player.get("yaw"))
+	drone = true
+	dragging = false
+	player.set("enabled", false)
+	player.set("auto_dir", Vector3.ZERO)
+	if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	drone_cam.current = true
+	vineyard.set("cam", drone_cam)
+	_drone_apply()
+	ambience.call("snap")
+	_update_zone(true)
+	_update_hint()
+
+
+## Back to walking where the walker was (resume = true), or before a teleport (set_view / set_camera).
+func _drone_off(resume: bool) -> void:
+	drone = false
+	dragging = false
+	player.cam.current = true
+	vineyard.set("cam", player.cam)
+	player.set("enabled", is_visible_in_tree() and not missing)
+	if resume:
+		ambience.call("snap")
+		_update_zone(true)
+	_update_hint()
+
+
+func _drone_apply() -> void:
+	var dir := Vector3(sin(drone_yaw) * cos(drone_pitch), -sin(drone_pitch), cos(drone_yaw) * cos(drone_pitch))
+	var pos := drone_center + dir * drone_dist
+	var ground := float(vineyard.call("ground_height", pos.x, pos.z)) + 3.0
+	if pos.y < ground:
+		pos.y = ground
+	drone_cam.global_position = pos
+	drone_cam.look_at(drone_center, Vector3.UP)
+
+
+func _drone_input(e: InputEvent) -> bool:
+	if e is InputEventMouseButton:
+		match e.button_index:
+			MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT:
+				dragging = e.pressed
+				return true
+			MOUSE_BUTTON_WHEEL_UP:
+				if e.pressed:
+					drone_dist = clampf(drone_dist * (0.8 if Input.is_physical_key_pressed(KEY_SHIFT) else 0.9), 12.0, 900.0)
+				return true
+			MOUSE_BUTTON_WHEEL_DOWN:
+				if e.pressed:
+					drone_dist = clampf(drone_dist * (1.25 if Input.is_physical_key_pressed(KEY_SHIFT) else 1.1), 12.0, 900.0)
+				return true
+	elif e is InputEventMouseMotion and dragging:
+		drone_yaw -= e.relative.x * 0.005
+		drone_pitch = clampf(drone_pitch - e.relative.y * 0.005, -1.5, -0.08)
+		return true
+	return false
+
+
+func _drone_step(delta: float) -> void:
+	var k := Vector3.ZERO
+	if Input.is_physical_key_pressed(KEY_W) or Input.is_physical_key_pressed(KEY_UP): k.z -= 1
+	if Input.is_physical_key_pressed(KEY_S) or Input.is_physical_key_pressed(KEY_DOWN): k.z += 1
+	if Input.is_physical_key_pressed(KEY_A) or Input.is_physical_key_pressed(KEY_LEFT): k.x -= 1
+	if Input.is_physical_key_pressed(KEY_D) or Input.is_physical_key_pressed(KEY_RIGHT): k.x += 1
+	if Input.is_physical_key_pressed(KEY_Q): drone_yaw += delta * 0.8
+	if Input.is_physical_key_pressed(KEY_E): drone_yaw -= delta * 0.8
+	if k != Vector3.ZERO:
+		var speed := drone_dist * 0.6 * (3.0 if Input.is_physical_key_pressed(KEY_SHIFT) else 1.0)
+		var mv := Basis(Vector3.UP, drone_yaw) * k.normalized() * speed * delta
+		var wr: Rect2 = vineyard.call("walk_rect")
+		drone_center.x = clampf(drone_center.x + mv.x, wr.position.x - 200.0, wr.end.x + 200.0)
+		drone_center.z = clampf(drone_center.z + mv.z, wr.position.y - 200.0, wr.end.y + 200.0)
+		drone_center.y = float(vineyard.call("ground_height", drone_center.x, drone_center.z))
+	_drone_apply()

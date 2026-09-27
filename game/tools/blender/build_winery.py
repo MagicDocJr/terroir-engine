@@ -32,6 +32,15 @@ C.MAT.update({
     "tank_jacket":  ((0.70, 0.70, 0.72), 0.35, False),
     "tank_dark":    ((0.08, 0.08, 0.08), 0.50, True),
     "rail":         ((0.55, 0.45, 0.10), 0.50, False),
+    "gutter":       ((0.55, 0.57, 0.60), 0.40, False),
+    "sign_board":   ((0.10, 0.18, 0.14), 0.60, False),
+    "door_wood":    ((0.25, 0.16, 0.10), 0.70, False),
+    "window_dark":  ((0.03, 0.04, 0.05), 0.10, False),
+    "canopy_roof":  ((0.40, 0.42, 0.44), 0.50, True),
+    "bin_plastic":  ((0.45, 0.10, 0.08), 0.60, False),
+    "tractor_paint": ((0.60, 0.10, 0.06), 0.45, False),
+    "tractor_tyre": ((0.03, 0.03, 0.03), 0.90, False),
+    "tractor_metal": ((0.08, 0.08, 0.09), 0.55, False),
     "facade":       ((0.85, 0.84, 0.80), 0.90, False),
     "plinth":       ((0.30, 0.30, 0.32), 0.90, False),
     "roof":         ((0.12, 0.12, 0.14), 0.70, False),
@@ -489,8 +498,9 @@ def build_hall():
             rect(P["hall_floor"], "y", yb, sx0, sx1, zr - ST["run"], zr, +1)
             box(P["hall_steel"], (sx0, yb - 0.004, zr - 0.04), (sx1, yb + 0.004, zr))
     # stair tunnel (slate like the cellar), slab underside, lintel, corridor
-    rect(P["cellar_wall"], "x", sx0, CORR_END, ST["z_top"], ST_FLOOR - 0.05, 0.0, +1)
-    rect(P["cellar_wall"], "x", sx1, CORR_END, ST["z_top"], ST_FLOOR - 0.05, 0.0, -1)
+    for (x, f) in ((sx0, +1), (sx1, -1)):
+        rect(P["cellar_wall"], "x", x, ST_BOTTOM_Z, ST["z_top"], ST_FLOOR - 0.05, 0.0, f)
+        rect(P["cellar_wall"], "x", x, CORR_END, ST_BOTTOM_Z, ST_FLOOR - 0.05, CORR_CEIL, f)
     rect(P["hall_wall"], "y", -0.3, sx0, sx1, ST_BOTTOM_Z, hz0, -1)
     rect(P["hall_wall"], "z", hz0, sx0, sx1, -0.3, 0.0, +1)
     rect(P["cellar_wall"], "z", ST_BOTTOM_Z, sx0, sx1, CORR_CEIL, -0.3, +1)
@@ -499,9 +509,9 @@ def build_hall():
     dx0, dx1 = CELLAR_DOOR_X - DOOR / 2, CELLAR_DOOR_X + DOOR / 2
     wall(P["cellar_wall"], "z", CORR_END, sx0, sx1, ST_FLOOR, CORR_CEIL, [(dx0, dx1, ST_FLOOR, ST_FLOOR + DOOR_H)], +1)
     # handrail on the west tunnel wall, railings round the stairwell opening
-    hr = [gl(sx0 + 0.07, -k * ST["rise"] + 0.9, ST["z_top"] - k * ST["run"]) for k in range(0, ST["n"] + 1, 3)]
+    hr = [gl(sx0 + 0.07, -k * ST["rise"] + 0.9, ST["z_top"] - k * ST["run"]) for k in range(6, ST["n"] + 1, 3)]
     tube(P["rail"], hr, [0.022] * len(hr), 10, (1, 1, 1))
-    for k in range(0, ST["n"], 6):
+    for k in range(6, ST["n"], 6):
         zr = ST["z_top"] - k * ST["run"]
         tube(P["rail"], [gl(sx0, -k * ST["rise"] + 0.9, zr), gl(sx0 + 0.07, -k * ST["rise"] + 0.9, zr)], [0.012, 0.012], 6, (1, 1, 1))
 
@@ -683,6 +693,232 @@ def occluders():
     return out
 
 
+# =========================================================================== outside detail, yard, tractors
+# All in the building frame (see above). Low-poly: boxes, quads and a few 8-12-sided tubes.
+SIGN = dict(z=(-2.5, 2.5), y=(4.85, 5.75))
+OFFICE_DOOR = dict(z=(3.4, 4.4), top=2.2)
+OFFICE_WIN = dict(z=(5.1, 6.7), y=(1.0, 2.3))
+LEANTO = dict(x=(3.0, 11.6), depth=3.2, y_wall=3.4, y_edge=2.8)
+PRESS = (6.2, HALL["z1"] + WALL_T + 1.55)
+DESTEM = (9.6, HALL["z1"] + WALL_T + 1.5)
+BINS = [(16.4, 0.0, 6.4), (17.8, 0.0, 6.4), (16.4, 0.76, 6.4)]
+PALLET = (15.2, -6.6)
+TRACTOR = dict(pos=[19.2, 0.0, -5.2], yaw=0.0)
+
+
+def cylinder(acc, c, axis, r, length, sides=12, caps=True):
+    """Closed cylinder in glTF coords, centred at c, along 'x' | 'y' | 'z'."""
+    verts, faces, uvs = [], [], []
+    for k, s in enumerate((-0.5, 0.5)):
+        for i in range(sides):
+            a = 2 * math.pi * i / sides
+            u, v = r * math.cos(a), r * math.sin(a)
+            p = {"x": (s * length, u, v), "y": (u, s * length, v), "z": (u, v, s * length)}[axis]
+            verts.append(gl(c[0] + p[0], c[1] + p[1], c[2] + p[2])); uvs.append((i / sides * 2, k))
+    for i in range(sides):
+        j = (i + 1) % sides
+        faces.append((i, j, sides + j, sides + i))
+    if caps:
+        faces.append(tuple(range(sides - 1, -1, -1)))
+        faces.append(tuple(range(sides, 2 * sides)))
+    acc.add(verts, faces, uvs, [(1, 1, 1)] * len(verts))
+
+
+def build_yard():
+    X1, Z1 = HALL["x1"] + WALL_T, HALL["z1"] + WALL_T
+    X0 = HALL["x0"] - WALL_T
+    Y = {k: Acc() for k in ("gutter", "sign_board", "fascia", "door_wood", "window_dark", "plinth", "rack_wood",
+                            "canopy_roof", "tank_steel", "hall_steel", "bin_plastic")}
+    tp = math.tan(PITCH)
+    y_eave = EAVE - OVERHANG * tp
+    ze = Z1 + OVERHANG
+    # gutters along both eaves, downpipes at the corners (into the wall, down, a shoe at the foot)
+    for s_ in (-1, 1):
+        cylinder(Y["gutter"], (0.0, y_eave - 0.03, s_ * (ze + 0.08)), "x", 0.075, X1 - X0 + 2 * GABLE_OH, 10)
+        for x in (X0 + 0.45, X1 - 0.45):
+            pts = [gl(x, y_eave - 0.05, s_ * (ze + 0.08)), gl(x, y_eave - 0.45, s_ * (Z1 + 0.08)),
+                   gl(x, 0.35, s_ * (Z1 + 0.08)), gl(x, 0.08, s_ * (Z1 + 0.3))]
+            tube(Y["gutter"], pts, [0.05] * 4, 10, (1, 1, 1))
+    # sign board over the roller door (the estate name is a Label3D in winery.gd)
+    box(Y["fascia"], (X1, SIGN["y"][0] - 0.06, SIGN["z"][0] - 0.06), (X1 + 0.05, SIGN["y"][1] + 0.06, SIGN["z"][1] + 0.06))
+    box(Y["sign_board"], (X1 + 0.05, SIGN["y"][0], SIGN["z"][0]), (X1 + 0.08, SIGN["y"][1], SIGN["z"][1]))
+    # office / tasting-room door: frame, panelled leaf, handle, step
+    d0, d1 = OFFICE_DOOR["z"]
+    top = OFFICE_DOOR["top"]
+    box(Y["fascia"], (X1, 0.0, d0 - 0.1), (X1 + 0.07, top + 0.1, d0))
+    box(Y["fascia"], (X1, 0.0, d1), (X1 + 0.07, top + 0.1, d1 + 0.1))
+    box(Y["fascia"], (X1, top, d0 - 0.1), (X1 + 0.07, top + 0.1, d1 + 0.1))
+    box(Y["door_wood"], (X1, 0.15, d0), (X1 + 0.04, top, d1))
+    for (ya, yb) in ((0.35, 1.05), (1.25, 2.0)):
+        box(Y["door_wood"], (X1 + 0.04, ya, d0 + 0.12), (X1 + 0.06, yb, d1 - 0.12))
+    cylinder(Y["hall_steel"], (X1 + 0.09, 1.05, d1 - 0.12), "z", 0.012, 0.14, 6)
+    box(Y["plinth"], (X1, 0.0, d0 - 0.25), (X1 + 0.55, 0.15, d1 + 0.25))
+    # office window with glazing bars and a sill
+    w0, w1 = OFFICE_WIN["z"]
+    v0, v1 = OFFICE_WIN["y"]
+    box(Y["window_dark"], (X1, v0, w0), (X1 + 0.02, v1, w1))
+    for (a, b, c, d) in ((w0 - 0.07, w0, v0, v1), (w1, w1 + 0.07, v0, v1), (w0 - 0.07, w1 + 0.07, v1, v1 + 0.07),
+                         ((w0 + w1) / 2 - 0.025, (w0 + w1) / 2 + 0.025, v0, v1), (w0, w1, (v0 + v1) / 2 - 0.025, (v0 + v1) / 2 + 0.025)):
+        box(Y["fascia"], (X1, c, a), (X1 + 0.06, d, b))
+    box(Y["fascia"], (X1, v0 - 0.06, w0 - 0.1), (X1 + 0.12, v0, w1 + 0.1))
+    # bench under the window
+    bx0, bx1 = X1 + 0.2, X1 + 0.62
+    box(Y["rack_wood"], (bx0, 0.42, w0 + 0.05), (bx1, 0.47, w1 - 0.05))
+    box(Y["rack_wood"], (X1 + 0.08, 0.55, w0 + 0.05), (X1 + 0.12, 0.95, w1 - 0.05))
+    for z in (w0 + 0.15, w1 - 0.2):
+        box(Y["hall_steel"], (bx0 + 0.02, 0.0, z), (bx1 - 0.02, 0.42, z + 0.05))
+    # lean-to canopy along the south wall with a basket press and a destemmer-crusher under it
+    lx0, lx1 = LEANTO["x"]
+    zo = Z1 + LEANTO["depth"]
+    yw, ye = LEANTO["y_wall"], LEANTO["y_edge"]
+    for x in (lx0 + 0.1, (lx0 + lx1) / 2, lx1 - 0.1):
+        box(Y["rack_wood"], (x - 0.07, 0.0, zo - 0.2), (x + 0.07, ye, zo - 0.06))
+        # rafter from the wall to the edge beam
+        pts = [(x - 0.05, yw - 0.02, Z1), (x + 0.05, yw - 0.02, Z1), (x + 0.05, ye - 0.02, zo), (x - 0.05, ye - 0.02, zo)]
+        Y["rack_wood"].add([gl(*q) for q in pts], [(0, 3, 2, 1)], [(0, 0), (1, 0), (1, 1), (0, 1)], [(1, 1, 1)] * 4)
+    box(Y["rack_wood"], (lx0, ye - 0.18, zo - 0.2), (lx1, ye, zo - 0.06))
+    box(Y["rack_wood"], (lx0, yw - 0.18, Z1), (lx1, yw, Z1 + 0.12))
+    slope_len = math.hypot(zo - Z1 + 0.3, yw - ye)
+    for (dy, flip) in ((0.0, False), (-0.02, True)):
+        pts = [(lx0 - 0.2, yw + dy, Z1), (lx1 + 0.2, yw + dy, Z1), (lx1 + 0.2, ye - 0.05 + dy, zo + 0.3), (lx0 - 0.2, ye - 0.05 + dy, zo + 0.3)]
+        f = [(0, 3, 2, 1)] if not flip else [(0, 1, 2, 3)]
+        Y["canopy_roof"].add([gl(*q) for q in pts], f, [(0, 0), (lx1 - lx0, 0), (lx1 - lx0, slope_len), (0, slope_len)], [(1, 1, 1)] * 4)
+    # basket press: legs, tray, slatted oak basket with two hoops, central screw and ratchet bar
+    px, pz = PRESS
+    for dx in (-0.55, 0.55):
+        for dz in (-0.55, 0.55):
+            cylinder(Y["hall_steel"], (px + dx, 0.23, pz + dz), "y", 0.04, 0.46, 8)
+    box(Y["tank_steel"], (px - 0.72, 0.46, pz - 0.72), (px + 0.72, 0.56, pz + 0.72))
+    for i in range(22):
+        a = 2 * math.pi * i / 22
+        cx, cz = px + 0.47 * math.cos(a), pz + 0.47 * math.sin(a)
+        ex, ez = 0.045 * math.sin(a), -0.045 * math.cos(a)
+        pts = [(cx - ex, 0.56, cz - ez), (cx + ex, 0.56, cz + ez), (cx + ex, 1.42, cz + ez), (cx - ex, 1.42, cz - ez)]
+        o = [(q[0] + 0.025 * math.cos(a), q[1], q[2] + 0.025 * math.sin(a)) for q in pts]
+        Y["rack_wood"].add([gl(*q) for q in o], [(0, 1, 2, 3)], [(0, 0), (0.1, 0), (0.1, 1), (0, 1)], [(1, 1, 1)] * 4)
+    for yh in (0.72, 1.28):
+        cylinder(Y["hall_steel"], (px, yh, pz), "y", 0.51, 0.06, 20, caps=False)
+    cylinder(Y["tank_steel"], (px, 1.35, pz), "y", 0.035, 1.6, 8)
+    box(Y["hall_steel"], (px - 0.5, 1.95, pz - 0.06), (px + 0.5, 2.05, pz + 0.06))
+    for dx in (-0.5, 0.5):
+        box(Y["hall_steel"], (px + dx - 0.05, 0.56, pz - 0.05), (px + dx + 0.05, 2.05, pz + 0.05))
+    cylinder(Y["hall_steel"], (px + 0.35, 1.75, pz), "x", 0.02, 0.7, 6)
+    # destemmer-crusher: stainless body on legs, wide hopper, motor box
+    qx, qz = DESTEM
+    for dx in (-0.5, 0.5):
+        for dz in (-0.3, 0.3):
+            cylinder(Y["hall_steel"], (qx + dx, 0.4, qz + dz), "y", 0.035, 0.8, 8)
+    box(Y["tank_steel"], (qx - 0.62, 0.8, qz - 0.36), (qx + 0.62, 1.2, qz + 0.36))
+    pts = [(qx - 0.6, 1.2, qz - 0.34), (qx + 0.6, 1.2, qz - 0.34), (qx + 0.8, 1.62, qz - 0.58), (qx - 0.8, 1.62, qz - 0.58)]
+    for s_ in (-1, 1):
+        q = [(p[0], p[1], qz + s_ * (p[2] - qz)) for p in pts]
+        f = [(0, 1, 2, 3)] if s_ < 0 else [(0, 3, 2, 1)]
+        Y["tank_steel"].add([gl(*p) for p in q], f, [(0, 0), (1, 0), (1, 1), (0, 1)], [(1, 1, 1)] * 4)
+    for s_ in (-1, 1):
+        q = [(qx + s_ * 0.6, 1.2, qz - 0.34), (qx + s_ * 0.6, 1.2, qz + 0.34), (qx + s_ * 0.8, 1.62, qz + 0.58), (qx + s_ * 0.8, 1.62, qz - 0.58)]
+        f = [(0, 1, 2, 3)] if s_ > 0 else [(0, 3, 2, 1)]
+        Y["tank_steel"].add([gl(*p) for p in q], f, [(0, 0), (1, 0), (1, 1), (0, 1)], [(1, 1, 1)] * 4)
+    box(Y["hall_steel"], (qx + 0.62, 0.85, qz - 0.2), (qx + 0.95, 1.15, qz + 0.2))
+    # half-tonne picking bins (open top), stacked
+    for (x, y, z) in BINS:
+        w, h, d, t = 1.2, 0.76, 1.0, 0.04
+        box(Y["bin_plastic"], (x - w / 2, y, z - d / 2), (x + w / 2, y + 0.06, z + d / 2))
+        box(Y["bin_plastic"], (x - w / 2, y, z - d / 2), (x + w / 2, y + h, z - d / 2 + t))
+        box(Y["bin_plastic"], (x - w / 2, y, z + d / 2 - t), (x + w / 2, y + h, z + d / 2))
+        box(Y["bin_plastic"], (x - w / 2, y, z - d / 2), (x - w / 2 + t, y + h, z + d / 2))
+        box(Y["bin_plastic"], (x + w / 2 - t, y, z - d / 2), (x + w / 2, y + h, z + d / 2))
+    # pallet (a crate stack goes on it, see winery.json exteriorProps)
+    px_, pz_ = PALLET
+    for dz in (-0.5, 0.0, 0.5):
+        box(Y["rack_wood"], (px_ - 0.6, 0.0, pz_ + dz - 0.05), (px_ + 0.6, 0.1, pz_ + dz + 0.05))
+    for i in range(7):
+        x = px_ - 0.6 + 0.2 * i
+        box(Y["rack_wood"], (x - 0.045, 0.1, pz_ - 0.55), (x + 0.045, 0.13, pz_ + 0.55))
+    yard = make_object("yard", Y, smooth=False)
+    info = {"sign": {"pos": [X1 + 0.085, (SIGN["y"][0] + SIGN["y"][1]) / 2, 0.0], "w": SIGN["z"][1] - SIGN["z"][0], "h": SIGN["y"][1] - SIGN["y"][0]},
+            "lamp": {"pos": [X1, 2.75, 2.85], "facing": [1, 0, 0]},
+            "tractor": TRACTOR}
+    col = []
+    b = lambda a, c: col.append(_box_entry(a, c))
+    for x in (lx0 + 0.1, (lx0 + lx1) / 2, lx1 - 0.1):
+        b((x - 0.08, 0.0, zo - 0.21), (x + 0.08, ye, zo - 0.05))
+    b((px - 0.75, 0.0, pz - 0.75), (px + 0.75, 2.05, pz + 0.75))
+    b((qx - 0.8, 0.0, qz - 0.6), (qx + 0.95, 1.62, qz + 0.6))
+    b((15.8, 0.0, 5.9), (18.4, 1.52, 6.9))
+    b((px_ - 0.6, 0.0, pz_ - 0.6), (px_ + 0.6, 1.2, pz_ + 0.6))
+    b((bx0, 0.0, w0 + 0.05), (bx1, 0.47, w1 - 0.05))
+    b((X1, 0.0, d0 - 0.25), (X1 + 0.55, 0.15, d1 + 0.25))
+    t = TRACTOR["pos"]
+    b((t[0] - 1.5, 0.0, t[2] - 1.0), (t[0] + 1.9, 2.4, t[2] + 1.0))
+    b((4.0, 0.0, Z1 + 2.2), (5.6, 1.0, Z1 + 3.0))                                          # crate stack
+    return yard, info, col
+
+
+def build_tractors():
+    """Three small tractors facing +x, origin on the ground between the axles: 'crawler' (Mosel steep-slope
+    tracked tractor), 'straddle' (Côte d'Or high-clearance straddle tractor), 'standard' (Napa)."""
+    obs = []
+
+    def wheel(A, x, z, r, w):
+        cylinder(A["tractor_tyre"], (x, r, z), "z", r, w, 14)
+        cylinder(A["tractor_metal"], (x, r, z), "z", r * 0.55, w + 0.02, 10)
+
+    def seat_rops(A, x, y, halfw, h):
+        box(A["tractor_metal"], (x - 0.25, y, -0.22), (x + 0.15, y + 0.1, 0.22))
+        box(A["tractor_metal"], (x - 0.3, y + 0.1, -0.22), (x - 0.22, y + 0.55, 0.22))
+        for z in (-halfw, halfw):
+            cylinder(A["tractor_metal"], (x - 0.35, y + h / 2, z), "y", 0.035, h, 8)
+        cylinder(A["tractor_metal"], (x - 0.35, y + h, 0.0), "z", 0.035, 2 * halfw + 0.07, 8)
+        tube(A["tractor_metal"], [gl(x + 0.35, y + 0.2, 0.0), gl(x + 0.25, y + 0.62, 0.0)], [0.02, 0.02], 6, (1, 1, 1))
+        cylinder(A["tractor_metal"], (x + 0.24, y + 0.64, 0.0), "y", 0.14, 0.03, 12)
+
+    # standard compact tractor
+    A = {k: Acc() for k in ("tractor_paint", "tractor_tyre", "tractor_metal")}
+    for z in (-0.72, 0.72):
+        wheel(A, -0.55, z, 0.62, 0.34)
+        wheel(A, 1.25, z * 0.9, 0.38, 0.22)
+    box(A["tractor_paint"], (0.15, 0.5, -0.34), (1.75, 1.18, 0.34))                  # bonnet
+    box(A["tractor_metal"], (1.72, 0.55, -0.3), (1.78, 1.1, 0.3))                   # grille
+    box(A["tractor_paint"], (-0.9, 0.55, -0.42), (0.25, 1.0, 0.42))                 # body / transmission
+    for z in (-0.72, 0.72):
+        box(A["tractor_paint"], (-1.05, 1.12, z - 0.2), (-0.05, 1.18, z + 0.2))     # fenders
+        box(A["tractor_paint"], (-1.05, 0.62, z - 0.2 if z > 0 else z + 0.14), (-0.99, 1.18, z + 0.2 if z < 0 else z - 0.14))
+    cylinder(A["tractor_metal"], (1.3, 1.5, 0.22), "y", 0.04, 0.7, 8)                # exhaust
+    seat_rops(A, -0.45, 1.0, 0.45, 1.3)
+    obs.append(make_object("tractor_standard", A, smooth=False))
+    # steep-slope crawler (narrow, tracked)
+    A = {k: Acc() for k in ("tractor_paint", "tractor_tyre", "tractor_metal")}
+    for z in (-0.46, 0.46):
+        box(A["tractor_tyre"], (-0.85, 0.08, z - 0.13), (0.85, 0.42, z + 0.13))
+        cylinder(A["tractor_tyre"], (-0.85, 0.25, z), "z", 0.25, 0.26, 12)
+        cylinder(A["tractor_tyre"], (0.85, 0.25, z), "z", 0.25, 0.26, 12)
+        for x in (-0.45, 0.0, 0.45):
+            cylinder(A["tractor_metal"], (x, 0.22, z), "z", 0.12, 0.28, 8)
+    box(A["tractor_paint"], (-0.8, 0.42, -0.3), (0.95, 0.95, 0.3))
+    box(A["tractor_paint"], (0.3, 0.95, -0.28), (1.0, 1.15, 0.28))
+    box(A["tractor_metal"], (0.98, 0.45, -0.25), (1.03, 1.1, 0.25))
+    cylinder(A["tractor_metal"], (0.75, 1.45, 0.18), "y", 0.035, 0.6, 8)
+    seat_rops(A, -0.35, 0.95, 0.34, 1.2)
+    obs.append(make_object("tractor_crawler", A, smooth=False))
+    # straddle tractor (enjambeur): portal legs over one row, cab on top
+    A = {k: Acc() for k in ("tractor_paint", "tractor_tyre", "tractor_metal", "window_glass")}
+    for x in (-1.0, 1.0):
+        for z in (-0.78, 0.78):
+            wheel(A, x, z, 0.42, 0.24)
+            box(A["tractor_paint"], (x - 0.1, 0.42, z - 0.08), (x + 0.1, 1.95, z + 0.08))
+    box(A["tractor_paint"], (-1.3, 1.95, -0.9), (1.3, 2.4, 0.9))
+    box(A["tractor_metal"], (-1.25, 1.9, -0.86), (1.25, 1.95, 0.86))
+    box(A["tractor_metal"], (-0.25, 2.4, -0.55), (0.95, 2.48, 0.55))
+    box(A["tractor_metal"], (-0.25, 3.25, -0.58), (0.95, 3.32, 0.58))
+    for x in (-0.25, 0.95):
+        for z in (-0.55, 0.55):
+            box(A["tractor_metal"], (x - 0.03, 2.48, z - 0.03), (x + 0.03, 3.25, z + 0.03))
+    box(A["window_glass"], (-0.24, 2.48, -0.54), (0.94, 3.25, 0.54))
+    cylinder(A["tractor_metal"], (-0.9, 2.9, 0.6), "y", 0.04, 1.0, 8)
+    obs.append(make_object("tractor_straddle", A, smooth=False))
+    return obs
+
+
 # =========================================================================== main
 bpy.ops.wm.read_factory_settings(use_empty=True)
 C.set_out(OUT)
@@ -701,6 +937,11 @@ hall_ob, hall_ext_ob, building = build_hall()
 export(hall_ob, "hall.glb")
 export(hall_ext_ob, "hall_ext.glb")
 C.clear_scene()
+yard_ob, yard_info, yard_col = build_yard()
+export(yard_ob, "yard.glb")
+C.clear_scene()
+export(build_tractors(), "tractors.glb")
+C.clear_scene()
 for kind in ("barriques", "fuder"):                       # slots only: contents come from the simulation
     for i, it in enumerate(cellar_items[kind]):
         it["slot"] = i + 1
@@ -714,7 +955,12 @@ hall_lights = [{"type": "hanging", "model": "hanging_industrial_lamp", "pos": [x
 props = [{"model": "plastic_crate_01", "pos": [9.2 + 0.62 * (k % 3), 0.33 * ((k // 3) % 3), -4.6 - 0.45 * (k // 9)], "yaw": 0.0} for k in range(27)]
 props += [{"model": "ladder_sectioned_01", "pos": [-11.6, 0.0, 4.2], "yaw": math.pi / 2}]
 stair_lights = [{"pos": [ST["x0"] + 0.02, -1.1, -3.3], "facing": [1, 0, 0], "color": [1.0, 0.74, 0.46]},
-                {"pos": [ST["x1"] - 0.02, ST_FLOOR + 2.05, -7.85], "facing": [-1, 0, 0], "color": [1.0, 0.74, 0.46]}]
+                {"pos": [ST["x1"] - 0.02, -2.95, -5.9], "facing": [-1, 0, 0], "color": [1.0, 0.74, 0.46]},
+                {"pos": [ST["x1"] - 0.02, ST_FLOOR + 2.05, -7.85], "facing": [-1, 0, 0], "color": [1.0, 0.74, 0.46]},
+                {"pos": [ST["x0"] + 0.02, ST_FLOOR + 2.05, -8.3], "facing": [1, 0, 0], "color": [1.0, 0.74, 0.46]}]
+Z1o = HALL["z1"] + WALL_T
+ext_props = [{"model": "plastic_crate_01", "pos": [14.9 + 0.62 * (k % 2), 0.13 + 0.33 * (k // 4), -6.82 + 0.45 * ((k // 2) % 2)], "yaw": 0.0} for k in range(12)]
+ext_props += [{"model": "plastic_crate_01", "pos": [4.4 + 0.62 * (k % 2), 0.33 * (k // 4), Z1o + 2.45 + 0.45 * ((k // 2) % 2)], "yaw": 0.0} for k in range(8)]
 C2B = cellar_to_building
 eye = 1.65
 layout = {
@@ -732,6 +978,8 @@ layout = {
         "stairs_down": {"position": [CELLAR_DOOR_X, eye, 2.2], "target": [CELLAR_DOOR_X, -3.3, -7.4]},
         "stairs_up": {"position": [CELLAR_DOOR_X, ST_FLOOR + eye, -8.3], "target": [CELLAR_DOOR_X, 0.6, 1.8]},
         "door": {"position": [20.0, eye, 3.5], "target": [6.0, 1.5, -1.0]},
+        "yard": {"position": [23.5, 1.9, 11.5], "target": [12.3, 2.6, 1.5]},
+        "yard_leanto": {"position": [15.0, 1.7, 13.2], "target": [7.0, 1.3, 8.9]},
     },
     # teleport spots (feet position + look target, building frame) for set_view("hall" | "cellar")
     "spawn": {
@@ -743,7 +991,9 @@ layout = {
                                    round(CELLAR_XFORM["origin"][2] - CELLAR["L"] / 2 - 0.3, 3), CORR_END],
                      zones={"hall": [HALL["x0"], HALL["x1"], -2.6, HALL["h"], HALL["z0"], HALL["z1"]],
                             "stair": [ST["x0"], ST["x1"], ST_FLOOR - 0.5, 0.5, CORR_END - REVEAL, ST["z_top"]]},
-                     collision=hall_collision(tanks), occluders=occluders(), stairLights=stair_lights),
+                     collision=hall_collision(tanks) + yard_col, occluders=occluders(), stairLights=stair_lights),
+    "yard": dict(yard_info, model="yard.glb", tractorModel="tractors.glb", props=ext_props,
+                 tractors={"mosel": "tractor_crawler", "cote-dor": "tractor_straddle", "napa": "tractor_standard"}),
     "cellar": {"model": "cellar.glb", "barriqueModel": "barrique.glb", "fuderModel": "fuder.glb", "dims": CELLAR,
                "barriques": cellar_items["barriques"], "fuder": cellar_items["fuder"], "lights": cellar_lights,
                "doorLeaf": door_leaf, "collision": cellar_collision(door_leaf)},

@@ -43,6 +43,9 @@ var screens_on := true
 var probes: Array[ReflectionProbe] = []
 var probe_frames := 0
 var panel_t := 0.0
+var Y: Dictionary                  # L.yard: sign, lamp, tractor spot, props
+var sign_label: Label3D
+var tractors := {}                 # node name -> Node3D (one shown, per Region)
 
 
 func build() -> void:
@@ -57,6 +60,7 @@ func build() -> void:
 	chalk.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
 	_environments()
 	_build_exterior()
+	_build_yard()
 	_build_hall()
 	_build_cellar()
 	_build_stair_lights()
@@ -75,6 +79,14 @@ func set_region(r: String) -> void:
 	for k in ["facade", "roof", "plinth"]:
 		if mats.has(k):
 			_region_material(k, mats[k])
+	# a steep-slope crawler in the Mosel, a straddle tractor in Burgundy, a standard tractor in Napa
+	var want := String(Y.get("tractors", {}).get(r, "tractor_standard"))
+	for k in tractors:
+		(tractors[k] as Node3D).visible = k == want
+	if mats.has("tractor_paint"):
+		(mats["tractor_paint"] as StandardMaterial3D).albedo_color = {"mosel": Color(0.62, 0.2, 0.05), "cote-dor": Color(0.1, 0.22, 0.45), "napa": Color(0.16, 0.36, 0.12)}.get(r, Color(0.6, 0.1, 0.06))
+	if mats.has("bin_plastic"):
+		(mats["bin_plastic"] as StandardMaterial3D).albedo_color = {"mosel": Color(0.18, 0.2, 0.22), "cote-dor": Color(0.52, 0.12, 0.08), "napa": Color(0.12, 0.2, 0.4)}.get(r, Color(0.5, 0.1, 0.08))
 
 
 ## Bake (or re-bake after the building moved) the interior GI. Needs the building and the terrain in the tree.
@@ -317,6 +329,26 @@ func _mat(name: String) -> Material:
 		"facade", "roof", "plinth":
 			m = StandardMaterial3D.new()
 			_region_material(name, m)
+		"gutter":
+			m = StandardMaterial3D.new(); m.albedo_color = Color(0.58, 0.6, 0.62); m.metallic = 0.7; m.roughness = 0.38
+		"sign_board":
+			m = A.pbr("oak_veneer_01", 0.5, Color(0.16, 0.24, 0.2), 1.0)
+		"door_wood":
+			m = A.pbr("oak_veneer_01", 0.7, Color(0.42, 0.28, 0.18), 1.0)
+		"window_dark":
+			m = StandardMaterial3D.new(); m.albedo_color = Color(0.02, 0.025, 0.03); m.metallic = 0.3; m.roughness = 0.06
+		"canopy_roof":
+			m = A.pbr("rusty_metal_02", 0.6, Color(0.55, 0.56, 0.58), 1.0)
+			m.metallic = 0.6
+			m.cull_mode = BaseMaterial3D.CULL_DISABLED
+		"bin_plastic":
+			m = StandardMaterial3D.new(); m.albedo_color = Color(0.5, 0.1, 0.08); m.roughness = 0.55
+		"tractor_paint":
+			m = StandardMaterial3D.new(); m.albedo_color = Color(0.6, 0.1, 0.06); m.roughness = 0.35; m.metallic = 0.1
+		"tractor_tyre":
+			m = StandardMaterial3D.new(); m.albedo_color = Color(0.025, 0.025, 0.025); m.roughness = 0.9
+		"tractor_metal":
+			m = StandardMaterial3D.new(); m.albedo_color = Color(0.07, 0.07, 0.08); m.metallic = 0.6; m.roughness = 0.5
 		"roof_under":
 			m = A.pbr("oak_veneer_01", 0.6, Color(0.42, 0.33, 0.24), 1.0)
 		"fascia":
@@ -508,6 +540,72 @@ func _build_exterior() -> void:
 	var rel := "models/" + String(L["hall"].get("exteriorModel", "hall_ext.glb"))
 	if A.exists(rel):
 		_add_static(self, rel, true)
+
+
+# ------------------------------------------------------------------ yard: gutters, sign, office door, lean-to, props
+func _build_yard() -> void:
+	Y = L.get("yard", {})
+	if Y.is_empty() or not A.exists("models/" + String(Y.get("model", "yard.glb"))):
+		return
+	_add_static(self, "models/" + String(Y["model"]), true)
+	# painted sign over the roller door: the estate name from the snapshot
+	var sg: Dictionary = Y["sign"]
+	var sp: Array = sg["pos"]
+	sign_label = Label3D.new()
+	var f := SystemFont.new()
+	f.font_names = PackedStringArray(["Georgia", "Palatino Linotype", "Times New Roman", "serif"])
+	f.font_weight = 700
+	sign_label.font = f
+	sign_label.font_size = 128
+	sign_label.outline_size = 0
+	sign_label.modulate = Color(0.93, 0.86, 0.62)
+	sign_label.shaded = true
+	sign_label.double_sided = false
+	sign_label.alpha_cut = Label3D.ALPHA_CUT_OPAQUE_PREPASS
+	sign_label.position = Vector3(sp[0], sp[1], sp[2])
+	sign_label.rotation = Vector3(0, PI / 2, 0)            # faces +x (out of the east gable)
+	sign_label.set_meta("w", float(sg["w"]) * 0.88)
+	sign_label.set_meta("h", float(sg["h"]) * 0.62)
+	add_child(sign_label)
+	# lamp by the doors (switched off: the view shows the afternoon)
+	var lp: Dictionary = Y["lamp"]
+	var lpos: Array = lp["pos"]
+	var lf: Array = lp["facing"]
+	_prop(self, "props/industrial_caged_sconce/industrial_caged_sconce.gltf", Transform3D(A.look_basis(Vector3(lf[0], lf[1], lf[2])), Vector3(lpos[0], lpos[1], lpos[2])), "industrial_caged_sconce_c")
+	for pr in Y.get("props", []):
+		var p: Array = pr["pos"]
+		_prop(self, "props/%s/%s.gltf" % [pr["model"], pr["model"]], Transform3D(Basis(Vector3.UP, float(pr["yaw"])), Vector3(p[0], p[1], p[2])))
+	# the tractor: one node per Region, the right one shown by set_region
+	var rel := "models/" + String(Y.get("tractorModel", "tractors.glb"))
+	if A.exists(rel):
+		var root := A.scene(rel)
+		var t: Dictionary = Y["tractor"]
+		var tp: Array = t["pos"]
+		root.transform = Transform3D(Basis(Vector3.UP, float(t["yaw"])), Vector3(tp[0], tp[1], tp[2]))
+		for mi in A.meshes(root):
+			var mesh: Mesh = (mi as MeshInstance3D).mesh
+			for i in mesh.get_surface_count():
+				var m := mesh.surface_get_material(i)
+				mesh.surface_set_material(i, _mat(String(m.resource_name) if m else ""))
+			(mi as MeshInstance3D).gi_mode = GeometryInstance3D.GI_MODE_DISABLED
+			tractors[String(mi.name)] = mi
+		add_child(root)
+		for k in tractors:
+			(tractors[k] as Node3D).position = Vector3.ZERO
+			(tractors[k] as Node3D).visible = false
+
+
+func _update_sign() -> void:
+	if sign_label == null:
+		return
+	var name_ := String(D.get("estate", ""))
+	if name_ == "":
+		name_ = "Weingut" if region == "mosel" else ("Domaine" if region == "cote-dor" else "Winery")
+	sign_label.text = name_
+	# fit the painted text to the board
+	var sz := sign_label.font.get_string_size(name_, HORIZONTAL_ALIGNMENT_LEFT, -1, sign_label.font_size)
+	var px := minf(float(sign_label.get_meta("w")) / maxf(sz.x, 1.0), float(sign_label.get_meta("h")) / maxf(sz.y, 1.0))
+	sign_label.pixel_size = px
 
 
 # ------------------------------------------------------------------ fermentation hall + stairs
@@ -782,6 +880,7 @@ func apply_snapshot(snap: Dictionary) -> void:
 	D = snap
 	if not built:
 		return
+	_update_sign()
 	var lots := _live_lots()
 	var vintage := int(D.get("vintage", 0))
 	var units := String(D.get("region", {}).get("units", "oe"))

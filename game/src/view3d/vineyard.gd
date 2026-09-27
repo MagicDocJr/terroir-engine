@@ -1697,6 +1697,10 @@ func _build_mist_layer() -> void:
 func _process(_delta: float) -> void:
 	if rain_node and cam:
 		rain_node.global_position = cam.global_position + Vector3(0, 18, 0)
+		var h := cam.global_position.y - H(cam.global_position.x, cam.global_position.z) > 30.0
+		if h != high:
+			high = h
+			_apply_rain_visibility()
 
 
 ## Inside the winery: no rain particles (the roof would stop them anyway) and no rain heightfield pass.
@@ -1708,8 +1712,9 @@ func set_outdoors(on: bool) -> void:
 
 
 var rain_level := 0.0
+var high := false                 # camera far above the ground (drone): no rain particles around it
 func _apply_rain_visibility() -> void:
-	var r := rain_level > 0.02 and outdoors
+	var r := rain_level > 0.02 and outdoors and not high
 	rain_node.emitting = r
 	rain_node.visible = r
 	splash_node.visible = r

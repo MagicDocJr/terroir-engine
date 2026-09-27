@@ -12,14 +12,17 @@ fermentation all come from `Sim.Snapshot()`.
 | member | meaning |
 |---|---|
 | `apply_snapshot(D: Dictionary)` | `D` = parsed `Sim.Snapshot()`. Call on entry and after every advance. Cheap, unless the Plot changed: then the landscape is rebuilt and the winery is moved and its GI re-baked (about 3–5 s). |
-| `set_view(kind: String)` | `"vineyard"`, `"cellar"` or `"hall"`. It teleports the walker to that place in the one world. |
+| `set_view(kind: String)` | `"vineyard"`, `"cellar"` or `"hall"`: teleports the walker to that place in the one world. `"drone"`: a free-flying camera above the Estate (the walker waits where it was). |
 | `signal exit_requested` | Tab, or Esc while the mouse is not captured. |
 | `show_hud` | Small date/Block/weather overlay plus the key hint line (default on). |
 | `sound_volume_db`, `sound_on` | Master volume of the view's sound (dB, 0 = as mixed) and on/off. M toggles it. |
 | `camera_preset(name, block)` / `set_camera(pos, target)` / `capture()` | Used by the test harness. The eye is put exactly there, and the walker waits until the next move key. |
 
 Input is read only while the node is visible. Click to capture the mouse, then walk with WASD (or the arrow
-keys). Shift runs. 1/2/3 jump to the vineyard, cellar or hall, M turns the sound on or off, and Tab goes back.
+keys). Shift runs. 1/2/3 jump to the vineyard, cellar or hall, 4 switches to the drone (and back), M turns the
+sound on or off, and Tab goes back. **Drone:** it orbits the Plot centre; drag with the mouse to orbit, WASD pans,
+Q/E turn, the wheel changes height/distance, Shift goes faster. 4 again resumes walking where you left off; 1/2/3
+teleport as usual.
 The world renders in its own `SubViewport` with its own `World3D`. Rendering, physics and sound stop while the
 view is hidden.
 
@@ -46,6 +49,12 @@ view is hidden.
   a straight flight of 30 steps goes down 5.25 m, then a short corridor passes under the north wall to the cellar
   door. The vaulted slate cellar (22 × 6.2 m) lies behind the hall, under at least ~0.9 m of ground (the terrain
   is raised over it where needed).
+- **Outside detail** (`build_winery.py` → `yard.glb`, `tractors.glb`): gutters and downpipes, a painted sign over
+  the roller door with the estate name from the snapshot (`estate`, a Label3D fitted to the board), an office /
+  tasting-room door and window with a bench, a lamp by the doors, a lean-to canopy on the south side with a
+  basket press and a destemmer-crusher, stacked half-tonne picking bins, crates on a pallet, and a parked
+  tractor: a tracked steep-slope crawler in the Mosel, a straddle tractor in the Côte d'Or, a compact tractor in
+  Napa. All low-poly (≈1 300 triangles in total) with collision.
 - **Regional outside**: Mosel has white render, a slate roof and a slate plinth. Côte d'Or has cream render,
   flat brown tiles and limestone. Napa has stucco and clay barrel tiles. *Game simplification (look only).*
 - **Row orientation**: rows are drawn as planted (snapshot `rows`: DownSlope / NorthSouth / EastWest), and the sun
@@ -56,7 +65,12 @@ view is hidden.
 - The environment is picked by zone: the outside sky environment, a hall environment (same sky, interior
   settings, auto exposure) or the dark cellar environment.
 - The interior lights and VoxelGI run only near or inside the building (hall: within 45 m; cellar/stairs: when
-  inside). Light shadows are on only in the room you are in, and the tank screens re-render only in the hall.
+  inside). Only two key lights per room cast shadows (cellar: the two ceiling bulbs; hall: one spot over each
+  tank row), with dual-paraboloid omni shadows; the rest light without. Shadows are on only in the room you are
+  in. Interior lights fade out with distance. VoxelGI uses subdivision 64. The tank screens re-render at 5 Hz,
+  and only in the hall.
+- Near vines (≤ 3 m) draw the LOD0 bunches on the LOD1 leaves and wood (the full LOD0 foliage cost ~3 ms at arm's
+  length). LOD1 to 13 m, far-LOD shadows to 38 m, sun shadows to 70 m.
 - Indoors, the sun's shadow reaches only 40 m and uses 2 splits. It is switched off in the cellar.
 - Occlusion culling (`viewport.use_occlusion_culling`): box occluders sit inside the hall walls and roof and in
   the rock around the cellar. From inside, the vineyard is culled; from outside, the interior is culled except
@@ -125,5 +139,8 @@ low-pass filter, and the fermentation is a simmering pot plus bubbles blown thro
   (real physics) from the vineyard along the track, through the door and the hall, down the stairs into the
   cellar and back up, then checks that sound stops when the view is hidden. It prints `WALK PASS/FAIL` and
   `SOUND PASS/FAIL`.
+- Drone shots: `mosel_drone`, `cotedor_drone`, `napa_drone`; yard shots: `mosel_yard`, `mosel_leanto`,
+  `cotedor_yard`, `napa_yard`. The walk test starts with a drone round trip (4 on, 4 off) and checks the walker
+  did not move.
 - LOD probe: `view3d_test.tscn -- --capture3d none --trellis`. The picture at a place must not depend on the
   direction you walked there from; `--trellis-old` restores the old bug to show the difference.

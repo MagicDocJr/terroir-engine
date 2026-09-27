@@ -8,15 +8,15 @@ extends Node
 const View3D := preload("res://src/view3d/view3d.tscn")
 
 # Planting used for the Mosel shots: four Einzelpfahl Blocks and one Guyot (VSP) Block, one of them Pinot Noir
-const MOSEL := {"plotId": "mosel-blauschiefer", "plantingYear": 2012, "seed": 42, "planting": {
+const MOSEL := {"plotId": "mosel-blauschiefer", "plantingYear": 2012, "seed": 42, "estateName": "Weingut Schieferhang", "planting": {
 	"A": {"variety": "Riesling", "rootstock": "SO4", "training": "Einzelpfahl", "density": 8000},
 	"B": {"variety": "Riesling", "rootstock": "SO4", "training": "Einzelpfahl", "density": 8000},
 	"C": {"variety": "Riesling", "rootstock": "R3309C", "training": "Einzelpfahl", "density": 8000},
 	"D": {"variety": "PinotNoir", "rootstock": "SO4", "training": "Einzelpfahl", "density": 8000},
 	"E": {"variety": "Riesling", "rootstock": "SO4", "training": "Guyot", "density": 5000, "rows": "DownSlope"}}}
 
-const COTEDOR := {"plotId": "cotedor-premiercru", "plantingYear": 2012, "seed": 7}
-const NAPA := {"plotId": "napa-bench", "plantingYear": 2012, "seed": 9}
+const COTEDOR := {"plotId": "cotedor-premiercru", "plantingYear": 2012, "seed": 7, "estateName": "Domaine des Pierres"}
+const NAPA := {"plotId": "napa-bench", "plantingYear": 2012, "seed": 9, "estateName": "Stonefield Cellars"}
 
 const SHOTS := [
 	{"name": "mosel_budburst", "game": MOSEL, "until": "stage:Budburst", "extra": 6, "dry": true, "view": "vineyard", "cam": "row", "block": 1},
@@ -30,10 +30,12 @@ const SHOTS := [
 	{"name": "cotedor_august", "game": COTEDOR, "until": "date:08-16", "dry": true, "view": "vineyard", "cam": "row", "block": 0},
 	{"name": "napa_september", "game": NAPA, "until": "date:09-12", "dry": true, "view": "vineyard", "cam": "row", "block": 1},
 	# the one walkable Estate: vineyard → track → door → hall → stairs → cellar
-	{"name": "mosel_estate", "game": MOSEL, "until": "winery", "view": "vineyard", "cam": "estate"},
-	{"name": "mosel_estate_high", "game": MOSEL, "until": "winery", "view": "vineyard", "cam": "estate_high"},
-	{"name": "mosel_track", "game": MOSEL, "until": "winery", "view": "vineyard", "cam": "track"},
+	{"name": "mosel_estate", "game": MOSEL, "until": "winery", "dry": true, "view": "vineyard", "cam": "estate"},
+	{"name": "mosel_estate_high", "game": MOSEL, "until": "winery", "dry": true, "view": "vineyard", "cam": "estate_high"},
+	{"name": "mosel_track", "game": MOSEL, "until": "winery", "dry": true, "view": "vineyard", "cam": "track"},
 	{"name": "mosel_door", "game": MOSEL, "until": "winery", "view": "hall", "cam": "door"},
+	{"name": "mosel_yard", "game": MOSEL, "until": "winery", "dry": true, "view": "hall", "cam": "yard"},
+	{"name": "mosel_leanto", "game": MOSEL, "until": "winery", "dry": true, "view": "hall", "cam": "yard_leanto"},
 	{"name": "hall", "game": MOSEL, "until": "winery", "view": "hall", "cam": "hall"},
 	{"name": "hall_panel", "game": MOSEL, "until": "winery", "view": "hall", "cam": "hall_panel"},
 	{"name": "hall_stairs", "game": MOSEL, "until": "winery", "view": "hall", "cam": "hall_stairs"},
@@ -44,11 +46,16 @@ const SHOTS := [
 	{"name": "cellar_door", "game": MOSEL, "until": "winery", "view": "cellar", "cam": "cellar_door"},
 	{"name": "cotedor_estate", "game": COTEDOR, "until": "date:08-16", "dry": true, "view": "vineyard", "cam": "estate"},
 	{"name": "cotedor_estate_high", "game": COTEDOR, "until": "date:08-16", "dry": true, "view": "vineyard", "cam": "estate_high"},
+	{"name": "cotedor_yard", "game": COTEDOR, "until": "date:08-16", "dry": true, "view": "hall", "cam": "yard"},
 	{"name": "cotedor_track", "game": COTEDOR, "until": "date:08-16", "dry": true, "view": "vineyard", "cam": "track"},
 	{"name": "cotedor_hall", "game": COTEDOR, "until": "date:08-16", "dry": true, "view": "hall", "cam": "hall"},
 	{"name": "napa_estate", "game": NAPA, "until": "date:09-12", "dry": true, "view": "vineyard", "cam": "estate"},
 	{"name": "napa_estate_high", "game": NAPA, "until": "date:09-12", "dry": true, "view": "vineyard", "cam": "estate_high"},
+	{"name": "napa_yard", "game": NAPA, "until": "date:09-12", "dry": true, "view": "hall", "cam": "yard"},
 	{"name": "napa_track", "game": NAPA, "until": "date:09-12", "dry": true, "view": "vineyard", "cam": "track"},
+	{"name": "mosel_drone", "game": MOSEL, "until": "winery", "dry": true, "view": "drone", "cam": "drone"},
+	{"name": "cotedor_drone", "game": COTEDOR, "until": "date:08-16", "dry": true, "view": "drone", "cam": "drone"},
+	{"name": "napa_drone", "game": NAPA, "until": "date:09-12", "dry": true, "view": "drone", "cam": "drone"},
 	{"name": "napa_cellar", "game": NAPA, "until": "date:09-12", "dry": true, "view": "cellar", "cam": "cellar"},
 	# the steepest Plots: Mosel terraces (winery at the foot) and the Napa mountain site (winery beside the Plot)
 	{"name": "terrassen_estate", "game": {"plotId": "mosel-terrassen", "plantingYear": 2012, "seed": 3}, "until": "date:07-10", "dry": true, "view": "vineyard", "cam": "estate"},
@@ -203,7 +210,7 @@ func _play_winery() -> void:
 
 func _run() -> void:
 	for shot in queue:
-		var key := JSON.stringify(shot["game"]) + String(shot["until"]) + str(shot.get("extra", 0)) + str(shot.get("harvest", []))
+		var key := JSON.stringify(shot["game"]) + String(shot["until"]) + str(shot.get("extra", 0)) + str(shot.get("harvest", [])) + str(shot.get("dry", false))
 		if key != last_game_key:
 			var t0 := Time.get_ticks_msec()
 			snap = _play(shot)
@@ -476,6 +483,15 @@ func _walk_test() -> void:
 	var vy: Node3D = view.get("vineyard")
 	var wy: Node3D = view.get("winery")
 	var pl: CharacterBody3D = view.get("player")
+	# a drone flight first (key 4 on, fly, 4 off): walking must carry on from the same spot afterwards
+	var before: Vector3 = pl.global_position
+	view.set_view("drone")
+	for f in 30:
+		await get_tree().physics_frame
+	view.call("_drone_off", true)
+	for f in 10:
+		await get_tree().physics_frame
+	print("WALK drone round trip: walker moved %.2f m, drone camera current: %s" % [pl.global_position.distance_to(before), str((view.get("drone_cam") as Camera3D).current)])
 	var est: Dictionary = vy.get("estate")
 	var trk: Array = vy.get("track")
 	var o: Vector3 = est["origin"]
