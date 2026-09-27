@@ -121,7 +121,7 @@ low-pass filter, and the fermentation is a simmering pot plus bubbles blown thro
   `mosel_door`, `hall`, `hall_stairs`, `stairs_down`, `stairs_up`, `cellar`, `cellar_door`, and
   `cotedor_*` / `napa_*`. The log also prints the sound mix per shot (`sound: {...}`); the bus is muted unless
   `--sound` is given.
-- Walk test: `view3d_test.tscn -- --capture3d none --walktest [mosel|cotedor|napa]`. It walks the capsule
+- Walk test: `view3d_test.tscn -- --capture3d none --walktest [mosel|cotedor|napa|terrassen|napa-mountain]`. It walks the capsule
   (real physics) from the vineyard along the track, through the door and the hall, down the stairs into the
   cellar and back up, then checks that sound stops when the view is hidden. It prints `WALK PASS/FAIL` and
   `SOUND PASS/FAIL`.
