@@ -3,6 +3,8 @@
 #   game/tools/shot3d.sh                      # all shots
 #   game/tools/shot3d.sh mosel_budburst,hall  # a subset
 #   game/tools/shot3d.sh all --perf           # also measure fps (vsync off) → game/shots/3d_perf.json
+#   game/tools/shot3d.sh hall,cellar --perf --breakdown   # fps with features switched off one by one
+# Walk test / LOD probe: see game/src/view3d/README.md (view3d_test.tscn --walktest, --trellis).
 # Needs the 3D assets (game/tools/sync_assets3d.sh) and a built C# solution (--build-solutions, done here).
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"

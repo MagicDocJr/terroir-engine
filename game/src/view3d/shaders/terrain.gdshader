@@ -19,6 +19,10 @@ uniform float soil_desat = 0.65;
 uniform float soil_bright = 1.0;
 uniform float soil_scale = 3.0;
 uniform vec3 grass_tint = vec3(0.78, 0.95, 0.55);
+uniform vec4 track_seg[8];                 // farm track centre line segments (x0, z0, x1, z1)
+uniform int track_n = 0;
+uniform vec4 yard_rect = vec4(0.0);        // gravel yard round the winery (x0, z0, x1, z1)
+uniform vec2 road_z = vec2(0.0);           // Mosel: the river road across the valley floor (z0, z1)
 
 global uniform float wetness;
 global uniform float rain_amount;
@@ -60,8 +64,30 @@ void fragment() {
 	vec3 ga = texture(grass_alb, guv).rgb * grass_tint * mix(0.8, 1.1, texture(soil_ao, wpos.xz / 23.0).r);
 	ga *= mix(vec3(1.0), vec3(0.42, 0.55, 0.36), COLOR.b * (1.0 - inside));        // scrub on fallow slopes
 	float mask = mix(COLOR.r, gm.r, inside);
+	// farm track: two bare wheel ruts with grass between them; the winery yard is bare gravel
+	float td = 1e6;
+	for (int i = 0; i < track_n; i++) {
+		vec2 a = track_seg[i].xy;
+		vec2 ba = track_seg[i].zw - a;
+		vec2 pa = wpos.xz - a;
+		float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-4), 0.0, 1.0);
+		td = min(td, length(pa - ba * h));
+	}
+	float rut = 1.0 - smoothstep(0.2, 0.36, abs(td - 0.8));
+	float lane = 1.0 - smoothstep(1.35, 1.9, td);
+	vec2 yq = max(max(yard_rect.xy - wpos.xz, wpos.xz - yard_rect.zw), vec2(0.0));
+	float yard = (yard_rect.z > yard_rect.x) ? 1.0 - smoothstep(0.0, 1.4, length(yq)) : 0.0;
+	mask = mix(mask, mix(0.6, 0.0, rut), lane * (1.0 - inside));
+	mask = mix(mask, 0.0, yard);
 	float m = smoothstep(0.25, 0.75, mask + (texture(soil_rgh, uv * 0.37).r - 0.5) * 0.5);
 	vec3 alb = mix(ra, ga, m);
+	float road = (road_z.y > road_z.x) ? smoothstep(road_z.x - 0.3, road_z.x + 0.3, wpos.z) * (1.0 - smoothstep(road_z.y - 0.3, road_z.y + 0.3, wpos.z)) : 0.0;
+	if (road > 0.001) {                    // asphalt with a worn centre line
+		float line = step(abs(wpos.z - (road_z.x + road_z.y) * 0.5), 0.06) * step(0.5, fract(wpos.x / 6.0));
+		vec3 asphalt = vec3(0.085, 0.087, 0.09) * mix(0.85, 1.15, texture(soil_ao, wpos.xz / 7.0).r);
+		alb = mix(alb, mix(asphalt, vec3(0.55, 0.55, 0.5), line * 0.8), road);
+		m *= 1.0 - road;
+	}
 	vec3 nm = mix(texture(soil_nrm, uv).rgb, texture(grass_nrm, guv).rgb, m);
 	float rgh = mix(texture(soil_rgh, uv).r, texture(grass_rgh, guv).r, m);
 	float ao = mix(texture(soil_ao, uv).r, texture(grass_ao, guv).r, m);

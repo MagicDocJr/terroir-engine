@@ -4,6 +4,10 @@
 #
 # Local frame: +Z runs down the fall line (the direction the Plot faces), +X across the slope, Y up.
 # The sun is rotated into this frame from the Plot's aspect, so a south-facing slope gets the southern sun.
+#
+# The Estate's winery stands on a levelled pad at the edge of the Plot (steep Mosel: at the foot of the slope by
+# the river road; elsewhere beside the Plot), joined to the Blocks by a farm track (_layout_estate). The terrain
+# carries a collision mesh (with a hole under the building) so the player can walk everywhere.
 extends Node3D
 
 const A := preload("res://src/view3d/assets3d.gd")
@@ -22,7 +26,8 @@ const ASPECTS := {"N": 0.0, "NNE": 22.5, "NE": 45.0, "ENE": 67.5, "E": 90.0, "ES
 	"S": 180.0, "SSW": 202.5, "SW": 225.0, "WSW": 247.5, "W": 270.0, "WNW": 292.5, "NW": 315.0, "NNW": 337.5}
 const TRAINING_FILE := {"Einzelpfahl": "einzelpfahl", "Guyot": "guyot", "Cordon": "cordon"}
 
-var cam: Camera3D
+var cam: Camera3D                 # the player's camera (set by view3d)
+var outside_attributes: CameraAttributesPractical
 var env: Environment
 var sun: DirectionalLight3D
 var sky_mat: ShaderMaterial
@@ -47,12 +52,26 @@ var blocks := []                  # per Block: {id, x0, x1, slope, training, vsp
 var block_delta := PackedFloat32Array()   # per-x slope offset table (x from band_x0-40, 1 m)
 var bd_x0 := 0.0
 
+# estate: winery pad, yard and farm track (see _layout_estate)
+var pad_blend := 9.0              # banks round the levelled pad: longer on sloping ground so they stay walkable
+var estate := {}                  # origin (building frame in this node's frame), building/cellar/yard rects, door
+var pad_on := false
+var pad_y := 0.0
+var pad_rect := Rect2()
+var bld_rect := Rect2()           # building exterior footprint (terrain has a hole here)
+var cellar_rect := Rect2()
+var keepout := Rect2()            # no neighbour vines, trees or tufts
+var gravel_rect := Rect2()
+var track: Array = []             # farm track centre line: [Vector4(x0, z0, x1, z1)]
+var outdoors := true
+
 # weather
 var rain_node: GPUParticles3D
 var splash_node: GPUParticles3D
 var rain_hf: GPUParticlesCollisionHeightField3D
 var mist_mat: ShaderMaterial
 var mist_node: MeshInstance3D
+var weather := {}                 # for the ambience: rain 0..1, wind km/h, mist, cloud, day of year
 var sky_cache := {}
 var current_sky := ""
 var hud := ""
@@ -65,15 +84,8 @@ func _ready() -> void:
 	_ensure_globals()
 	_setup_environment()
 	_setup_sun()
-	cam = Camera3D.new()
-	cam.fov = 70.0
-	cam.near = 0.05
-	cam.far = 6000.0
-	cam.environment = env
-	var ca := CameraAttributesPractical.new()
-	ca.auto_exposure_enabled = false
-	cam.attributes = ca
-	add_child(cam)
+	outside_attributes = CameraAttributesPractical.new()
+	outside_attributes.auto_exposure_enabled = false
 	_build_rain()
 	_build_mist_layer()
 
@@ -104,7 +116,7 @@ func apply_snapshot(snap: Dictionary) -> void:
 func _blocks_key() -> String:
 	var s := ""
 	for b in D.get("blocks", []):
-		s += "%s:%s:%s:%s;" % [b.get("id", ""), b.get("training", ""), b.get("density", 0), b.get("area", 0)]
+		s += "%s:%s:%s:%s:%s;" % [b.get("id", ""), b.get("training", ""), b.get("density", 0), b.get("area", 0), b.get("rows", "")]
 	return s
 
 
@@ -316,8 +328,8 @@ func _profile_keys() -> Array:
 			var hill := maxf(sv, 0.62)
 			up = [[0.0, sv], [12.0 if steep else 30.0, sv], [40.0 if steep else 60.0, hill], [170.0, hill * 0.9], [240.0, 0.03]]
 			var fd := clampf(sv * 70.0, 6.0, 55.0)
-			down = [[0.0, sv], [fd, sv], [fd + 10.0, 0.004], [fd + 175.0, 0.004], [fd + 200.0, -0.5], [fd + 420.0, -0.45], [fd + 490.0, -0.02]]
-			river = Vector2(hz + fd + 24.0, hz + fd + 150.0)
+			down = [[0.0, sv], [fd, sv], [fd + 10.0, 0.004], [fd + 195.0, 0.004], [fd + 220.0, -0.5], [fd + 440.0, -0.45], [fd + 510.0, -0.02]]
+			river = Vector2(hz + fd + 44.0, hz + fd + 170.0)      # valley floor: winery, yard, river road, river
 		"cote-dor":
 			up = [[0.0, sv], [90.0, maxf(sv, 0.10)], [300.0, 0.16], [360.0, 0.55], [440.0, 0.5], [500.0, 0.02]]
 			down = [[0.0, sv], [80.0, sv * 0.6], [260.0, 0.004], [2400.0, 0.002]]
@@ -386,10 +398,33 @@ func H(x: float, z: float) -> float:
 	var amp := 14.0 if region != "napa" else 22.0
 	y += far * (amp * sin(x / 170.0 + 0.4) * smoothstep(0.0, 1.0, absf(sin(z / 900.0 + 0.3)) + 0.3) + amp * 0.6 * noise.get_noise_2d(x, z))
 	y += 0.09 * noise.get_noise_2d(x * 9.0, z * 9.0)
+	if pad_on:
+		var d := _rect_dist(pad_rect, x, z)
+		if d < pad_blend:
+			y = lerpf(y, pad_y, 1.0 - smoothstep(0.0, pad_blend, d))
+		y = maxf(y, pad_y + 0.35 - 0.6 * _rect_dist(cellar_rect, x, z))    # keep the vaulted cellar under ground
 	if river.x < INF and z > river.x - 12.0 and z < river.y + 12.0:
 		var t := minf(smoothstep(river.x - 12.0, river.x + 4.0, z), smoothstep(river.y + 12.0, river.y - 4.0, z))
 		y = lerpf(y, river_y - 1.5, t)
 	return y
+
+
+static func _rect_dist(r: Rect2, x: float, z: float) -> float:
+	var dx := maxf(maxf(r.position.x - x, x - r.end.x), 0.0)
+	var dz := maxf(maxf(r.position.y - z, z - r.end.y), 0.0)
+	return sqrt(dx * dx + dz * dz)
+
+
+## Distance to the farm track's centre line.
+func track_dist(x: float, z: float) -> float:
+	var best := INF
+	var p := Vector2(x, z)
+	for sg in track:
+		var a := Vector2(sg.x, sg.y)
+		var ba := Vector2(sg.z, sg.w) - a
+		var h := clampf((p - a).dot(ba) / maxf(ba.length_squared(), 0.0001), 0.0, 1.0)
+		best = minf(best, (p - a - ba * h).length())
+	return best
 
 
 func _normal(x: float, z: float) -> Vector3:
@@ -412,10 +447,12 @@ func _build_world() -> void:
 	var p: Dictionary = D.get("plot", {})
 	region = String(D.get("region", {}).get("id", "mosel"))
 	sv = _num(p, "slope", 20.0) / 100.0
-	aspect = _aspect_deg(String(p.get("aspect", "S")))
+	aspect = _num(p, "aspectDeg", _aspect_deg(String(p.get("aspect", "S"))))
 	lat = _num(p, "lat", 49.9)
 	_layout_blocks()
+	pad_on = false
 	_build_profile()
+	_layout_estate()
 	var t0 := Time.get_ticks_msec()
 	_build_terrain()
 	var t1 := Time.get_ticks_msec()
@@ -429,6 +466,41 @@ func _build_world() -> void:
 	if river.x < INF:
 		_build_river()
 	print("view3d vineyard: %s terrain %d ms, far %d ms, vines %d ms, rest %d ms" % [p.get("id", ""), t1 - t0, t2 - t1, t3 - t2, Time.get_ticks_msec() - t3])
+
+
+## Where the winery stands: at the foot of steep Mosel slopes by the river road (the cellar runs into the hill),
+## otherwise beside the Plot with its door towards the Blocks. A farm track joins the yard to the Blocks.
+func _layout_estate() -> void:
+	var lay = A.json("models/winery.json")
+	var bi: Dictionary = lay.get("building", {}) if lay is Dictionary else {}
+	var ext: Array = bi.get("extent", [-12.3, 12.3, -7.3, 7.3])
+	var cex: Array = bi.get("cellarExtent", [-14.2, -7.3, -31.3, -8.6])
+	var steep := region == "mosel" and sv >= 0.3
+	var fd := clampf(sv * 70.0, 6.0, 55.0)
+	var c := Vector2(band_x0 + 4.0, hz + fd + 15.0) if steep else Vector2(band_x0 - 10.0 - float(ext[1]), 0.0)
+	var door := Vector2(c.x + float(ext[1]), c.y)
+	pad_on = false
+	pad_y = H(c.x, c.y)
+	pad_blend = 9.0 if steep else clampf(9.0 + sv * 60.0, 9.0, 30.0)
+	bld_rect = Rect2(c.x + float(ext[0]), c.y + float(ext[2]), float(ext[1]) - float(ext[0]), float(ext[3]) - float(ext[2]))
+	cellar_rect = Rect2(c.x + float(cex[0]), c.y + float(cex[2]), float(cex[1]) - float(cex[0]), float(cex[3]) - float(cex[2]))
+	var yard := Rect2(door.x, c.y - 9.0, 11.0 if steep else 9.0, 18.0)
+	if steep and river.x < INF:                 # the yard runs down to the river road
+		yard = Rect2(door.x, c.y - 9.0, 11.0, maxf(18.0, river.x - 14.0 - (c.y - 9.0)))
+	pad_rect = bld_rect.grow(3.0).merge(yard)
+	gravel_rect = bld_rect.grow(1.5).merge(yard)
+	keepout = bld_rect.merge(cellar_rect).merge(yard).grow(4.0)
+	track.clear()
+	if steep:
+		var mid := Vector2(minf(band_x0 + 60.0, band_x1 - 6.0), hz + fd * 0.5)
+		var top := Vector2(band_x0 + 24.0, hz + 1.3)
+		track = [Vector4(door.x + 6.0, c.y, mid.x, mid.y), Vector4(mid.x, mid.y, top.x, top.y),
+			Vector4(band_x0 - 1.0, hz + 1.3, band_x1 + 1.0, hz + 1.3)]
+	else:
+		var x := band_x0 - 3.0
+		track = [Vector4(door.x + 2.0, c.y, x, c.y), Vector4(x, -hz - 3.0, x, hz + 3.0)]
+	estate = {"origin": Vector3(c.x, pad_y + 0.03, c.y), "door": door, "steep": steep}
+	pad_on = true
 
 
 func _layout_blocks() -> void:
@@ -447,7 +519,7 @@ func _layout_blocks() -> void:
 		var w := _num(b, "area", 0.3) * 10000.0 / depth
 		var tr := String(b.get("training", "Guyot"))
 		blocks.append({"id": b.get("id", ""), "name": b.get("name", ""), "x0": x, "x1": x + w, "slope": _num(b, "slope", sv * 100.0) / 100.0,
-			"training": TRAINING_FILE.get(tr, "guyot"), "vsp": tr != "Einzelpfahl", "density": _num(b, "density", 5000.0),
+			"training": TRAINING_FILE.get(tr, "guyot"), "vsp": tr != "Einzelpfahl", "density": _num(b, "density", 5000.0), "rows": String(b.get("rows", "")),
 			"stones": _num(b.get("soilProfile", {}), "stones", 20.0), "mm": [], "g": -1})
 		_owner_materials(blocks[-1])
 		x += w + gap
@@ -505,6 +577,15 @@ func _terrain_material() -> ShaderMaterial:
 			sm.set_shader_parameter("soil_desat", 0.1)
 			sm.set_shader_parameter("soil_bright", 1.0)
 			sm.set_shader_parameter("soil_scale", 3.2)
+	var segs := []
+	for sg in track:
+		segs.append(sg)
+	while segs.size() < 8:
+		segs.append(Vector4.ZERO)
+	sm.set_shader_parameter("track_seg", segs)
+	sm.set_shader_parameter("track_n", mini(track.size(), 8))
+	sm.set_shader_parameter("yard_rect", Vector4(gravel_rect.position.x, gravel_rect.position.y, gravel_rect.end.x, gravel_rect.end.y))
+	sm.set_shader_parameter("road_z", Vector2(river.x - 14.0, river.x - 6.0) if river.x < INF else Vector2.ZERO)
 	mats["terrain"] = sm
 	return sm
 
@@ -551,12 +632,29 @@ func _build_terrain() -> void:
 	var idx := PackedInt32Array()
 	idx.resize((nx - 1) * (nz - 1) * 6)
 	var k := 0
+	# collision: the same triangles inside the walkable area
+	var wr := walk_rect()
+	var faces := PackedVector3Array()
+	faces.resize((nx - 1) * (nz - 1) * 6)
+	var fk := 0
+	var hole := bld_rect
 	for iz in nz - 1:
+		var z := z0 + iz * step
 		for ix in nx - 1:
+			var x := x0 + ix * step
+			# the building has its own floor: drop quads that lie completely inside its footprint
+			if hole.has_point(Vector2(x, z)) and hole.has_point(Vector2(x + step, z + step)):
+				continue
 			var a := iz * nx + ix
 			idx[k] = a; idx[k + 1] = a + 1; idx[k + 2] = a + nx
 			idx[k + 3] = a + 1; idx[k + 4] = a + nx + 1; idx[k + 5] = a + nx
 			k += 6
+			if x > wr.position.x - 2.0 and x < wr.end.x + 2.0 and z > wr.position.y - 2.0 and z < wr.end.y + 2.0:
+				faces[fk] = verts[a]; faces[fk + 1] = verts[a + 1]; faces[fk + 2] = verts[a + nx]
+				faces[fk + 3] = verts[a + 1]; faces[fk + 4] = verts[a + nx + 1]; faces[fk + 5] = verts[a + nx]
+				fk += 6
+	idx.resize(k)
+	faces.resize(fk)
 	var arr := []
 	arr.resize(Mesh.ARRAY_MAX)
 	arr[Mesh.ARRAY_VERTEX] = verts
@@ -572,6 +670,14 @@ func _build_terrain() -> void:
 	_paint_ground_map(sm)
 	mi.material_override = sm
 	world.add_child(mi)
+	var body := StaticBody3D.new()
+	body.name = "TerrainCollision"
+	var cs := CollisionShape3D.new()
+	var shape := ConcavePolygonShape3D.new()
+	shape.set_faces(faces)
+	cs.shape = shape
+	body.add_child(cs)
+	world.add_child(body)
 
 
 ## Ground map over the band: R = grass cover (inter-row cover crop, paths), G = soil brightness per Block.
@@ -608,11 +714,16 @@ func _paint_ground_map(sm: ShaderMaterial) -> void:
 
 # =============================================================================================== vine layout
 func _row_dir(blk: Dictionary) -> Vector2:
-	# rows follow the sim's default: down the slope on steep Plots, otherwise north-south (as simulated)
-	if sv >= 0.3:
+	# rows as planted (snapshot "rows"); older snapshots: the sim's default (down the slope on steep Plots,
+	# otherwise north-south)
+	var rows := String(blk.get("rows", ""))
+	if rows == "":
+		rows = "DownSlope" if sv >= 0.3 else "NorthSouth"
+	if rows == "DownSlope":
 		return Vector2(0, 1)
 	var a := deg_to_rad(aspect)
-	return Vector2(sin(a), cos(a)).normalized()    # world direction of north
+	var north := Vector2(sin(a), cos(a)).normalized()    # world direction of north
+	return north if rows == "NorthSouth" else Vector2(-north.y, north.x)
 
 
 func _spacing(blk: Dictionary) -> Vector2:
@@ -747,7 +858,10 @@ func _vine_mmi(blk: Dictionary, xfs: Array, center: Vector3, lod: int, seed: int
 		4:
 			mmi.visibility_range_begin = SHADOW_END
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mmi.visibility_range_end_margin = 1.0
+	# no hysteresis margin: with fade disabled, a margin makes a LOD that is currently hidden wait until the
+	# camera is `margin` metres inside its range, while the neighbouring LOD already switched off at the exact
+	# threshold, so the vines nearest the camera vanished (the "disappearing trellis" bug). Adjacent LODs now
+	# share exact thresholds; see view3d_test.gd --trellis.
 	world.add_child(mmi)
 	blk["mm"].append({"mmi": mmi, "lod": lod, "seed": seed})
 
@@ -963,6 +1077,8 @@ func _parcel(x: float, z: float) -> float:
 
 func _neighbour_planted(x: float, z: float) -> bool:
 	# vineyards on the slopes around the Plot (not on roads, the river or the forest)
+	if pad_on and (keepout.has_point(Vector2(x, z)) or track_dist(x, z) < 3.5):
+		return false
 	var p := _parcel(x, z)
 	match region:
 		"mosel":
@@ -1029,7 +1145,7 @@ func _build_far() -> void:
 			var z := -ext + iz * step
 			var y := H(x, z)
 			if x > nx0 and x < nx1 and z > nz0 and z < nz1:      # tuck under the near terrain
-				y -= 4.0 if (x > nx0 + 22.0 and x < nx1 - 22.0 and z > nz0 + 22.0 and z < nz1 - 22.0) else 0.8
+				y -= 25.0 if (x > nx0 + 22.0 and x < nx1 - 22.0 and z > nz0 + 22.0 and z < nz1 - 22.0) else 0.8
 			hts[iz * n + ix] = y
 	for iz in n:
 		for ix in n:
@@ -1195,6 +1311,11 @@ func _build_scatter() -> void:
 				g = 0.15
 		if rng.randf() > g * 0.9:
 			continue
+		if gravel_rect.grow(0.5).has_point(Vector2(x, z)) or bld_rect.grow(1.0).has_point(Vector2(x, z)):
+			continue
+		var td := track_dist(x, z)
+		if td > 0.35 and td < 1.25:
+			continue
 		tufts.append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(0.18, 0.42)), Vector3(x, H(x, z) - 0.02, z)))
 	_add_chunked(tufts, gm, 34.0, false)
 
@@ -1323,8 +1444,10 @@ func _build_trees() -> void:
 			x += step
 			var dx := maxf(maxf(band_x0 - px, px - band_x1), 0.0)
 			var dz := maxf(absf(pz) - hz, 0.0)
-			if sqrt(dx * dx + dz * dz) < 70.0:
+			if sqrt(dx * dx + dz * dz) < 70.0 or _rect_dist(keepout, px, pz) < 12.0:
 				continue
+			if river.x < INF and pz > river.x - 16.0 and pz < river.y + 4.0:
+				continue                                   # not in the Moselle or on its road
 			var gi := clampi(int(roundf((pz + ext) / fstep)), 0, fn - 1) * fn + clampi(int(roundf((px + ext) / fstep)), 0, fn - 1)
 			var c: Color = fcols[gi]
 			var y := H(px, pz)
@@ -1426,11 +1549,10 @@ func _apply_weather() -> void:
 	mist_mat.set_shader_parameter("amount", mist if river.x < INF else 0.0)
 	mist_node.position = Vector3(0, valley, river.x if river.x < INF else 300.0)
 	mist_mat.set_shader_parameter("lit_color", Vector3(1.0, 0.95, 0.9).lerp(Vector3(1.0, 0.82, 0.7), low))
-	rain_node.emitting = rain > 0.02
-	rain_node.visible = rain > 0.02
-	splash_node.visible = rain > 0.02
-	rain_hf.visible = rain > 0.02
-	rain_node.amount_ratio = rain
+	rain_level = rain
+	_apply_rain_visibility()
+	rain_node.amount_ratio = maxf(rain, 0.01)
+	weather = {"rain": rain, "wind_kmh": wind, "mist": mist, "cloud": cloud, "doy": doy, "icon": icon}
 	RenderingServer.global_shader_parameter_set("wetness", wet)
 	RenderingServer.global_shader_parameter_set("rain_amount", rain)
 	RenderingServer.global_shader_parameter_set("wind_strength", clampf(wind / 14.0, 0.4, 2.4) * lerpf(1.0, 0.5, mist))
@@ -1557,6 +1679,23 @@ func _process(_delta: float) -> void:
 		rain_node.global_position = cam.global_position + Vector3(0, 18, 0)
 
 
+## Inside the winery: no rain particles (the roof would stop them anyway) and no rain heightfield pass.
+func set_outdoors(on: bool) -> void:
+	if on == outdoors:
+		return
+	outdoors = on
+	_apply_rain_visibility()
+
+
+var rain_level := 0.0
+func _apply_rain_visibility() -> void:
+	var r := rain_level > 0.02 and outdoors
+	rain_node.emitting = r
+	rain_node.visible = r
+	splash_node.visible = r
+	rain_hf.visible = r
+
+
 # =============================================================================================== camera & HUD
 func block_center(i: int) -> Vector3:
 	if blocks.is_empty():
@@ -1617,6 +1756,30 @@ func camera_preset(name: String, bi := 0) -> Array:
 			pos.y = H(pos.x, pos.z) + EYE
 			tgt = Vector3(cx + 40.0, 0, 380.0)
 			tgt.y = H(tgt.x, tgt.z) + 20.0
+		"estate":   # from the vineyard towards the winery (vines in front, the building beyond)
+			var o: Vector3 = estate.get("origin", Vector3.ZERO)
+			if estate.get("steep", false):
+				pos = Vector3(band_x0 + 34.0, 0, hz - 3.0)
+				tgt = Vector3(o.x + 4.0, o.y + 3.0, o.z)
+			else:
+				pos = Vector3(band_x0 + 9.0, 0, hz * 0.55)
+				tgt = Vector3(o.x, o.y + 3.5, o.z)
+			pos.y = H(pos.x, pos.z) + EYE + 0.4
+		"estate_high":   # raised view over the winery, its yard and track, and the Blocks beyond
+			var o: Vector3 = estate.get("origin", Vector3.ZERO)
+			if estate.get("steep", false):
+				pos = o + Vector3(34.0, 24.0, 30.0)
+				tgt = o + Vector3(16.0, 2.0, -34.0)
+			else:
+				pos = o + Vector3(20.0, 22.0, 44.0)
+				tgt = o + Vector3(28.0, 0.0, -12.0)
+			pos.y = maxf(pos.y, H(pos.x, pos.z) + 12.0)
+		"track":   # on the farm track in the yard, looking at the open hall door
+			var o: Vector3 = estate.get("origin", Vector3.ZERO)
+			var d: Vector2 = estate.get("door", Vector2(o.x, o.z))
+			pos = Vector3(d.x + (13.0 if estate.get("steep", false) else 7.5), 0, o.z + (7.5 if estate.get("steep", false) else 5.5))
+			pos.y = H(pos.x, pos.z) + EYE
+			tgt = Vector3(d.x - 6.0, o.y + 1.6, o.z - 1.0)
 		_:   # walk: at the bottom corner of the first Block, looking up across the vineyard
 			pos = Vector3(band_x0 + 2.0, 0, hz + 3.0)
 			pos.y = H(pos.x, pos.z) + EYE
@@ -1625,11 +1788,16 @@ func camera_preset(name: String, bi := 0) -> Array:
 	return [pos, tgt]
 
 
-func constrain(p: Vector3) -> Vector3:
-	p.x = clampf(p.x, band_x0 - 100.0, band_x1 + 100.0)
-	p.z = clampf(p.z, -hz - 100.0, hz + 100.0)
-	p.y = H(p.x, p.z) + EYE
-	return p
+## The walkable area (x, z): 100 m round the Plot, and not into the Moselle.
+func walk_rect() -> Rect2:
+	var z1 := hz + 100.0
+	if river.x < INF:
+		z1 = minf(z1, river.x - 3.0)
+	return Rect2(band_x0 - 100.0, -hz - 100.0, band_x1 - band_x0 + 200.0, z1 + hz + 100.0)
+
+
+func building_origin() -> Vector3:
+	return estate.get("origin", Vector3.ZERO)
 
 
 func _update_hud() -> void:

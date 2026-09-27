@@ -1,183 +1,256 @@
-# Winery rooms from the engine demo, bound to the simulation's Lots:
-#   "cellar": vaulted slate barrel cellar. Lots ageing in barriques / Fuder get chalk-labelled casks.
-#   "hall":   fermentation hall. Each tank's controller screen shows one Lot (tank_panel.gd).
-# GI: VoxelGI baked at runtime the first time the room is shown (LightmapGI needs the editor).
+# The winery building on the Estate, as one walkable place: exterior shell, fermentation hall, the stairs down
+# and the vaulted barrel cellar behind the hall under the ground. Building frame: hall floor at y = 0, hall
+# interior x∈[-12, 12], z∈[-7, 7], roller door in the east (+x) wall (game/tools/blender/build_winery.py,
+# layout in assets3d/models/winery.json). vineyard.gd decides where the building stands; view3d.gd places it.
+#
+# Bound to the simulation's Lots (nothing is computed here):
+#   hall:   each tank's controller screen shows one Lot (tank_panel.gd)
+#   cellar: Lots ageing in barriques / Fuder get chalk-labelled casks
+# Interior lights, VoxelGI and the tank screens only run while the player is near or inside (set_active).
 extends Node3D
 
 const A := preload("res://src/view3d/assets3d.gd")
 const TankPanel := preload("res://src/view3d/tank_panel.gd")
-const VESSEL := ["Stainless steel", "Old Fuder (1 000 L)", "Neutral barriques", "Barriques 1st fill", "New French barriques", "New American barriques"]
 const VESSEL_SHORT := ["steel", "Fuder", "neutral", "1st fill", "new FR", "new US"]
 
-var room := "cellar"
 var L: Dictionary
-var cam: Camera3D
-var env: Environment
-var voxel: VoxelGI
-var probe: ReflectionProbe
+var B: Dictionary                  # L.building (extents, zones, collision, occluders, stairs)
+var cellar: Node3D                 # the cellar's own frame (child of this node)
+var env_hall: Environment
+var env_cellar: Environment
+var attr_hall: CameraAttributesPractical
+var attr_cellar: CameraAttributesPractical
 var mats := {}
 var chalk: SystemFont
 var built := false
 var baked := false
-var frame := 0
+var region := ""
+var hall_lights: Array[Light3D] = []
+var cellar_lights: Array[Light3D] = []
+var hall_gi: Array[Node3D] = []
+var cellar_gi: Array[Node3D] = []
+var voxel_hall: VoxelGI
+var voxel_cellar: VoxelGI
 var led_mats: Array[StandardMaterial3D] = []
-var barrels := []          # [{node, label_holder}]
+var barrels := []
 var fuders := []
-var panels := []           # [{ui, vp}]
+var panels := []                   # [{ui, vp, id}]
+var tanks := []                    # tank MeshInstance3D nodes (panel order)
 var D := {}
+var hall_on := true
+var cellar_on := true
+var screens_on := true
+var probes: Array[ReflectionProbe] = []
+var probe_frames := 0
 
 
 func build() -> void:
 	if built:
 		return
 	built = true
+	var t0 := Time.get_ticks_msec()
 	L = A.json("models/winery.json")
+	B = L.get("building", {})
 	chalk = SystemFont.new()
 	chalk.font_names = PackedStringArray(["Ink Free", "Segoe Print", "Comic Sans MS"])
 	chalk.antialiasing = TextServer.FONT_ANTIALIASING_GRAY
-	_environment()
-	if room == "cellar":
-		_build_cellar()
-	else:
-		_build_hall()
-	cam = Camera3D.new()
-	cam.fov = 64.0
-	cam.near = 0.03
-	cam.far = 400.0
-	cam.environment = env
-	var ca := CameraAttributesPractical.new()
-	ca.auto_exposure_enabled = room == "hall"
-	ca.auto_exposure_scale = 0.26
-	ca.auto_exposure_max_sensitivity = 500.0
-	ca.auto_exposure_speed = 4.0
-	ca.auto_exposure_min_sensitivity = 40.0
-	cam.attributes = ca
-	add_child(cam)
+	_environments()
+	_build_exterior()
+	_build_hall()
+	_build_cellar()
+	_build_stair_lights()
+	_build_collision()
+	_build_occluders()
 	if not D.is_empty():
 		apply_snapshot(D)
+	print("view3d winery: build %d ms" % (Time.get_ticks_msec() - t0))
 
 
-## Called when the room becomes visible: bake GI once (needs the geometry visible in the tree).
-func on_shown() -> void:
+## Region look of the outside (facade render, roof, plinth). Cheap: only swaps material parameters.
+func set_region(r: String) -> void:
+	if r == region:
+		return
+	region = r
+	for k in ["facade", "roof", "plinth"]:
+		if mats.has(k):
+			_region_material(k, mats[k])
+
+
+## Bake (or re-bake after the building moved) the interior GI. Needs the building and the terrain in the tree.
+func bake_gi() -> void:
 	var t0 := Time.get_ticks_msec()
-	build()
-	var t1 := Time.get_ticks_msec()
-	if not baked:
-		baked = true
-		_setup_gi()
-		print("view3d %s: build %d ms, GI bake %d ms" % [room, t1 - t0, Time.get_ticks_msec() - t1])
-	for p in panels:
-		(p["vp"] as SubViewport).render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	for v in [voxel_hall, voxel_cellar]:
+		var was: bool = v.visible
+		v.visible = true
+		v.bake()
+		v.data.propagation = 0.75
+		v.data.bias = 1.5
+		v.data.normal_bias = 0.2
+		v.visible = was
+	voxel_hall.data.energy = 1.4
+	voxel_cellar.data.energy = 1.6
+	baked = true
+	refresh_probes()
+	print("view3d winery: GI bake %d ms" % (Time.get_ticks_msec() - t0))
 
 
-func on_hidden() -> void:
-	for p in panels:
-		(p["vp"] as SubViewport).render_target_update_mode = SubViewport.UPDATE_DISABLED
+## Re-render the interior reflection probes for a few seconds (after baking / when the lights change).
+func refresh_probes() -> void:
+	for p in probes:
+		p.update_mode = ReflectionProbe.UPDATE_ALWAYS
+	probe_frames = 200
 
 
+## zone: where the eye is ("" outside, "hall", "cellar"); near: outside but close to the building.
+## Hall lights + GI run when near or inside; cellar and stair lights + GI when inside. Light shadows (the
+## costly part: cube maps for the omnis) only in the room you are in; the tank screens only in the hall.
+func set_active(zone: String, near: bool) -> void:
+	var hall := near or zone != ""
+	var cel := zone != ""
+	if hall != hall_on:
+		hall_on = hall
+		for l in hall_lights: l.visible = hall
+		for g in hall_gi: g.visible = hall
+	if cel != cellar_on:
+		cellar_on = cel
+		for l in cellar_lights: l.visible = cel
+		for g in cellar_gi: g.visible = cel
+	for l in hall_lights:
+		l.shadow_enabled = zone == "hall" and bool(l.get_meta("shadow", false))
+	for l in cellar_lights:
+		l.shadow_enabled = zone == "cellar" and bool(l.get_meta("shadow", false))
+	var screens := zone == "hall"
+	if screens != screens_on:
+		screens_on = screens
+		for p in panels:
+			(p["vp"] as SubViewport).render_target_update_mode = SubViewport.UPDATE_ALWAYS if screens else SubViewport.UPDATE_DISABLED
+
+
+## "hall" | "cellar" | "" (outside) for a point in the building frame. The upper half of the stairs counts as hall.
+func zone_at(p: Vector3) -> String:
+	var z: Dictionary = B.get("zones", {})
+	var st: Array = z.get("stair", [])
+	if st.size() == 6 and _inside(st, p):
+		return "hall" if p.y > -2.6 else "cellar"
+	var h: Array = z.get("hall", [])
+	if h.size() == 6 and _inside(h, p):
+		return "hall"
+	var ce: Array = B.get("cellarExtent", [])
+	if ce.size() == 4 and p.x > ce[0] and p.x < ce[1] and p.z > ce[2] and p.z < ce[3] and p.y < -1.0 and p.y > -7.0:
+		return "cellar"
+	return ""
+
+
+static func _inside(r: Array, p: Vector3) -> bool:
+	return p.x > r[0] and p.x < r[1] and p.y > r[2] and p.y < r[3] and p.z > r[4] and p.z < r[5]
+
+
+## Named camera spot in the building frame: [position, target].
 func camera_preset(name: String) -> Array:
-	var cams: Dictionary = L.get("cameras", {})
-	var c: Dictionary = cams.get(name, cams.get(room, {"position": [0, 1.6, 0], "target": [1, 1.6, 0]}))
+	var c: Dictionary = L.get("cameras", {}).get(name, {})
+	if c.is_empty():
+		return []
 	var p: Array = c["position"]
 	var t: Array = c["target"]
 	return [Vector3(p[0], p[1], p[2]), Vector3(t[0], t[1], t[2])]
 
 
-func constrain(p: Vector3) -> Vector3:
-	var w: Dictionary = L[room]["walk"]
-	p.x = clampf(p.x, w["x"][0], w["x"][1])
-	p.z = clampf(p.z, w["z"][0], w["z"][1])
-	p.y = 1.65
-	return p
+## Teleport spot for set_view("hall" | "cellar"): [feet position, look target] in the building frame.
+func spawn(kind: String) -> Array:
+	var s: Dictionary = L.get("spawn", {}).get(kind, {})
+	if s.is_empty():
+		return []
+	var f: Array = s["feet"]
+	var t: Array = s["target"]
+	return [Vector3(f[0], f[1], f[2]), Vector3(t[0], t[1], t[2])]
 
 
-func hud_text(_pos: Vector3) -> String:
-	var n := 0
-	for l in D.get("lots", []):
-		n += 1
-	if room == "cellar":
-		return "Barrel cellar · %s · %d Lot(s) in the winery" % [D.get("dateLabel", ""), n]
-	return "Fermentation hall · %s · %d Lot(s) in the winery" % [D.get("dateLabel", ""), n]
+func hud_text(zone: String) -> String:
+	var lots := _live_lots()
+	var ferm := 0
+	for l in lots:
+		if String(l.get("phase", "")) == "Fermenting":
+			ferm += 1
+	if zone == "cellar":
+		var wood := lots.filter(func(l): return in_barrel(l)).size()
+		return "Barrel cellar · %s · %d Lot(s) in wood" % [D.get("dateLabel", ""), wood]
+	return "Fermentation hall · %s · %d Lot(s) in the winery, %d fermenting" % [D.get("dateLabel", ""), lots.size(), ferm]
 
 
-# ------------------------------------------------------------------ environment & GI
-func _environment() -> void:
-	env = Environment.new()
-	env.tonemap_mode = Environment.TONE_MAPPER_AGX
-	env.ssao_enabled = true
-	env.ssao_radius = 0.6
-	env.ssao_intensity = 1.6
-	env.ssil_enabled = true
-	env.ssil_radius = 1.5
-	env.ssil_intensity = 0.8
-	env.ssr_enabled = true
-	env.ssr_max_steps = 96
-	env.glow_enabled = true
-	env.glow_hdr_threshold = 1.2
-	env.glow_intensity = 0.55
-	env.glow_bloom = 0.06
-	env.volumetric_fog_enabled = true
-	env.volumetric_fog_anisotropy = 0.55
-	env.volumetric_fog_gi_inject = 0.6
-	env.volumetric_fog_detail_spread = 2.0
-	if room == "cellar":
-		env.background_mode = Environment.BG_COLOR
-		env.background_color = Color(0, 0, 0)
-		env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-		env.ambient_light_color = Color(0.03, 0.025, 0.02)
-		env.ambient_light_energy = 0.3
-		env.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
-		env.tonemap_exposure = 1.25
-		env.volumetric_fog_density = 0.018
-		env.volumetric_fog_albedo = Color(0.85, 0.8, 0.72)
-		env.volumetric_fog_length = 40.0
-	else:
-		var sky_mat := PanoramaSkyMaterial.new()
-		var img := Image.load_from_file(A.path("hdri/clear.hdr"))
-		sky_mat.panorama = ImageTexture.create_from_image(img)
-		var sky := Sky.new()
-		sky.sky_material = sky_mat
-		env.background_mode = Environment.BG_SKY
-		env.sky = sky
-		env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-		env.ambient_light_energy = 0.25
-		env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
-		env.tonemap_exposure = 1.1
-		env.volumetric_fog_density = 0.006
-		env.volumetric_fog_albedo = Color(0.9, 0.9, 0.9)
-		env.volumetric_fog_length = 60.0
+## Global positions of the tanks whose Lot is fermenting (weight 1) or in malolactic (weight 0.3), for sound.
+func active_tanks() -> Array:
+	var out := []
+	var tank_lots := _live_lots().filter(func(l): return not in_barrel(l))
+	for i in mini(tank_lots.size(), tanks.size()):
+		var ph := String(tank_lots[i].get("phase", ""))
+		var w: float = {"Fermenting": 1.0, "Stuck": 0.15, "Malolactic": 0.3, "ColdSoak": 0.0}.get(ph, 0.0)
+		if w > 0.0:
+			out.append([(tanks[i] as Node3D).global_position + Vector3(0, 2.6, 0), w])
+	return out
 
 
-func _setup_gi() -> void:
-	var dims: Dictionary = L[room]["dims"]
-	var size: Vector3
-	var center: Vector3
-	if room == "cellar":
-		size = Vector3(float(dims["L"]) + 1.0, 5.4, float(dims["W"]) + 1.0)
-		center = Vector3(0, 2.6, 0)
-	else:
-		size = Vector3(26, 7.6, 16)
-		center = Vector3(0, 3.7, 0)
-	voxel = VoxelGI.new()
-	voxel.size = size
-	voxel.position = center
-	voxel.subdiv = VoxelGI.SUBDIV_128
-	add_child(voxel)
-	voxel.bake()
-	voxel.data.energy = 1.6 if room == "cellar" else 1.4
-	voxel.data.propagation = 0.75
-	voxel.data.bias = 1.5
-	voxel.data.normal_bias = 0.2
-	probe = ReflectionProbe.new()
-	probe.size = size
-	probe.position = center
-	probe.box_projection = true
-	probe.interior = true
-	probe.update_mode = ReflectionProbe.UPDATE_ALWAYS
-	probe.ambient_mode = ReflectionProbe.AMBIENT_DISABLED
-	probe.max_distance = 60
-	add_child(probe)
-	frame = 0
+# ------------------------------------------------------------------ environments (per zone, set on the camera)
+func _environments() -> void:
+	env_cellar = Environment.new()
+	env_cellar.tonemap_mode = Environment.TONE_MAPPER_AGX
+	env_cellar.ssao_enabled = true
+	env_cellar.ssao_radius = 0.6
+	env_cellar.ssao_intensity = 1.6
+	env_cellar.ssil_enabled = true
+	env_cellar.ssil_radius = 1.5
+	env_cellar.ssil_intensity = 0.8
+	env_cellar.ssr_enabled = true
+	env_cellar.ssr_max_steps = 96
+	env_cellar.glow_enabled = true
+	env_cellar.glow_hdr_threshold = 1.2
+	env_cellar.glow_intensity = 0.55
+	env_cellar.glow_bloom = 0.06
+	env_cellar.volumetric_fog_enabled = true
+	env_cellar.volumetric_fog_anisotropy = 0.55
+	env_cellar.volumetric_fog_gi_inject = 0.6
+	env_cellar.volumetric_fog_detail_spread = 2.0
+	env_cellar.background_mode = Environment.BG_COLOR
+	env_cellar.background_color = Color(0, 0, 0)
+	env_cellar.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env_cellar.ambient_light_color = Color(0.03, 0.025, 0.02)
+	env_cellar.ambient_light_energy = 0.3
+	env_cellar.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
+	env_cellar.tonemap_exposure = 1.25
+	env_cellar.volumetric_fog_density = 0.018
+	env_cellar.volumetric_fog_albedo = Color(0.85, 0.8, 0.72)
+	env_cellar.volumetric_fog_length = 40.0
+	attr_cellar = CameraAttributesPractical.new()
+	attr_cellar.auto_exposure_enabled = false
+	attr_hall = CameraAttributesPractical.new()
+	attr_hall.auto_exposure_enabled = true
+	attr_hall.auto_exposure_scale = 0.26
+	attr_hall.auto_exposure_max_sensitivity = 500.0
+	attr_hall.auto_exposure_speed = 4.0
+	attr_hall.auto_exposure_min_sensitivity = 40.0
+
+
+## The hall sees the same sky and weather as outside (door and windows), with interior settings on top.
+func sync_hall_env(outside: Environment) -> Environment:
+	env_hall = outside.duplicate() as Environment
+	env_hall.ambient_light_energy = 0.3
+	env_hall.tonemap_exposure = 1.1
+	env_hall.ssao_radius = 0.6
+	env_hall.ssao_intensity = 1.6
+	env_hall.ssil_radius = 1.5
+	env_hall.ssil_intensity = 0.8
+	env_hall.ssr_max_steps = 96
+	env_hall.glow_hdr_threshold = 1.2
+	env_hall.glow_intensity = 0.55
+	env_hall.glow_bloom = 0.06
+	env_hall.volumetric_fog_enabled = true
+	env_hall.volumetric_fog_density = 0.006
+	env_hall.volumetric_fog_albedo = Color(0.9, 0.9, 0.9)
+	env_hall.volumetric_fog_length = 60.0
+	env_hall.volumetric_fog_anisotropy = 0.55
+	env_hall.volumetric_fog_gi_inject = 0.6
+	env_hall.volumetric_fog_ambient_inject = 0.0
+	env_hall.volumetric_fog_detail_spread = 2.0
+	return env_hall
 
 
 # ------------------------------------------------------------------ materials
@@ -193,8 +266,11 @@ func _mat(name: String) -> Material:
 			m.normal_scale = 0.8
 		"cellar_floor":
 			m = A.pbr("cobblestone_floor_04", 0.55, Color(0.60, 0.58, 0.56), 0.72)
-		"rack_wood", "cellar_door":
+		"rack_wood":
 			m = A.pbr("oak_veneer_01", 0.8, Color(0.30, 0.22, 0.16), 1.0)
+		"cellar_door":
+			m = A.pbr("oak_veneer_01", 0.8, Color(0.30, 0.22, 0.16), 1.0)
+			m.cull_mode = BaseMaterial3D.CULL_DISABLED
 		"barrel_oak":
 			m = A.pbr("oak_veneer_01", 1.0, Color(0.66, 0.56, 0.46), 1.0)
 			m.vertex_color_use_as_albedo = true
@@ -213,6 +289,8 @@ func _mat(name: String) -> Material:
 		"hall_steel":
 			m = StandardMaterial3D.new(); m.albedo_color = Color(0.20, 0.23, 0.27); m.metallic = 0.6; m.roughness = 0.45
 			m.cull_mode = BaseMaterial3D.CULL_DISABLED
+		"rail":
+			m = StandardMaterial3D.new(); m.albedo_color = Color(0.62, 0.63, 0.64); m.metallic = 0.85; m.roughness = 0.4
 		"grate":
 			m = StandardMaterial3D.new(); m.albedo_color = Color(0.25, 0.26, 0.27); m.metallic = 0.8; m.roughness = 0.5
 			m.cull_mode = BaseMaterial3D.CULL_DISABLED
@@ -235,10 +313,50 @@ func _mat(name: String) -> Material:
 		"tank_dark":
 			m = StandardMaterial3D.new(); m.albedo_color = Color(0.05, 0.05, 0.055); m.roughness = 0.4
 			m.cull_mode = BaseMaterial3D.CULL_DISABLED
+		"facade", "roof", "plinth":
+			m = StandardMaterial3D.new()
+			_region_material(name, m)
+		"roof_under":
+			m = A.pbr("oak_veneer_01", 0.6, Color(0.42, 0.33, 0.24), 1.0)
+		"fascia":
+			m = StandardMaterial3D.new(); m.albedo_color = Color(0.16, 0.16, 0.17); m.roughness = 0.6
+			m.cull_mode = BaseMaterial3D.CULL_DISABLED
 		_:
 			m = StandardMaterial3D.new()
 	mats[name] = m
 	return m
+
+
+## Regional outside: Mosel white render + slate roof on a slate plinth; Côte d'Or cream render + flat brown
+## tiles on limestone; Napa stucco + clay barrel tiles. (Look only; no facts are attached.)
+func _region_material(name: String, m: StandardMaterial3D) -> void:
+	var tex := ""
+	var tint := Color(1, 1, 1)
+	var uv := 0.35
+	match name:
+		"facade":
+			tex = "painted_plaster_wall"
+			tint = {"mosel": Color(0.95, 0.94, 0.91), "cote-dor": Color(0.96, 0.88, 0.74), "napa": Color(0.92, 0.80, 0.63)}.get(region, Color(0.95, 0.94, 0.91))
+			uv = 0.3
+		"roof":
+			tex = {"mosel": "grey_roof_tiles_02", "cote-dor": "red_slate_roof_tiles_01", "napa": "clay_roof_tiles_02"}.get(region, "grey_roof_tiles_02")
+			tint = {"mosel": Color(0.5, 0.53, 0.6), "cote-dor": Color(0.95, 0.85, 0.8), "napa": Color(1.0, 0.92, 0.86)}.get(region, Color(1, 1, 1))
+			uv = 0.45
+		"plinth":
+			tex = "castle_wall_slates"
+			tint = {"mosel": Color(0.55, 0.57, 0.62), "cote-dor": Color(1.15, 1.08, 0.95), "napa": Color(0.9, 0.78, 0.66)}.get(region, Color(0.6, 0.6, 0.62))
+			uv = 0.5
+	var src := A.pbr(tex, uv, tint, 1.0)
+	m.albedo_texture = src.albedo_texture
+	m.albedo_color = tint
+	m.normal_enabled = true
+	m.normal_texture = src.normal_texture
+	m.roughness_texture = src.roughness_texture
+	m.roughness = 1.0
+	m.ao_enabled = src.ao_enabled
+	m.ao_texture = src.ao_texture
+	m.uv1_scale = Vector3(uv, uv, uv)
+	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 
 
 func _brushed_image(nrm: bool) -> Image:
@@ -305,7 +423,7 @@ func _with_tangents(mesh: Mesh) -> Mesh:
 	return out
 
 
-func _add_static(rel: String) -> Node3D:
+func _add_static(parent: Node3D, rel: String, double_shadow := false) -> Node3D:
 	var root := A.scene(rel)
 	for mi in A.meshes(root):
 		var mesh: Mesh = (mi as MeshInstance3D).mesh
@@ -313,12 +431,14 @@ func _add_static(rel: String) -> Node3D:
 			var m := mesh.surface_get_material(i)
 			mesh.surface_set_material(i, _mat(String(m.resource_name) if m else ""))
 		(mi as MeshInstance3D).gi_mode = GeometryInstance3D.GI_MODE_STATIC
-	add_child(root)
+		if double_shadow:
+			(mi as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_DOUBLE_SIDED
+	parent.add_child(root)
 	return root
 
 
 var _prop_cache := {}
-func _prop(rel: String, xf: Transform3D, only := "") -> Node3D:
+func _prop(parent: Node3D, rel: String, xf: Transform3D, only := "") -> Node3D:
 	if not _prop_cache.has(rel):
 		_prop_cache[rel] = A.scene(rel)
 	var root: Node3D = (_prop_cache[rel] as Node3D).duplicate()
@@ -329,7 +449,7 @@ func _prop(rel: String, xf: Transform3D, only := "") -> Node3D:
 			else:
 				(c as Node3D).position = Vector3.ZERO
 	root.transform = xf
-	add_child(root)
+	parent.add_child(root)
 	for mi in A.meshes(root):
 		(mi as MeshInstance3D).gi_mode = GeometryInstance3D.GI_MODE_DISABLED
 	return root
@@ -341,117 +461,53 @@ func _exit_tree() -> void:
 	_prop_cache.clear()
 
 
-# ------------------------------------------------------------------ cellar
-func _label(parent: Node3D, local_z: float, size: int, col: Color, width := 540.0) -> Label3D:
-	var l := Label3D.new()
-	l.font = chalk
-	l.font_size = size
-	l.pixel_size = 0.00075
-	l.modulate = col
-	l.outline_size = 0
-	l.shaded = true
-	l.double_sided = false
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.width = width
-	l.alpha_cut = Label3D.ALPHA_CUT_DISABLED
-	l.position = Vector3(0, 0.02, local_z)
-	l.rotation = Vector3(0, PI, randf_range(-0.06, 0.06))
-	parent.add_child(l)
-	return l
-
-
-func _build_cellar() -> void:
-	var C: Dictionary = L["cellar"]
-	_add_static("models/" + String(C["model"]))
-	var bq := _prep("models/" + String(C["barriqueModel"]))
-	var fd := _prep("models/" + String(C["fuderModel"]))
-	seed(11)
-	for it in C["barriques"]:
-		var mi := MeshInstance3D.new()
-		mi.mesh = bq
-		mi.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
-		var p: Array = it["pos"]
-		mi.transform = Transform3D(Basis(Vector3.UP, float(it["yaw"])) * Basis(Vector3.BACK, float(it["roll"])), Vector3(p[0], p[1], p[2]))
-		add_child(mi)
-		var holder := Node3D.new()
-		holder.rotation = Vector3(0, 0, -float(it["roll"]))
-		mi.add_child(holder)
-		var lb := _label(holder, -(0.475 - 0.035) - 0.003, 42, Color(0.93, 0.92, 0.88, 0.82), 520.0)
-		barrels.append({"node": mi, "label": lb, "slot": int(it.get("slot", 0))})
-	for it in C["fuder"]:
-		var mi := MeshInstance3D.new()
-		mi.mesh = fd
-		mi.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
-		var p: Array = it["pos"]
-		mi.transform = Transform3D(Basis(Vector3.UP, float(it["yaw"])), Vector3(p[0], p[1], p[2]))
-		add_child(mi)
-		var lb := _label(mi, -(0.61 - 0.035) - 0.016, 44, Color(0.95, 0.93, 0.86, 0.9), 560.0)
-		fuders.append({"node": mi, "label": lb})
-	for l in C["lights"]:
-		var p: Array = l["pos"]
-		var pos := Vector3(p[0], p[1], p[2])
-		var col := Color(l["color"][0], l["color"][1], l["color"][2])
-		if l["type"] == "sconce":
-			var f: Array = l["facing"]
-			var fwd := Vector3(f[0], f[1], f[2])
-			var wall := Vector3(pos.x, pos.y, -fwd.z * 3.04)
-			_prop("props/industrial_caged_sconce/industrial_caged_sconce.gltf", Transform3D(A.look_basis(fwd), wall), "industrial_caged_sconce_c")
-			_omni(wall + fwd * 0.13 + Vector3(0, 0.02, 0), col, 2.2, 10.0)
-		else:
-			var bulb := MeshInstance3D.new()
-			var sm := SphereMesh.new(); sm.radius = 0.045; sm.height = 0.1
-			bulb.mesh = sm
-			var em := StandardMaterial3D.new(); em.emission_enabled = true; em.emission = col; em.emission_energy_multiplier = 30.0
-			em.albedo_color = col
-			bulb.material_override = em
-			bulb.position = pos
-			bulb.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			add_child(bulb)
-			var cord := MeshInstance3D.new()
-			var cm := CylinderMesh.new(); cm.top_radius = 0.006; cm.bottom_radius = 0.006; cm.height = 4.7 - pos.y
-			cord.mesh = cm
-			cord.material_override = _mat("tank_dark")
-			cord.position = pos + Vector3(0, cm.height / 2 + 0.04, 0)
-			add_child(cord)
-			_omni(pos + Vector3(0, -0.06, 0), col, 1.6, 9.0)
-
-
-func _omni(pos: Vector3, col: Color, energy: float, rng: float) -> OmniLight3D:
+func _omni(parent: Node3D, pos: Vector3, col: Color, energy: float, rng: float, shadow := true) -> OmniLight3D:
 	var o := OmniLight3D.new()
 	o.position = pos
 	o.light_color = col
 	o.light_energy = energy
 	o.omni_range = rng
 	o.omni_attenuation = 1.6
-	o.shadow_enabled = true
+	o.shadow_enabled = shadow
+	o.set_meta("shadow", shadow)
 	o.shadow_blur = 1.5
 	o.light_size = 0.04
 	o.light_volumetric_fog_energy = 1.4
 	o.light_bake_mode = Light3D.BAKE_DYNAMIC
-	add_child(o)
+	parent.add_child(o)
 	return o
 
 
-# ------------------------------------------------------------------ fermentation hall
+func _gi(parent: Node3D, size: Vector3, center: Vector3) -> VoxelGI:
+	var v := VoxelGI.new()
+	v.size = size
+	v.position = center
+	v.subdiv = VoxelGI.SUBDIV_128
+	parent.add_child(v)
+	var probe := ReflectionProbe.new()
+	probe.size = size
+	probe.position = center
+	probe.box_projection = true
+	probe.interior = true
+	probe.update_mode = ReflectionProbe.UPDATE_ONCE
+	probes.append(probe)
+	probe.ambient_mode = ReflectionProbe.AMBIENT_DISABLED
+	probe.max_distance = 60
+	parent.add_child(probe)
+	return v
+
+
+# ------------------------------------------------------------------ exterior
+func _build_exterior() -> void:
+	var rel := "models/" + String(L["hall"].get("exteriorModel", "hall_ext.glb"))
+	if A.exists(rel):
+		_add_static(self, rel, true)
+
+
+# ------------------------------------------------------------------ fermentation hall + stairs
 func _build_hall() -> void:
 	var Hd: Dictionary = L["hall"]
-	_add_static("models/" + String(Hd["model"]))
-	var yard := MeshInstance3D.new()
-	var pm := PlaneMesh.new(); pm.size = Vector2(200, 200)
-	yard.mesh = pm
-	yard.position = Vector3(112.0, -0.01, 0)
-	yard.material_override = A.pbr("concrete_floor_worn_001", 0.25, Color(0.75, 0.75, 0.72), 0.9)
-	add_child(yard)
-	var sun := DirectionalLight3D.new()
-	add_child(sun)
-	sun.look_at_from_position(Vector3.ZERO, -Vector3(0.35, 0.5, -0.8).normalized(), Vector3.UP)
-	sun.light_color = Color(1.0, 0.93, 0.84)
-	sun.light_energy = 2.2
-	sun.shadow_enabled = true
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-	sun.directional_shadow_max_distance = 60.0
-	sun.light_volumetric_fog_energy = 2.0
-	sun.light_bake_mode = Light3D.BAKE_DYNAMIC
+	_add_static(self, "models/" + String(Hd["model"]), true)
 	var tank_mesh := _with_tangents(_prep("models/" + String(Hd["tankModel"])))
 	var info: Dictionary = Hd["tankInfo"]
 	var pnl: Dictionary = info["panel"]
@@ -462,6 +518,7 @@ func _build_hall() -> void:
 		tank.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
 		tank.transform = Transform3D(Basis(Vector3.UP, float(td["yaw"])), Vector3(p[0], p[1], p[2]))
 		add_child(tank)
+		tanks.append(tank)
 		_tank_panel(tank, String(td["id"]), pnl)
 		var led: Array = info["controllerLed"]
 		var lm := MeshInstance3D.new()
@@ -475,7 +532,7 @@ func _build_hall() -> void:
 	for l in Hd["lights"]:
 		var p: Array = l["pos"]
 		var top := Vector3(p[0], 6.98, p[2])
-		_prop("props/hanging_industrial_lamp/hanging_industrial_lamp.gltf", Transform3D(Basis(), top))
+		_prop(self, "props/hanging_industrial_lamp/hanging_industrial_lamp.gltf", Transform3D(Basis(), top))
 		var sp := SpotLight3D.new()
 		sp.position = top + Vector3(0, -1.25, 0)
 		sp.rotation = Vector3(-PI / 2, 0, 0)
@@ -485,12 +542,19 @@ func _build_hall() -> void:
 		sp.spot_angle = 58.0
 		sp.spot_attenuation = 1.2
 		sp.shadow_enabled = int(p[0]) % 8 == 2 or int(p[0]) % 8 == -6
+		sp.set_meta("shadow", sp.shadow_enabled)
 		sp.light_volumetric_fog_energy = 0.8
 		add_child(sp)
+		hall_lights.append(sp)
 	for pr in Hd["props"]:
 		var p: Array = pr["pos"]
 		var rel := "props/%s/%s.gltf" % [pr["model"], pr["model"]]
-		_prop(rel, Transform3D(Basis(Vector3.UP, float(pr["yaw"])), Vector3(p[0], p[1], p[2])))
+		_prop(self, rel, Transform3D(Basis(Vector3.UP, float(pr["yaw"])), Vector3(p[0], p[1], p[2])))
+	var dims: Dictionary = Hd["dims"]
+	var size := Vector3(float(dims["x1"]) - float(dims["x0"]) + 0.2, float(dims["h"]) + 0.3, float(dims["z1"]) - float(dims["z0"]) + 0.2)
+	voxel_hall = _gi(self, size, Vector3(0, size.y / 2.0 - 0.1, 0))
+	hall_gi = [voxel_hall, get_child(get_child_count() - 1)]
+	voxel_hall.visible = true
 
 
 func _tank_panel(tank: Node3D, id: String, pnl: Dictionary) -> void:
@@ -528,64 +592,236 @@ func _tank_panel(tank: Node3D, id: String, pnl: Dictionary) -> void:
 	panels.append({"ui": ui, "vp": vp, "id": id})
 
 
+func _build_stair_lights() -> void:
+	for l in B.get("stairLights", []):
+		var p: Array = l["pos"]
+		var f: Array = l["facing"]
+		var fwd := Vector3(f[0], f[1], f[2])
+		var pos := Vector3(p[0], p[1], p[2])
+		var col := Color(l["color"][0], l["color"][1], l["color"][2])
+		_prop(self, "props/industrial_caged_sconce/industrial_caged_sconce.gltf", Transform3D(A.look_basis(fwd), pos), "industrial_caged_sconce_c")
+		cellar_lights.append(_omni(self, pos + fwd * 0.13 + Vector3(0, 0.02, 0), col, 1.8, 7.0, false))
+
+
+# ------------------------------------------------------------------ cellar
+func _label(parent: Node3D, local_z: float, size: int, col: Color, width := 540.0) -> Label3D:
+	var l := Label3D.new()
+	l.font = chalk
+	l.font_size = size
+	l.pixel_size = 0.00075
+	l.modulate = col
+	l.outline_size = 0
+	l.shaded = true
+	l.double_sided = false
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.width = width
+	l.alpha_cut = Label3D.ALPHA_CUT_DISABLED
+	l.position = Vector3(0, 0.02, local_z)
+	l.rotation = Vector3(0, PI, randf_range(-0.06, 0.06))
+	parent.add_child(l)
+	return l
+
+
+func _build_cellar() -> void:
+	var C: Dictionary = L["cellar"]
+	var cx: Dictionary = B.get("cellarXform", {"origin": [0, -6, -20], "yaw": PI / 2})
+	var o: Array = cx["origin"]
+	cellar = Node3D.new()
+	cellar.name = "Cellar"
+	cellar.transform = Transform3D(Basis(Vector3.UP, float(cx["yaw"])), Vector3(o[0], o[1], o[2]))
+	add_child(cellar)
+	_add_static(cellar, "models/" + String(C["model"]))
+	var bq := _prep("models/" + String(C["barriqueModel"]))
+	var fd := _prep("models/" + String(C["fuderModel"]))
+	seed(11)
+	for it in C["barriques"]:
+		var mi := MeshInstance3D.new()
+		mi.mesh = bq
+		mi.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
+		var p: Array = it["pos"]
+		mi.transform = Transform3D(Basis(Vector3.UP, float(it["yaw"])) * Basis(Vector3.BACK, float(it["roll"])), Vector3(p[0], p[1], p[2]))
+		cellar.add_child(mi)
+		var holder := Node3D.new()
+		holder.rotation = Vector3(0, 0, -float(it["roll"]))
+		mi.add_child(holder)
+		var lb := _label(holder, -(0.475 - 0.035) - 0.003, 42, Color(0.93, 0.92, 0.88, 0.82), 520.0)
+		barrels.append({"node": mi, "label": lb, "slot": int(it.get("slot", 0))})
+	for it in C["fuder"]:
+		var mi := MeshInstance3D.new()
+		mi.mesh = fd
+		mi.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
+		var p: Array = it["pos"]
+		mi.transform = Transform3D(Basis(Vector3.UP, float(it["yaw"])), Vector3(p[0], p[1], p[2]))
+		cellar.add_child(mi)
+		var lb := _label(mi, -(0.61 - 0.035) - 0.016, 44, Color(0.95, 0.93, 0.86, 0.9), 560.0)
+		fuders.append({"node": mi, "label": lb})
+	for l in C["lights"]:
+		var p: Array = l["pos"]
+		var pos := Vector3(p[0], p[1], p[2])
+		var col := Color(l["color"][0], l["color"][1], l["color"][2])
+		if l["type"] == "sconce":
+			var f: Array = l["facing"]
+			var fwd := Vector3(f[0], f[1], f[2])
+			var wall := Vector3(pos.x, pos.y, -fwd.z * 3.04)
+			_prop(cellar, "props/industrial_caged_sconce/industrial_caged_sconce.gltf", Transform3D(A.look_basis(fwd), wall), "industrial_caged_sconce_c")
+			cellar_lights.append(_omni(cellar, wall + fwd * 0.13 + Vector3(0, 0.02, 0), col, 2.2, 10.0))
+		else:
+			var bulb := MeshInstance3D.new()
+			var sm := SphereMesh.new(); sm.radius = 0.045; sm.height = 0.1
+			bulb.mesh = sm
+			var em := StandardMaterial3D.new(); em.emission_enabled = true; em.emission = col; em.emission_energy_multiplier = 30.0
+			em.albedo_color = col
+			bulb.material_override = em
+			bulb.position = pos
+			bulb.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			cellar.add_child(bulb)
+			var cord := MeshInstance3D.new()
+			var cm := CylinderMesh.new(); cm.top_radius = 0.006; cm.bottom_radius = 0.006; cm.height = 4.7 - pos.y
+			cord.mesh = cm
+			cord.material_override = _mat("tank_dark")
+			cord.position = pos + Vector3(0, cm.height / 2 + 0.04, 0)
+			cellar.add_child(cord)
+			cellar_lights.append(_omni(cellar, pos + Vector3(0, -0.06, 0), col, 1.6, 9.0))
+	var dims: Dictionary = C["dims"]
+	var size := Vector3(float(dims["L"]) + 1.0, 5.4, float(dims["W"]) + 1.0)
+	voxel_cellar = _gi(cellar, size, Vector3(0, 2.6, 0))
+	cellar_gi = [voxel_cellar, cellar.get_child(cellar.get_child_count() - 1)]
+
+
+# ------------------------------------------------------------------ collision & occlusion
+func _shapes(parent: Node3D, list: Array) -> void:
+	var body := StaticBody3D.new()
+	body.name = "Collision"
+	parent.add_child(body)
+	for e in list:
+		var c: Array = e["c"]
+		var cs := CollisionShape3D.new()
+		if e.has("cyl"):
+			var cyl := CylinderShape3D.new()
+			cyl.radius = float(e["cyl"])
+			cyl.height = float(e["h"])
+			cs.shape = cyl
+			cs.position = Vector3(c[0], c[1], c[2])
+		else:
+			var s: Array = e["s"]
+			var bx := BoxShape3D.new()
+			bx.size = Vector3(s[0], s[1], s[2])
+			cs.shape = bx
+			var basis := Basis()
+			if e.has("rx"):
+				basis = Basis(Vector3.RIGHT, float(e["rx"]))
+			elif e.has("ry"):
+				basis = Basis(Vector3.UP, float(e["ry"]))
+			cs.transform = Transform3D(basis, Vector3(c[0], c[1], c[2]))
+		body.add_child(cs)
+
+
+func _build_collision() -> void:
+	_shapes(self, B.get("collision", []))
+	_shapes(cellar, L["cellar"].get("collision", []))
+
+
+func _build_occluders() -> void:
+	for e in B.get("occluders", []):
+		var c: Array = e["c"]
+		var s: Array = e["s"]
+		_occluder(self, Vector3(c[0], c[1], c[2]), Vector3(s[0], s[1], s[2]))
+	# the rock round the vaulted cellar (outside its surfaces, leaving the doorway open): from inside the cellar
+	# the vineyard above is culled instead of being drawn behind the walls
+	var dims: Dictionary = L["cellar"]["dims"]
+	var hl := float(dims["L"]) / 2.0
+	var hw := float(dims["W"]) / 2.0
+	var top := float(dims["wall_h"]) + hw
+	var dw := float(L["cellar"].get("doorLeaf", {}).get("len", 1.3)) / 2.0
+	var t := 0.35
+	_occluder(cellar, Vector3(0, top + 0.05 + t / 2.0, 0), Vector3(2.0 * hl + 1.6, t, 2.0 * hw + 1.6))       # above the vault
+	for sz in [-1.0, 1.0]:
+		_occluder(cellar, Vector3(0, top / 2.0, sz * (hw + 0.05 + t / 2.0)), Vector3(2.0 * hl + 1.6, top + 1.2, t))
+	_occluder(cellar, Vector3(0, -0.05 - t / 2.0, 0), Vector3(2.0 * hl + 1.6, t, 2.0 * hw + 1.6))          # under the floor
+	_occluder(cellar, Vector3(hl + 0.05 + t / 2.0, top / 2.0, 0), Vector3(t, top + 1.2, 2.0 * hw + 1.6))    # far end
+	var xe := -hl - 0.4 - t / 2.0                                                                           # door end
+	for sz in [-1.0, 1.0]:
+		var w := hw + 0.8 - dw
+		_occluder(cellar, Vector3(xe, top / 2.0, sz * (dw + w / 2.0)), Vector3(t, top + 1.2, w))
+	_occluder(cellar, Vector3(xe, (2.1 + top + 0.6) / 2.0 + 0.3, 0), Vector3(t, top + 0.6 - 2.1, 2.0 * dw))
+
+
+func _occluder(parent: Node3D, pos: Vector3, size: Vector3) -> void:
+	var oc := OccluderInstance3D.new()
+	var bo := BoxOccluder3D.new()
+	bo.size = size
+	oc.occluder = bo
+	oc.position = pos
+	parent.add_child(oc)
+
+
 # ------------------------------------------------------------------ snapshot binding
 static func in_barrel(lot: Dictionary) -> bool:
 	var vessel := int(lot.get("choices", {}).get("Vessel", 0))
 	return vessel >= 1 and String(lot.get("phase", "")) in ["Ageing", "Ready"]
 
 
-func apply_snapshot(snap: Dictionary) -> void:
-	D = snap
-	if not built:
-		return
+func _live_lots() -> Array:
 	var lots: Array = []
 	for l in D.get("lots", []):
 		if String(l.get("phase", "")) != "Blended":
 			lots.append(l)
+	return lots
+
+
+func apply_snapshot(snap: Dictionary) -> void:
+	D = snap
+	if not built:
+		return
+	var lots := _live_lots()
 	var vintage := int(D.get("vintage", 0))
-	if room == "hall":
-		var units := String(D.get("region", {}).get("units", "oe"))
-		var tank_lots := lots.filter(func(l): return not in_barrel(l))
-		for i in panels.size():
-			var p: Dictionary = panels[i]
-			(p["ui"] as Control).call("setup", p["id"], tank_lots[i] if i < tank_lots.size() else {}, units)
-			if i < led_mats.size():
-				led_mats[i].emission = Color(0.2, 1.0, 0.35) if i < tank_lots.size() else Color(0.3, 0.3, 0.3)
-	else:
-		for b in barrels:
-			(b["label"] as Label3D).text = ""
-		for f in fuders:
-			(f["label"] as Label3D).text = ""
-		var bi := 0
-		var fi := 0
-		for l in lots:
-			if not in_barrel(l):
-				continue
-			var vessel := int(l.get("choices", {}).get("Vessel", 0))
-			var month := int(l.get("ageingDay", 0)) / 30 + 1
-			var target := int(l.get("ageingMonths", 0))
-			var ready := String(l.get("phase", "")) == "Ready"
-			var line3 := "ready to bottle" if ready else "month %d of %d" % [month, target]
-			if vessel == 1:
-				var nf := maxi(1, ceili(float(l.get("volume", 0.0)) / 1000.0))
-				for k in nf:
-					if fi >= fuders.size():
-						break
-					(fuders[fi]["label"] as Label3D).text = "Lot %s · %d\n%s\n%s" % [l.get("id", ""), vintage, l.get("variety", ""), line3]
-					fi += 1
-			else:
-				var nb := maxi(1, ceili(float(l.get("volume", 0.0)) / 225.0))
-				for k in nb:
-					if bi >= barrels.size():
-						break
-					(barrels[bi]["label"] as Label3D).text = "Lot %s  %d\n%s\n%s · %s" % [l.get("id", ""), vintage, l.get("variety", ""), VESSEL_SHORT[vessel], line3]
-					bi += 1
+	var units := String(D.get("region", {}).get("units", "oe"))
+	var tank_lots := lots.filter(func(l): return not in_barrel(l))
+	for i in panels.size():
+		var p: Dictionary = panels[i]
+		(p["ui"] as Control).call("setup", p["id"], tank_lots[i] if i < tank_lots.size() else {}, units)
+		if i < led_mats.size():
+			led_mats[i].emission = Color(0.2, 1.0, 0.35) if i < tank_lots.size() else Color(0.3, 0.3, 0.3)
+		if not screens_on:
+			(p["vp"] as SubViewport).render_target_update_mode = SubViewport.UPDATE_ONCE
+	for b in barrels:
+		(b["label"] as Label3D).text = ""
+	for f in fuders:
+		(f["label"] as Label3D).text = ""
+	var bi := 0
+	var fi := 0
+	for l in lots:
+		if not in_barrel(l):
+			continue
+		var vessel := int(l.get("choices", {}).get("Vessel", 0))
+		var month := int(l.get("ageingDay", 0)) / 30 + 1
+		var target := int(l.get("ageingMonths", 0))
+		var ready := String(l.get("phase", "")) == "Ready"
+		var line3 := "ready to bottle" if ready else "month %d of %d" % [month, target]
+		if vessel == 1:
+			var nf := maxi(1, ceili(float(l.get("volume", 0.0)) / 1000.0))
+			for k in nf:
+				if fi >= fuders.size():
+					break
+				(fuders[fi]["label"] as Label3D).text = "Lot %s · %d\n%s\n%s" % [l.get("id", ""), vintage, l.get("variety", ""), line3]
+				fi += 1
+		else:
+			var nb := maxi(1, ceili(float(l.get("volume", 0.0)) / 225.0))
+			for k in nb:
+				if bi >= barrels.size():
+					break
+				(barrels[bi]["label"] as Label3D).text = "Lot %s  %d\n%s\n%s · %s" % [l.get("id", ""), vintage, l.get("variety", ""), VESSEL_SHORT[vessel], line3]
+				bi += 1
 
 
 func _process(_delta: float) -> void:
-	frame += 1
-	if probe and frame == 200:
-		probe.update_mode = ReflectionProbe.UPDATE_ONCE
+	if probe_frames > 0:
+		probe_frames -= 1
+		if probe_frames == 0:
+			for p in probes:
+				p.update_mode = ReflectionProbe.UPDATE_ONCE
+	if not screens_on:
+		return
 	var blink := fmod(Time.get_ticks_msec() / 1000.0, 1.2) < 0.6
 	for m in led_mats:
 		if m.emission.g > 0.5:

@@ -31,6 +31,12 @@ C.MAT.update({
     "tank_steel":   ((0.78, 0.78, 0.78), 0.25, False),
     "tank_jacket":  ((0.70, 0.70, 0.72), 0.35, False),
     "tank_dark":    ((0.08, 0.08, 0.08), 0.50, True),
+    "rail":         ((0.55, 0.45, 0.10), 0.50, False),
+    "facade":       ((0.85, 0.84, 0.80), 0.90, False),
+    "plinth":       ((0.30, 0.30, 0.32), 0.90, False),
+    "roof":         ((0.12, 0.12, 0.14), 0.70, False),
+    "roof_under":   ((0.35, 0.28, 0.20), 0.80, False),
+    "fascia":       ((0.25, 0.25, 0.26), 0.60, False),
 })
 
 # =========================================================================== barrels
@@ -203,6 +209,7 @@ def build_tank():
 
 # =========================================================================== cellar (vaulted Mosel slate cellar)
 CELLAR = dict(L=22.0, W=6.2, wall_h=1.6)
+DOOR, DOOR_H, REVEAL = 1.3, 2.1, 0.35      # cellar doorway (to the stair corridor)
 def build_cellar(R):
     L, W, wh = CELLAR["L"], CELLAR["W"], CELLAR["wall_h"]
     rv = W / 2
@@ -242,15 +249,6 @@ def build_cellar(R):
             a = ix * m + i
             faces.append((a, a + m, a + m + 1, a + 1))                  # faces the room
     P["cellar_wall"].add(verts, faces, uvs, [(1, 1, 1)] * len(verts))
-    # end walls (fan from a centre point)
-    for sx in (-1, 1):
-        x = sx * L / 2
-        cz, cy = 0.0, wh
-        vs = [gl(x, cy, cz)] + [gl(x, y, z) for (z, y) in dense]
-        us = [(cz, cy)] + [(z, y) for (z, y) in dense]
-        fs = [((0, i + 2, i + 1) if sx > 0 else (0, i + 1, i + 2)) for i in range(len(dense) - 1)]
-        fs.append((0, 1, len(dense)) if sx > 0 else (0, len(dense), 1))
-        P["cellar_wall"].add(vs, fs, us, [(1, 1, 1)] * len(vs))
     # cobbled floor
     fx, fz = int(L / 0.5), int(W / 0.5)
     vs, us = [], []
@@ -264,9 +262,51 @@ def build_cellar(R):
             a = ix * (fz + 1) + iz
             fs.append((a, a + 1, a + fz + 2, a + fz + 1))
     P["cellar_floor"].add(vs, fs, us, [(1, 1, 1)] * len(vs))
-    # oak door at the -X end
-    d = [gl(-L / 2 + 0.02, y, z) for (z, y) in ((-0.65, 0), (0.65, 0), (0.65, 2.1), (-0.65, 2.1))]
-    P["cellar_door"].add(d, [(0, 1, 2, 3)], [(0, 0), (1, 0), (1, 1), (0, 1)], [(1, 1, 1)] * 4)
+    # end walls, built in horizontal bands that follow the vault; the -X end has the doorway to the stair
+    # corridor (DOOR wide, DOOR_H high) with 0.35 m deep reveals and the oak door standing open inside
+    def half_w(y):
+        return rv if y <= wh else math.sqrt(max(rv * rv - (y - wh) ** 2, 0.0))
+    top = wh + rv
+    ys = [DOOR_H * i / 8 for i in range(8)] + [DOOR_H + (top - DOOR_H) * i / 40 for i in range(41)]
+    dw = DOOR / 2
+    for sx in (-1, 1):
+        x = sx * L / 2
+        vs, us, fs = [], [], []
+        for i in range(len(ys) - 1):
+            ya, yb = ys[i], ys[i + 1]
+            wa, wb = half_w(ya), half_w(yb)
+            spans = [(-wa, -wb, wa, wb)]
+            if sx < 0 and yb <= DOOR_H + 1e-6:
+                spans = [(-wa, -wb, -dw, -dw), (dw, dw, wa, wb)]
+            for (za0, zb0, za1, zb1) in spans:
+                quad = [(za0, ya), (za1, ya), (zb1, yb), (zb0, yb)]
+                o = len(vs)
+                for (z, y) in quad:
+                    vs.append(gl(x, y, z)); us.append((z, y))
+                fs.append((o, o + 3, o + 2, o + 1) if sx < 0 else (o, o + 1, o + 2, o + 3))
+        P["cellar_wall"].add(vs, fs, us, [(1, 1, 1)] * len(vs))
+    x0, x1 = -L / 2 - REVEAL, -L / 2
+    def quad(acc, pts, uvs):
+        acc.add([gl(*q) for q in pts], [(0, 1, 2, 3)], uvs, [(1, 1, 1)] * 4)
+    quad(P["cellar_wall"], [(x0, 0, -dw), (x1, 0, -dw), (x1, DOOR_H, -dw), (x0, DOOR_H, -dw)], [(0, 0), (REVEAL, 0), (REVEAL, DOOR_H), (0, DOOR_H)])
+    quad(P["cellar_wall"], [(x1, 0, dw), (x0, 0, dw), (x0, DOOR_H, dw), (x1, DOOR_H, dw)], [(0, 0), (REVEAL, 0), (REVEAL, DOOR_H), (0, DOOR_H)])
+    quad(P["cellar_wall"], [(x0, DOOR_H, -dw), (x1, DOOR_H, -dw), (x1, DOOR_H, dw), (x0, DOOR_H, dw)], [(0, 0), (REVEAL, 0), (REVEAL, DOOR), (0, DOOR)])
+    quad(P["cellar_floor"], [(x0, 0.002, dw), (x1, 0.002, dw), (x1, 0.002, -dw), (x0, 0.002, -dw)], [(0, 0), (REVEAL, 0), (REVEAL, DOOR), (0, DOOR)])
+    # oak door leaf (5 cm thick), hinged at the +z jamb and swung open 150° into the cellar
+    hx, hz_, ang = -L / 2, dw, math.radians(150)
+    ux, uz = math.sin(ang), -math.cos(ang)        # along the leaf from the hinge (0° = closed)
+    nx, nz = -uz, ux
+    t = 0.05
+    for (a0, a1) in ((0.0, DOOR),):
+        c = []
+        for (u, n) in ((a0, 0), (a1, 0), (a1, t), (a0, t)):
+            c.append((hx + ux * u + nx * n, hz_ + uz * u + nz * n))
+        for (y0, y1) in ((0.0, DOOR_H - 0.02),):
+            pts = [(c[i][0], y, c[i][1]) for i in range(4) for y in (y0, y1)]
+            faces = [(0, 2, 3, 1), (4, 6, 7, 5), (0, 1, 7, 6), (2, 4, 5, 3), (1, 3, 5, 7), (0, 6, 4, 2)]
+            uvs = [(0, 0), (0, 1), (1, 0), (1, 1), (0, 0), (0, 1), (1, 0), (1, 1)]
+            P["cellar_door"].add([gl(*q) for q in pts], faces, [(u * DOOR, v * DOOR_H) for (u, v) in uvs], [(1, 1, 1)] * 8)
+    door_leaf = {"hinge": [hx, hz_], "angle": ang, "len": DOOR, "t": t}
     # barrel racks + barrel/Fuder placements
     items = {"barriques": [], "fuder": []}
     num = 1
@@ -300,75 +340,347 @@ def build_cellar(R):
         lights.append({"type": "sconce", "model": "industrial_caged_sconce", "pos": [lx, 2.15, side * 3.0], "facing": [0, 0, -side],
                        "color": [1.0, 0.71, 0.42], "lumens": 650, "kelvin": 2700})
     lights += [{"type": "bulb", "pos": [x, 4.3, 0.0], "color": [1.0, 0.74, 0.46], "lumens": 450, "kelvin": 2700} for x in (-3.0, 5.0)]
-    return ob, items, lights
+    return ob, items, lights, door_leaf
 
-# =========================================================================== fermentation hall
+# =========================================================================== fermentation hall, stairwell, shell
+# One building in its own frame (the "building frame"): hall floor at y = 0, hall interior x∈[-12, 12],
+# z∈[-7, 7], roller door in the east wall (+x). A straight flight of stairs along the west end goes down
+# towards -z, through a short corridor under the north wall, into the vaulted cellar, which lies behind
+# the hall (-z) under the ground. winery.gd places the building on a terrain pad in the vineyard and the
+# cellar with CELLAR_XFORM.
 HALL = dict(x0=-12.0, x1=12.0, z0=-7.0, z1=7.0, h=7.0)
+WALL_T = 0.3
+EAVE = 7.3
+PITCH = math.radians(24.0)
+OVERHANG, GABLE_OH = 0.6, 0.35
+PLINTH = (-0.6, 0.45)
+DOOR_Z, DOOR_TOP = (-2.2, 2.2), 4.5
+WX = [(-10.5, -6.5), (-5.5, -1.5), (-0.5, 3.5), (4.5, 8.5)]       # north clerestory windows (x ranges)
+WIN_Y = (4.4, 6.1)
+SWX = [(-7.0, -5.4), (-2.8, -1.2), (1.2, 2.8), (5.4, 7.0), (8.9, 10.5)]   # south windows, between the tanks
+SWIN_Y = (1.3, 2.9)
+ST = dict(x0=-11.5, x1=-10.0, z_top=1.0, rise=0.175, run=0.28, n=30, hole_z0=-4.0)
+ST_BOTTOM_Z = ST["z_top"] - (ST["n"] - 1) * ST["run"]           # -7.12: last riser
+ST_FLOOR = -ST["n"] * ST["rise"]                                 # -5.25: corridor / cellar floor
+CORR_CEIL, CORR_END = ST_FLOOR + 2.4, -8.6
+CELLAR_DOOR_X = (ST["x0"] + ST["x1"]) / 2                        # -10.75
+# cellar frame → building frame: x_b = ox + z_c, y_b = oy + y_c, z_b = oz - x_c (yaw +90°)
+CELLAR_XFORM = dict(origin=[CELLAR_DOOR_X, ST_FLOOR, CORR_END - REVEAL - CELLAR["L"] / 2], yaw=math.pi / 2)
+
+
+def cellar_to_building(p):
+    o = CELLAR_XFORM["origin"]
+    return [round(o[0] + p[2], 4), round(o[1] + p[1], 4), round(o[2] - p[0], 4)]
+
+
+def quad(acc, a, b, c, d, uvs=None):
+    acc.add([gl(*a), gl(*b), gl(*c), gl(*d)], [(0, 1, 2, 3)], uvs or [(0, 0), (1, 0), (1, 1), (0, 1)], [(1, 1, 1)] * 4)
+
+
+def rect(acc, axis, fixed, u0, u1, v0, v1, facing):
+    """Axis-aligned rectangle with metre UVs. axis "x": plane x = fixed, u = z, v = y; "z": plane z = fixed,
+    u = x, v = y; "y": plane y = fixed, u = x, v = z. facing = +1/-1: which side of the plane it faces."""
+    if u1 - u0 < 1e-6 or v1 - v0 < 1e-6:
+        return
+    if axis == "z":
+        p = [(u0, v0, fixed), (u1, v0, fixed), (u1, v1, fixed), (u0, v1, fixed)]; flip = facing < 0
+    elif axis == "x":
+        p = [(fixed, v0, u0), (fixed, v0, u1), (fixed, v1, u1), (fixed, v1, u0)]; flip = facing > 0
+    else:
+        p = [(u0, fixed, v0), (u1, fixed, v0), (u1, fixed, v1), (u0, fixed, v1)]; flip = facing > 0
+    uv = [(u0, v0), (u1, v0), (u1, v1), (u0, v1)]
+    if flip:
+        p, uv = p[::-1], uv[::-1]
+    quad(acc, *p, uvs=uv)
+
+
+def split_holes(u0, u1, v0, v1, holes):
+    """Rectangles covering [u0,u1]x[v0,v1] minus the hole rectangles (hu0, hu1, hv0, hv1)."""
+    out = []
+    us = sorted(set([u0, u1] + [min(max(h[k], u0), u1) for h in holes for k in (0, 1)]))
+    for a, b in zip(us, us[1:]):
+        if b - a < 1e-6:
+            continue
+        cuts = sorted((h[2], h[3]) for h in holes if h[0] <= a + 1e-6 and h[1] >= b - 1e-6)
+        v = v0
+        for c0, c1 in cuts:
+            if c0 > v + 1e-6:
+                out.append((a, b, v, min(c0, v1)))
+            v = max(v, c1)
+        if v1 > v + 1e-6:
+            out.append((a, b, v, v1))
+    return out
+
+
+def wall(acc, axis, fixed, u0, u1, v0, v1, holes, facing):
+    for (a, b, c, d) in split_holes(u0, u1, v0, v1, holes):
+        rect(acc, axis, fixed, a, b, c, d, facing)
+
+
+def box(acc, a, b):
+    (ax, ay, az), (bx, by, bz) = a, b
+    rect(acc, "x", ax, az, bz, ay, by, -1); rect(acc, "x", bx, az, bz, ay, by, +1)
+    rect(acc, "y", ay, ax, bx, az, bz, -1); rect(acc, "y", by, ax, bx, az, bz, +1)
+    rect(acc, "z", az, ax, bx, ay, by, -1); rect(acc, "z", bz, ax, bx, ay, by, +1)
+
+
+def floor_rect(acc, x0, x1, z0, z1, step=0.5):
+    """Hall floor patch, falling 12 mm towards the drain channel at z = 0."""
+    nx, nz = max(1, round((x1 - x0) / step)), max(1, round((z1 - z0) / step))
+    vs, us, fs = [], [], []
+    for ix in range(nx + 1):
+        for iz in range(nz + 1):
+            x, z = x0 + (x1 - x0) * ix / nx, z0 + (z1 - z0) * iz / nz
+            vs.append(gl(x, 0.012 * min(abs(z), 7.0) / 7.0, z)); us.append((x, z))
+    for ix in range(nx):
+        for iz in range(nz):
+            a = ix * (nz + 1) + iz
+            fs.append((a, a + 1, a + nz + 2, a + nz + 1))
+    acc.add(vs, fs, us, [(1, 1, 1)] * len(vs))
+
+
 def build_hall():
     x0, x1, z0, z1, hh = HALL["x0"], HALL["x1"], HALL["z0"], HALL["z1"], HALL["h"]
-    P = {"hall_floor": Acc(), "hall_wall": Acc(), "hall_steel": Acc(), "window_glass": Acc(), "grate": Acc()}
-    def quad(acc, a, b, c, d, uvs=None):
-        acc.add([gl(*a), gl(*b), gl(*c), gl(*d)], [(0, 1, 2, 3)], uvs or [(0, 0), (1, 0), (1, 1), (0, 1)], [(1, 1, 1)] * 4)
-    def wall_rect(acc, axis, fixed, u0, u1, v0, v1, facing):
-        """Axis-aligned wall rectangle, UV in metres; facing = +1/-1 along the fixed axis (normal towards the room)."""
-        if axis == "z":   # wall at z = fixed, spanning x
-            p = [(u0, v0, fixed), (u1, v0, fixed), (u1, v1, fixed), (u0, v1, fixed)]
-        else:             # wall at x = fixed, spanning z
-            p = [(fixed, v0, u0), (fixed, v0, u1), (fixed, v1, u1), (fixed, v1, u0)]
-        uv = [(u0, v0), (u1, v0), (u1, v1), (u0, v1)]
-        if (axis == "z" and facing < 0) or (axis == "x" and facing > 0): p, uv = p[::-1], uv[::-1]
-        quad(acc, *p, uvs=uv)
-    # floor with a central drain channel (grate)
-    for (za, zb) in ((z0, -0.12), (0.12, z1)):
-        nxs, nzs = 48, 14
-        vs, us, fs = [], [], []
-        for ix in range(nxs + 1):
-            for iz in range(nzs + 1):
-                x, z = x0 + (x1 - x0) * ix / nxs, za + (zb - za) * iz / nzs
-                vs.append(gl(x, 0.012 * abs(z) / 7, z)); us.append((x, z))          # floor falls towards the drain
-        for ix in range(nxs):
-            for iz in range(nzs):
-                a = ix * (nzs + 1) + iz
-                fs.append((a, a + 1, a + nzs + 2, a + nzs + 1))
-        P["hall_floor"].add(vs, fs, us, [(1, 1, 1)] * len(vs))
-    quad(P["grate"], (x0, -0.005, 0.12), (x1, -0.005, 0.12), (x1, -0.005, -0.12), (x0, -0.005, -0.12),
-         [(0, 0), (24 / 0.24, 0), (24 / 0.24, 1), (0, 1)])
-    # north wall with a ribbon of high windows
-    wall_rect(P["hall_wall"], "z", z0, x0, x1, 0, 4.4, +1)
-    wall_rect(P["hall_wall"], "z", z0, x0, x1, 6.1, hh, +1)
-    wx = [(-10.5, -6.5), (-5.5, -1.5), (-0.5, 3.5), (4.5, 8.5)]
-    edges = [x0] + [v for w in wx for v in w] + [x1]
-    for i in range(0, len(edges), 2):
-        wall_rect(P["hall_wall"], "z", z0, edges[i], edges[i + 1], 4.4, 6.1, +1)
-    for (a, b) in wx:
-        wall_rect(P["window_glass"], "z", z0 - 0.08, a, b, 4.4, 6.1, +1)
-    wall_rect(P["hall_wall"], "z", z1, x0, x1, 0, hh, -1)
-    wall_rect(P["hall_wall"], "x", x0, z0, z1, 0, hh, +1)
-    # east wall with an open roller door
-    wall_rect(P["hall_wall"], "x", x1, z0, -2.2, 0, hh, -1)
-    wall_rect(P["hall_wall"], "x", x1, 2.2, z1, 0, hh, -1)
-    wall_rect(P["hall_wall"], "x", x1, -2.2, 2.2, 4.5, hh, -1)
-    quad(P["hall_wall"], (x1, hh, z0), (x1, hh, z1), (x0, hh, z1), (x0, hh, z0), [(x1, z0), (x1, z1), (x0, z1), (x0, z0)])
+    P = {"hall_floor": Acc(), "hall_wall": Acc(), "hall_steel": Acc(), "window_glass": Acc(), "grate": Acc(),
+         "cellar_wall": Acc(), "cellar_floor": Acc(), "rail": Acc()}
+    sx0, sx1, hz0 = ST["x0"], ST["x1"], ST["hole_z0"]
+    # floor (with the stairwell opening and the drain channel)
+    for (a, b, c, d) in ((sx1, x1, 0.12, z1), (x0, sx1, ST["z_top"], z1), (x0, sx0, 0.12, ST["z_top"]),
+                         (sx1, x1, z0, -0.12), (x0, sx1, z0, hz0), (x0, sx0, hz0, -0.12), (x0, sx0, -0.12, 0.12)):
+        floor_rect(P["hall_floor"], a, b, c, d)
+    floor_rect(P["hall_floor"], x1, x1 + WALL_T, DOOR_Z[0], DOOR_Z[1])          # threshold under the door
+    quad(P["grate"], (sx1, -0.005, 0.12), (x1, -0.005, 0.12), (x1, -0.005, -0.12), (sx1, -0.005, -0.12),
+         [(0, 0), ((x1 - sx1) / 0.24, 0), ((x1 - sx1) / 0.24, 1), (0, 1)])
+    # inner walls: north with a ribbon of high windows, east with the open roller door
+    wall(P["hall_wall"], "z", z0, x0, x1, 0, hh, [(a, b, WIN_Y[0], WIN_Y[1]) for a, b in WX], +1)
+    for (a, b) in WX:
+        rect(P["window_glass"], "z", z0 - 0.08, a, b, WIN_Y[0], WIN_Y[1], +1)
+    wall(P["hall_wall"], "z", z1, x0, x1, 0, hh, [(a, b, SWIN_Y[0], SWIN_Y[1]) for a, b in SWX], -1)
+    for (a, b) in SWX:
+        rect(P["window_glass"], "z", z1 + 0.08, a, b, SWIN_Y[0], SWIN_Y[1], -1)
+    rect(P["hall_wall"], "x", x0, z0, z1, 0, hh, +1)
+    wall(P["hall_wall"], "x", x1, z0, z1, 0, hh, [(DOOR_Z[0], DOOR_Z[1], 0, DOOR_TOP)], -1)
+    rect(P["hall_wall"], "y", hh, x0, x1, z0, z1, -1)
+    # roller door: housing drum above the opening and guide rails
+    box(P["hall_steel"], (x1 - 0.5, DOOR_TOP, DOOR_Z[0] - 0.2), (x1, DOOR_TOP + 0.5, DOOR_Z[1] + 0.2))
+    for zr in (DOOR_Z[0] - 0.1, DOOR_Z[1]):
+        box(P["hall_steel"], (x1 - 0.1, 0.0, zr), (x1, DOOR_TOP, zr + 0.1))
     # steel roof trusses (I-beams) + a catwalk over the tank aisle
-    def box(acc, a, b):
-        (ax, ay, az), (bx, by, bz) = a, b
-        vs = [gl(ax, ay, az), gl(bx, ay, az), gl(bx, by, az), gl(ax, by, az), gl(ax, ay, bz), gl(bx, ay, bz), gl(bx, by, bz), gl(ax, by, bz)]
-        acc.add(vs, [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)],
-                [(0, 0), (1, 0), (1, 1), (0, 1)] * 2, [(1, 1, 1)] * 8)
     for x in (-10.0, -6.0, -2.0, 2.0, 6.0, 10.0):
         box(P["hall_steel"], (x - 0.08, 6.62, z0), (x + 0.08, 6.64, z1))
         box(P["hall_steel"], (x - 0.08, 6.96, z0), (x + 0.08, 6.98, z1))
         box(P["hall_steel"], (x - 0.006, 6.64, z0), (x + 0.006, 6.96, z1))
-    box(P["grate"], (-11.0, 3.72, -0.6), (6.0, 3.76, 0.6))
+    cw0, cw1 = -9.0, 6.0
+    box(P["grate"], (cw0, 3.72, -0.6), (cw1, 3.76, 0.6))
     for zr in (-0.6, 0.6):
-        box(P["hall_steel"], (-11.0, 4.72, zr - 0.02), (6.0, 4.76, zr + 0.02))
-        box(P["hall_steel"], (-11.0, 4.22, zr - 0.012), (6.0, 4.24, zr + 0.012))
-        for x in range(-11, 7, 2):
+        box(P["hall_steel"], (cw0, 4.72, zr - 0.02), (cw1, 4.76, zr + 0.02))
+        box(P["hall_steel"], (cw0, 4.22, zr - 0.012), (cw1, 4.24, zr + 0.012))
+        for x in range(-9, 7, 2):
             box(P["hall_steel"], (x - 0.02, 3.76, zr - 0.02), (x + 0.02, 4.76, zr + 0.02))
-    for x in (-11.0, -3.0, 5.0):
+    for x in (-9.0, -2.0, 5.0):
         for zr in (-0.55, 0.55):
             box(P["hall_steel"], (x - 0.05, 0.0, zr - 0.05), (x + 0.05, 3.72, zr + 0.05))
-    return make_object("hall", P, smooth=False)
+    # stairs down to the cellar: treads, risers, steel nosings
+    for k in range(1, ST["n"] + 1):
+        zr = ST["z_top"] - (k - 1) * ST["run"]
+        ya, yb = -(k - 1) * ST["rise"], -k * ST["rise"]
+        rect(P["hall_floor"], "z", zr, sx0, sx1, yb, ya, -1)      # riser faces down the flight
+        if k < ST["n"]:
+            rect(P["hall_floor"], "y", yb, sx0, sx1, zr - ST["run"], zr, +1)
+            box(P["hall_steel"], (sx0, yb - 0.004, zr - 0.04), (sx1, yb + 0.004, zr))
+    # stair tunnel (slate like the cellar), slab underside, lintel, corridor
+    rect(P["cellar_wall"], "x", sx0, CORR_END, ST["z_top"], ST_FLOOR - 0.05, 0.0, +1)
+    rect(P["cellar_wall"], "x", sx1, CORR_END, ST["z_top"], ST_FLOOR - 0.05, 0.0, -1)
+    rect(P["hall_wall"], "y", -0.3, sx0, sx1, ST_BOTTOM_Z, hz0, -1)
+    rect(P["hall_wall"], "z", hz0, sx0, sx1, -0.3, 0.0, +1)
+    rect(P["cellar_wall"], "z", ST_BOTTOM_Z, sx0, sx1, CORR_CEIL, -0.3, +1)
+    rect(P["cellar_wall"], "y", CORR_CEIL, sx0, sx1, CORR_END, ST_BOTTOM_Z, -1)
+    rect(P["cellar_floor"], "y", ST_FLOOR, sx0, sx1, CORR_END, ST_BOTTOM_Z, +1)
+    dx0, dx1 = CELLAR_DOOR_X - DOOR / 2, CELLAR_DOOR_X + DOOR / 2
+    wall(P["cellar_wall"], "z", CORR_END, sx0, sx1, ST_FLOOR, CORR_CEIL, [(dx0, dx1, ST_FLOOR, ST_FLOOR + DOOR_H)], +1)
+    # handrail on the west tunnel wall, railings round the stairwell opening
+    hr = [gl(sx0 + 0.07, -k * ST["rise"] + 0.9, ST["z_top"] - k * ST["run"]) for k in range(0, ST["n"] + 1, 3)]
+    tube(P["rail"], hr, [0.022] * len(hr), 10, (1, 1, 1))
+    for k in range(0, ST["n"], 6):
+        zr = ST["z_top"] - k * ST["run"]
+        tube(P["rail"], [gl(sx0, -k * ST["rise"] + 0.9, zr), gl(sx0 + 0.07, -k * ST["rise"] + 0.9, zr)], [0.012, 0.012], 6, (1, 1, 1))
+
+    def railing(pa, pb, n_posts):
+        for h in (0.55, 1.05):
+            tube(P["rail"], [gl(pa[0], h, pa[1]), gl(pb[0], h, pb[1])], [0.022, 0.022], 10, (1, 1, 1))
+        for i in range(n_posts):
+            t = i / (n_posts - 1)
+            x, z = pa[0] + (pb[0] - pa[0]) * t, pa[1] + (pb[1] - pa[1]) * t
+            tube(P["rail"], [gl(x, 0.0, z), gl(x, 1.07, z)], [0.022, 0.022], 10, (1, 1, 1), cap=True)
+    railing((sx1 + 0.05, hz0 - 0.05), (sx1 + 0.05, ST["z_top"] - 0.02), 5)
+    railing((sx0 - 0.05, hz0 - 0.05), (sx0 - 0.05, ST["z_top"] - 0.02), 5)
+    railing((sx0 - 0.05, hz0 - 0.05), (sx1 + 0.05, hz0 - 0.05), 2)
+    interior = make_object("hall", P, smooth=False)
+
+    # ---------------------------------------------------------------- exterior shell (walls, reveals, gable roof)
+    E = {"facade": Acc(), "plinth": Acc(), "roof": Acc(), "roof_under": Acc(), "fascia": Acc()}
+    X0, X1, Z0, Z1 = x0 - WALL_T, x1 + WALL_T, z0 - WALL_T, z1 + WALL_T
+    door_hole = [(DOOR_Z[0], DOOR_Z[1], PLINTH[0] - 0.1, DOOR_TOP)]
+    win_holes = [(a, b, WIN_Y[0], WIN_Y[1]) for a, b in WX]
+    swin_holes = [(a, b, SWIN_Y[0], SWIN_Y[1]) for a, b in SWX]
+    for (mat, v0, v1) in (("plinth", PLINTH[0], PLINTH[1]), ("facade", PLINTH[1], EAVE)):
+        wall(E[mat], "x", X1, Z0, Z1, v0, v1, door_hole, +1)
+        wall(E[mat], "z", Z0, X0, X1, v0, v1, win_holes, -1)
+        wall(E[mat], "z", Z1, X0, X1, v0, v1, swin_holes, +1)
+        rect(E[mat], "x", X0, Z0, Z1, v0, v1, -1)
+    # reveals: door jambs + lintel, window sides, sills and heads
+    rect(E["facade"], "z", DOOR_Z[0], x1, X1, 0.0, DOOR_TOP, +1)
+    rect(E["facade"], "z", DOOR_Z[1], x1, X1, 0.0, DOOR_TOP, -1)
+    rect(E["facade"], "y", DOOR_TOP, x1, X1, DOOR_Z[0], DOOR_Z[1], -1)
+    for (a, b) in WX:
+        rect(E["facade"], "x", a, Z0, z0, WIN_Y[0], WIN_Y[1], +1)
+        rect(E["facade"], "x", b, Z0, z0, WIN_Y[0], WIN_Y[1], -1)
+        rect(E["facade"], "y", WIN_Y[0], a, b, Z0, z0, +1)
+        rect(E["facade"], "y", WIN_Y[1], a, b, Z0, z0, -1)
+        box(E["fascia"], (a - 0.05, WIN_Y[0] - 0.06, Z0 - 0.06), (b + 0.05, WIN_Y[0], Z0 + 0.02))    # sill
+    for (a, b) in SWX:
+        rect(E["facade"], "x", a, z1, Z1, SWIN_Y[0], SWIN_Y[1], +1)
+        rect(E["facade"], "x", b, z1, Z1, SWIN_Y[0], SWIN_Y[1], -1)
+        rect(E["facade"], "y", SWIN_Y[0], a, b, z1, Z1, +1)
+        rect(E["facade"], "y", SWIN_Y[1], a, b, z1, Z1, -1)
+        box(E["fascia"], (a - 0.05, SWIN_Y[0] - 0.06, Z1 - 0.02), (b + 0.05, SWIN_Y[0], Z1 + 0.06))
+        for k in (1, 2):                                                             # glazing bars
+            xm = a + (b - a) * k / 3
+            box(E["fascia"], (xm - 0.025, SWIN_Y[0], z1 + 0.06), (xm + 0.025, SWIN_Y[1], z1 + 0.1))
+        box(E["fascia"], (a, (SWIN_Y[0] + SWIN_Y[1]) / 2 - 0.025, z1 + 0.06), (b, (SWIN_Y[0] + SWIN_Y[1]) / 2 + 0.025, z1 + 0.1))
+    # gables
+    tp = math.tan(PITCH)
+    ridge = EAVE + Z1 * tp
+    for (x, s_) in ((X1, +1), (X0, -1)):
+        pts = [(x, EAVE, Z0), (x, EAVE, Z1), (x, ridge, 0.0)]
+        if s_ > 0:
+            pts = [pts[1], pts[0], pts[2]]
+        E["facade"].add([gl(*q) for q in pts], [(0, 1, 2)], [(q[2], q[1]) for q in pts], [(1, 1, 1)] * 3)
+    # roof: two slabs (top: roof tiles, underside: soffit), fascia boards along the edges, ridge cap
+    TH = 0.22
+    zo = Z1 + OVERHANG
+    xa, xb = X0 - GABLE_OH, X1 + GABLE_OH
+    y_eave = EAVE - OVERHANG * tp
+    slope = math.hypot(zo, zo * tp)
+    for s_ in (-1, 1):
+        ze = s_ * zo
+        top = [(xa, y_eave + TH, ze), (xb, y_eave + TH, ze), (xb, ridge + TH, 0.0), (xa, ridge + TH, 0.0)]
+        und = [(xa, y_eave, ze), (xb, y_eave, ze), (xb, ridge, 0.0), (xa, ridge, 0.0)]
+        uv = [(xa, 0), (xb, 0), (xb, slope), (xa, slope)]
+        if s_ > 0:                                   # corners run +x then up the slope: faces up on the +z side
+            quad(E["roof"], *top, uvs=uv)
+            quad(E["roof_under"], *und[::-1], uvs=uv[::-1])
+        else:
+            quad(E["roof"], *top[::-1], uvs=uv[::-1])
+            quad(E["roof_under"], *und, uvs=uv)
+        rect(E["fascia"], "z", ze, xa, xb, y_eave - 0.05, y_eave + TH, s_)                     # eave board
+        for (x, f) in ((xa, -1), (xb, +1)):                                                     # verge boards
+            pts = [(x, y_eave - 0.05, ze), (x, ridge - 0.05, 0.0), (x, ridge + TH, 0.0), (x, y_eave + TH, ze)]
+            if (f > 0) != (s_ > 0):
+                pts = pts[::-1]
+            quad(E["fascia"], *pts)
+    box(E["roof"], (xa, ridge + TH - 0.06, -0.16), (xb, ridge + TH + 0.1, 0.16))
+    exterior = make_object("hall_ext", E, smooth=False)
+    info = {"extent": [X0, X1, Z0, Z1], "eave": EAVE, "ridge": round(ridge + TH + 0.1, 3), "wallT": WALL_T,
+            "door": {"x": X1, "z": list(DOOR_Z), "top": DOOR_TOP},
+            "stair": dict(ST, bottom_z=ST_BOTTOM_Z, floor=ST_FLOOR, corridor_end=CORR_END, corridor_ceiling=CORR_CEIL)}
+    return interior, exterior, info
+
+
+def _box_entry(a, c):
+    return {"c": [round((a[i] + c[i]) / 2, 4) for i in range(3)], "s": [round(abs(c[i] - a[i]), 4) for i in range(3)]}
+
+
+def hall_collision(tanks):
+    """Collision in the building frame: boxes {"c": centre, "s": size, "rx"/"ry": rotation (rad)} and tank
+    cylinders {"cyl": radius, "h": height, "c": centre}."""
+    x0, x1, z0, z1 = HALL["x0"], HALL["x1"], HALL["z0"], HALL["z1"]
+    sx0, sx1, hz0 = ST["x0"], ST["x1"], ST["hole_z0"]
+    out = []
+    b = lambda a, c: out.append(_box_entry(a, c))
+    # floor slab around the stairwell opening, threshold
+    b((sx1, -0.3, z0), (x1, 0.0, z1))
+    b((x0, -0.3, ST["z_top"]), (sx1, 0.0, z1))
+    b((x0, -0.3, z0), (sx1, 0.0, hz0))
+    b((x0, -0.3, hz0), (sx0, 0.0, ST["z_top"]))
+    b((x1, -0.3, DOOR_Z[0]), (x1 + WALL_T + 0.3, 0.0, DOOR_Z[1]))
+    # walls (the tunnel runs under the north wall, below the hall floor)
+    b((x0 - WALL_T, -0.3, z0 - WALL_T), (x0, EAVE, z1 + WALL_T))
+    b((x0 - WALL_T, 0.0, z0 - WALL_T), (x1 + WALL_T, EAVE, z0))
+    b((x0 - WALL_T, -0.3, z1), (x1 + WALL_T, EAVE, z1 + WALL_T))
+    b((x1, -0.3, z0 - WALL_T), (x1 + WALL_T, EAVE, DOOR_Z[0]))
+    b((x1, -0.3, DOOR_Z[1]), (x1 + WALL_T, EAVE, z1 + WALL_T))
+    b((x1, DOOR_TOP, DOOR_Z[0]), (x1 + WALL_T, EAVE, DOOR_Z[1]))
+    # railings round the opening
+    b((sx1, 0.0, hz0 - 0.1), (sx1 + 0.1, 1.1, ST["z_top"]))
+    b((sx0 - 0.1, 0.0, hz0 - 0.1), (sx0, 1.1, ST["z_top"]))
+    b((sx0 - 0.1, 0.0, hz0 - 0.1), (sx1 + 0.1, 1.1, hz0))
+    # stair ramp (the capsule glides on it; treads are visual only)
+    z_a, z_b = ST["z_top"], ST_BOTTOM_Z
+    run, drop = z_a - z_b, -ST_FLOOR
+    ang = math.atan2(drop, run)
+    length = math.hypot(run, drop)
+    th = 0.3
+    cy = -drop / 2 - th / 2 * math.cos(ang)
+    cz = (z_a + z_b) / 2 - th / 2 * math.sin(ang)
+    out.append({"c": [round((sx0 + sx1) / 2, 4), round(cy, 4), round(cz, 4)], "s": [sx1 - sx0, th, round(length + 0.3, 4)], "rx": round(-ang, 5)})
+    # tunnel walls, corridor floor, doorway jambs and lintel, corridor ceiling
+    b((sx0 - 0.3, ST_FLOOR - 0.2, CORR_END - 0.4), (sx0, 0.0, ST["z_top"]))
+    b((sx1, ST_FLOOR - 0.2, CORR_END - 0.4), (sx1 + 0.3, 0.0, ST["z_top"]))
+    b((sx0, ST_FLOOR - 0.3, CORR_END - REVEAL - 0.05), (sx1, ST_FLOOR, ST_BOTTOM_Z + 0.3))
+    dx0, dx1 = CELLAR_DOOR_X - DOOR / 2, CELLAR_DOOR_X + DOOR / 2
+    b((sx0, ST_FLOOR, CORR_END - REVEAL), (dx0, CORR_CEIL, CORR_END))
+    b((dx1, ST_FLOOR, CORR_END - REVEAL), (sx1, CORR_CEIL, CORR_END))
+    b((dx0, ST_FLOOR + DOOR_H, CORR_END - REVEAL), (dx1, CORR_CEIL, CORR_END))
+    b((sx0, CORR_CEIL, CORR_END - REVEAL), (sx1, CORR_CEIL + 0.3, ST_BOTTOM_Z))
+    # catwalk posts, crate stack, ladder, tanks
+    for x in (-9.0, -2.0, 5.0):
+        for zr in (-0.55, 0.55):
+            b((x - 0.06, 0.0, zr - 0.06), (x + 0.06, 3.72, zr + 0.06))
+    b((8.85, 0.0, -5.75), (10.75, 1.0, -4.35))
+    b((-12.0, 0.0, 3.8), (-11.3, 2.5, 4.6))
+    for t in tanks:
+        out.append({"cyl": 0.9, "h": 3.6, "c": [t["pos"][0], 1.8, t["pos"][2]]})
+    return out
+
+
+def cellar_collision(door_leaf):
+    """Collision boxes in the cellar's own frame (floor y = 0, long axis x, doorway at x = -L/2)."""
+    L, W = CELLAR["L"], CELLAR["W"]
+    out = []
+    b = lambda a, c: out.append(_box_entry(a, c))
+    b((-L / 2 - REVEAL - 0.1, -0.3, -W / 2), (L / 2, 0.0, W / 2))
+    b((-L / 2, 0.0, W / 2), (L / 2, 5.0, W / 2 + 0.3))
+    b((-L / 2, 0.0, -W / 2 - 0.3), (L / 2, 5.0, -W / 2))
+    b((L / 2, 0.0, -W / 2), (L / 2 + 0.3, 5.0, W / 2))
+    b((-L / 2 - 0.3, 0.0, -W / 2), (-L / 2, 5.0, -DOOR / 2))
+    b((-L / 2 - 0.3, 0.0, DOOR / 2), (-L / 2, 5.0, W / 2))
+    b((-L / 2 - 0.3, DOOR_H, -DOOR / 2), (-L / 2, 5.0, DOOR / 2))
+    b((-10.5, 0.0, -W / 2), (4.75, 1.4, -2.08))                         # barrique racks
+    b((-10.5, 0.0, 2.08), (10.55, 1.4, W / 2))
+    b((5.25, 0.0, -W / 2), (9.65, 1.3, -1.8))                           # Fuder
+    hx, hz = door_leaf["hinge"]
+    a = door_leaf["angle"]
+    ux, uz = math.sin(a), -math.cos(a)
+    cx, cz = hx + ux * DOOR / 2, hz + uz * DOOR / 2
+    out.append({"c": [round(cx, 4), 1.05, round(cz, 4)], "s": [round(DOOR, 3), 2.1, 0.08], "ry": round(math.atan2(-uz, ux), 5)})
+    return out
+
+
+def occluders():
+    """Occluder boxes (building frame) inside the exterior walls and the roof, leaving the door and windows open."""
+    x0, x1, z0, z1 = HALL["x0"], HALL["x1"], HALL["z0"], HALL["z1"]
+    out = []
+    t = WALL_T - 0.12
+    for (a, b_, c, d) in split_holes(z0 - WALL_T, z1 + WALL_T, 0.0, EAVE, [(DOOR_Z[0], DOOR_Z[1], -1.0, DOOR_TOP)]):
+        out.append({"c": [x1 + WALL_T / 2, (c + d) / 2, (a + b_) / 2], "s": [t, d - c, b_ - a]})
+    for (a, b_, c, d) in split_holes(x0 - WALL_T, x1 + WALL_T, 0.0, EAVE, [(p, q, WIN_Y[0], WIN_Y[1]) for p, q in WX]):
+        out.append({"c": [(a + b_) / 2, (c + d) / 2, z0 - WALL_T / 2], "s": [b_ - a, d - c, t]})
+    for (a, b_, c, d) in split_holes(x0 - WALL_T, x1 + WALL_T, 0.0, EAVE, [(p, q, SWIN_Y[0], SWIN_Y[1]) for p, q in SWX]):
+        out.append({"c": [(a + b_) / 2, (c + d) / 2, z1 + WALL_T / 2], "s": [b_ - a, d - c, t]})
+    out.append({"c": [x0 - WALL_T / 2, EAVE / 2, 0.0], "s": [t, EAVE, z1 - z0 + 2 * WALL_T]})
+    out.append({"c": [0.0, HALL["h"] + 0.15, 0.0], "s": [x1 - x0, 0.2, z1 - z0]})
+    return out
 
 
 # =========================================================================== main
@@ -382,10 +694,12 @@ C.clear_scene()
 tank_ob, tank_info = build_tank()
 export(tank_ob, "tank.glb")
 C.clear_scene()
-cellar_ob, cellar_items, cellar_lights = build_cellar(R)
+cellar_ob, cellar_items, cellar_lights, door_leaf = build_cellar(R)
 export(cellar_ob, "cellar.glb")
 C.clear_scene()
-export(build_hall(), "hall.glb")
+hall_ob, hall_ext_ob, building = build_hall()
+export(hall_ob, "hall.glb")
+export(hall_ext_ob, "hall_ext.glb")
 C.clear_scene()
 for kind in ("barriques", "fuder"):                       # slots only: contents come from the simulation
     for i, it in enumerate(cellar_items[kind]):
@@ -398,21 +712,43 @@ for i in range(8):
 hall_lights = [{"type": "hanging", "model": "hanging_industrial_lamp", "pos": [x, 6.2, z], "color": [1.0, 0.96, 0.9]}
                for x in (-10.0, -6.0, -2.0, 2.0, 6.0, 10.0) for z in (-2.2, 2.2)]
 props = [{"model": "plastic_crate_01", "pos": [9.2 + 0.62 * (k % 3), 0.33 * ((k // 3) % 3), -4.6 - 0.45 * (k // 9)], "yaw": 0.0} for k in range(27)]
-props += [{"model": "ladder_sectioned_01", "pos": [-11.6, 0.0, 0.0], "yaw": math.pi / 2}]
+props += [{"model": "ladder_sectioned_01", "pos": [-11.6, 0.0, 4.2], "yaw": math.pi / 2}]
+stair_lights = [{"pos": [ST["x0"] + 0.02, -1.1, -3.3], "facing": [1, 0, 0], "color": [1.0, 0.74, 0.46]},
+                {"pos": [ST["x1"] - 0.02, ST_FLOOR + 2.05, -7.85], "facing": [-1, 0, 0], "color": [1.0, 0.74, 0.46]}]
+C2B = cellar_to_building
+eye = 1.65
 layout = {
-    "note": "Winery layout for game/src/view3d/winery.gd. glTF coords. Cellar and hall have independent origins.",
+    "note": ("Winery layout for game/src/view3d/winery.gd. glTF coords (Y up, metres). Everything is in the building "
+             "frame (hall floor y = 0) except the 'cellar' section, which is in the cellar's own frame; "
+             "building.cellarXform places it (x_b = ox + z_c, y_b = oy + y_c, z_b = oz - x_c)."),
     "cameras": {
-        "cellar": {"position": [-10.2, 1.62, 0.0], "target": [8.0, 1.3, 0.0]},
-        "cellar_heads": {"position": [-9.7, 1.2, -0.45], "target": [-8.6, 0.75, -2.1]},
-        "cellar_fuder": {"position": [5.6, 1.55, -0.2], "target": [7.45, 0.85, -1.9]},
+        "cellar": {"position": C2B([-10.2, 1.62, 0.0]), "target": C2B([8.0, 1.3, 0.0])},
+        "cellar_heads": {"position": C2B([-9.7, 1.2, -0.45]), "target": C2B([-8.6, 0.75, -2.1])},
+        "cellar_fuder": {"position": C2B([5.6, 1.55, -0.2]), "target": C2B([7.45, 0.85, -1.9])},
+        "cellar_door": {"position": C2B([-6.0, 1.62, 0.9]), "target": C2B([-11.6, 1.2, 0.0])},
         "hall": {"position": [10.5, 2.2, 5.8], "target": [-6.0, 1.8, -1.0]},
         "hall_panel": {"position": [-7.72, 1.62, -1.72], "target": [-8.0, 1.52, -2.45]},
+        "hall_stairs": {"position": [-6.2, eye, 2.6], "target": [-10.9, -0.6, -1.5]},
+        "stairs_down": {"position": [CELLAR_DOOR_X, eye, 2.2], "target": [CELLAR_DOOR_X, -3.3, -7.4]},
+        "stairs_up": {"position": [CELLAR_DOOR_X, ST_FLOOR + eye, -8.3], "target": [CELLAR_DOOR_X, 0.6, 1.8]},
+        "door": {"position": [20.0, eye, 3.5], "target": [6.0, 1.5, -1.0]},
     },
+    # teleport spots (feet position + look target, building frame) for set_view("hall" | "cellar")
+    "spawn": {
+        "hall": {"feet": [9.8, 0.0, 1.2], "target": [-6.0, 1.6, -0.6]},
+        "cellar": {"feet": C2B([-9.9, 0.0, 0.0]), "target": C2B([8.0, 1.4, 0.0])},
+    },
+    "building": dict(building, cellarXform=CELLAR_XFORM,
+                     cellarExtent=[round(CELLAR_XFORM["origin"][0] - CELLAR["W"] / 2 - 0.3, 3), round(CELLAR_XFORM["origin"][0] + CELLAR["W"] / 2 + 0.3, 3),
+                                   round(CELLAR_XFORM["origin"][2] - CELLAR["L"] / 2 - 0.3, 3), CORR_END],
+                     zones={"hall": [HALL["x0"], HALL["x1"], -2.6, HALL["h"], HALL["z0"], HALL["z1"]],
+                            "stair": [ST["x0"], ST["x1"], ST_FLOOR - 0.5, 0.5, CORR_END - REVEAL, ST["z_top"]]},
+                     collision=hall_collision(tanks), occluders=occluders(), stairLights=stair_lights),
     "cellar": {"model": "cellar.glb", "barriqueModel": "barrique.glb", "fuderModel": "fuder.glb", "dims": CELLAR,
                "barriques": cellar_items["barriques"], "fuder": cellar_items["fuder"], "lights": cellar_lights,
-               "walk": {"x": [-10.6, 10.6], "z": [-1.6, 1.6]}},
-    "hall": {"model": "hall.glb", "tankModel": "tank.glb", "tankInfo": tank_info, "dims": HALL, "tanks": tanks, "lights": hall_lights, "props": props,
-             "walk": {"x": [-11.4, 11.4], "z": [-1.9, 1.9]}},
+               "doorLeaf": door_leaf, "collision": cellar_collision(door_leaf)},
+    "hall": {"model": "hall.glb", "exteriorModel": "hall_ext.glb", "tankModel": "tank.glb", "tankInfo": tank_info, "dims": HALL,
+             "tanks": tanks, "lights": hall_lights, "props": props},
 }
 with open(os.path.join(OUT, "winery.json"), "w") as fh:
     json.dump(layout, fh, indent=1)

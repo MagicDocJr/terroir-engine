@@ -25,7 +25,8 @@ static func exists(rel: String) -> bool:
 
 
 static func available() -> bool:
-	return exists("models/winery.json") and exists("models/vine_guyot_g4.glb") and exists("hdri/clear.hdr")
+	# hall_ext.glb: the one-world winery layout (older asset folders need game/tools/sync_assets3d.sh again)
+	return exists("models/winery.json") and exists("models/hall_ext.glb") and exists("models/vine_guyot_g4.glb") and exists("hdri/clear.hdr")
 
 
 static func tex(rel: String, mipmaps := true) -> Texture2D:
