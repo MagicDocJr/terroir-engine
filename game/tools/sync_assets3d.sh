@@ -6,14 +6,16 @@
 #   game/tools/sync_assets3d.sh fetch      # only the downloads (skips files that already exist)
 #   game/tools/sync_assets3d.sh vineyard [misc|einzelpfahl|guyot|cordon]   # only the vineyard models
 #   game/tools/sync_assets3d.sh winery     # only the winery models + winery.json
+#   game/tools/sync_assets3d.sh audio      # only the ambience/one-shot WAVs + audio.json + CREDITS.md
 #
-# Needs: python3 (WSL), Windows Blender 5.2 LTS (headless). Everything downloaded is CC0 (Poly Haven).
+# Needs: python3 (WSL), Windows Blender 5.2 LTS (headless). Everything downloaded is CC0 (Poly Haven;
+# sounds from BigSoundBank and Wikimedia Commons, credited in assets3d/audio/CREDITS.md).
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 DEST="$(cd "$HERE/.." && pwd)/assets3d"
 BLENDER="/mnt/c/Program Files/Blender Foundation/Blender 5.2/blender.exe"
 STEP="${1:-all}"
-mkdir -p "$DEST/models" "$DEST/textures" "$DEST/hdri" "$DEST/props"
+mkdir -p "$DEST/models" "$DEST/textures" "$DEST/hdri" "$DEST/props" "$DEST/audio"
 touch "$DEST/.gdignore"
 
 blender_run() {  # script out_dir [extra args]
@@ -30,5 +32,8 @@ if [[ "$STEP" == "all" || "$STEP" == "vineyard" ]]; then
 fi
 if [[ "$STEP" == "all" || "$STEP" == "winery" ]]; then
   blender_run build_winery.py "$DEST/models"
+fi
+if [[ "$STEP" == "all" || "$STEP" == "audio" ]]; then
+  python3 "$HERE/fetch_audio.py" "$DEST/audio"
 fi
 echo "assets3d: $(find "$DEST" -type f | wc -l) files, $(du -sh "$DEST" | cut -f1) in $DEST"

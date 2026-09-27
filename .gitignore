@@ -27,3 +27,6 @@ game/assets3d/
 
 # Screenshots from scripts/capture.sh (regenerated)
 game/shots/
+
+# Python bytecode (tool scripts)
+__pycache__/
