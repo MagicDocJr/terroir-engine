@@ -595,6 +595,13 @@ func _build_yard() -> void:
 			(tractors[k] as Node3D).visible = false
 
 
+## The parked tractor in the yard is hidden while it is out in the vineyard (workers.gd).
+func set_parked_tractor(on: bool) -> void:
+	var want := String(Y.get("tractors", {}).get(region, "tractor_standard"))
+	for k in tractors:
+		(tractors[k] as Node3D).visible = on and k == want
+
+
 func _update_sign() -> void:
 	if sign_label == null:
 		return

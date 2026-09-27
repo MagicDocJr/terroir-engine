@@ -10,6 +10,7 @@ global uniform float wetness;
 uniform vec4 berry_col = vec4(0.3, 0.36, 0.07, 0.0);
 uniform vec4 berry_state = vec4(1.0, 0.0, 0.0, 0.0);
 uniform vec4 berry_state2 = vec4(0.0);
+uniform vec4 pick_plane = vec4(0.0);          // (W.x, W.z, w of the picking front, active): rows with w < front are picked
 
 varying float v_bunch;
 
@@ -17,8 +18,9 @@ float h1(float x) { return fract(sin(x * 91.7 + 3.1) * 43758.5453); }
 
 void vertex() {
 	v_bunch = UV2.x;
-	if (v_bunch >= berry_state.x) {              // picked (or never set): bunch disappears
-		VERTEX = vec3(0.0, -10.0, 0.0);
+	vec2 wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xz;
+	if (v_bunch >= berry_state.x || (pick_plane.w > 0.5 && dot(wp, pick_plane.xy) < pick_plane.z)) {
+		VERTEX = vec3(0.0, -10.0, 0.0);           // picked (or never set): bunch disappears
 	}
 }
 

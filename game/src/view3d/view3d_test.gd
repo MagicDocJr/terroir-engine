@@ -57,6 +57,20 @@ const SHOTS := [
 	{"name": "cotedor_drone", "game": COTEDOR, "until": "date:08-16", "dry": true, "view": "drone", "cam": "drone"},
 	{"name": "napa_drone", "game": NAPA, "until": "date:09-12", "dry": true, "view": "drone", "cam": "drone"},
 	{"name": "napa_cellar", "game": NAPA, "until": "date:09-12", "dry": true, "view": "cellar", "cam": "cellar"},
+	# people at work (workers.gd): harvest crews, machine harvest, sorting table, sprayer, pruning, canopy work
+	{"name": "mosel_harvest_crew", "game": MOSEL, "until": "picking:E:hand:Table:0", "view": "vineyard", "cam": "crew"},
+	{"name": "mosel_harvest_late", "game": MOSEL, "until": "picking:B:hand:Table:90", "view": "vineyard", "cam": "crew"},
+	{"name": "mosel_harvest_wide", "game": MOSEL, "until": "picking:E:hand:Table:0", "view": "vineyard", "cam": "estate_high"},
+	{"name": "mosel_sorting", "game": MOSEL, "until": "picking:E:hand:Table:0", "view": "vineyard", "cam": "sorting"},
+	{"name": "cotedor_harvest_crew", "game": COTEDOR, "until": "picking:A:hand:Rigorous:0", "view": "vineyard", "cam": "crew"},
+	{"name": "cotedor_sorting", "game": COTEDOR, "until": "picking:A:hand:Rigorous:0", "view": "vineyard", "cam": "sorting"},
+	{"name": "napa_harvest_machine", "game": NAPA, "until": "picking:B:machine:None:0", "view": "vineyard", "cam": "crew"},
+	{"name": "napa_harvest_crew", "game": NAPA, "until": "picking:C:hand:Table:0:High", "view": "vineyard", "cam": "crew"},
+	{"name": "mosel_pruning", "game": MOSEL, "until": "date:02-12", "view": "vineyard", "cam": "crew"},
+	{"name": "cotedor_canopy", "game": COTEDOR, "until": "date:06-12", "view": "vineyard", "cam": "crew"},
+	{"name": "mosel_spray", "game": MOSEL, "until": "spray", "view": "vineyard", "cam": "crew"},
+	{"name": "cotedor_spray", "game": COTEDOR, "until": "spray", "view": "vineyard", "cam": "crew"},
+	{"name": "napa_spray", "game": NAPA, "until": "spray", "view": "vineyard", "cam": "crew"},
 	# the steepest Plots: Mosel terraces (winery at the foot) and the Napa mountain site (winery beside the Plot)
 	{"name": "terrassen_estate", "game": {"plotId": "mosel-terrassen", "plantingYear": 2012, "seed": 3}, "until": "date:07-10", "dry": true, "view": "vineyard", "cam": "estate"},
 	{"name": "terrassen_estate_high", "game": {"plotId": "mosel-terrassen", "plantingYear": 2012, "seed": 3}, "until": "date:07-10", "dry": true, "view": "vineyard", "cam": "estate_high"},
@@ -85,6 +99,9 @@ func _ready() -> void:
 	perf = "--perf" in args
 	if "--trellis" in args:
 		_trellis_probe()
+		return
+	if "--pickrates" in args:
+		_pick_rates()
 		return
 	if "--walktest" in args:
 		_walk_test()
@@ -160,6 +177,34 @@ func _play(shot: Dictionary) -> Dictionary:
 		for id in shot.get("harvest", []):
 			Sim.Command("harvest", id, "hand", "Table", "", "")
 		Sim.Advance(int(shot.get("after", 0)), false)
+	elif until.begins_with("picking:"):
+		# picking:<Block>:<hand|machine>:<None|Table|Rigorous>:<pct> — order the harvest once the Block is in its
+		# window, then advance until the crew has picked at least pct % (stops a day early if it would finish)
+		var a := until.split(":")
+		if a.size() > 5:
+			Sim.Command("programme", "labour", a[5], "", "", "")          # crew size (Low = 8 pickers)
+		while guard < 400 and not _block(s, a[1]).get("inWindow", false):
+			Sim.Advance(1, false); guard += 1
+			s = _snap()
+		Sim.Command("harvest", a[1], a[2], a[3], "", "")
+		guard = 0
+		while guard < 30:
+			s = _snap()
+			var b := _block(s, a[1])
+			if float(b.get("pickedPct", 0)) >= float(a[4]) or not b.get("picking", false):
+				break
+			Sim.Advance(1, false); guard += 1
+		print("  picking %s (%.2f ha): %s %% after %d day(s), picking=%s" % [a[1], float(_block(_snap(), a[1]).get("area", 0)), str(_block(_snap(), a[1]).get("pickedPct")), guard, str(_block(_snap(), a[1]).get("picking"))])
+	elif until == "spray":
+		# the first day a spray pass is booked in any Block (daysSinceSpray == 0)
+		while guard < 400:
+			var hit := false
+			for b in s["blocks"]:
+				hit = hit or (b.get("daysSinceSpray") != null and int(b["daysSinceSpray"]) <= 1)
+			if hit:
+				break
+			Sim.Advance(1, false); guard += 1
+			s = _snap()
 	elif until == "winery":
 		_play_winery()
 	if shot.get("dry", false):              # prefer a day without rain for the showcase shots
@@ -373,6 +418,17 @@ func _log_state(shot: Dictionary) -> void:
 	var amb: Node = view.get("ambience")
 	if amb:
 		print("  sound: ", amb.call("debug_state"))
+	var wk: Node = view.get("workers")
+	if wk and String(wk.get("summary")) != "":
+		print("  at work: ", wk.get("summary"), " (", wk.get("people").size(), " people)")
+		if "--debug-workers" in OS.get_cmdline_user_args():
+			for m in wk.get("machines"):
+				print("  machine at ", (m["node"] as Node3D).global_position, " visible ", (m["node"] as Node3D).is_visible_in_tree(), " span ", m["span"], " w ", m["w"])
+			for n in wk.get("shown"):
+				print("  shown ", (n as MeshInstance3D).mesh.resource_name, " ", n.name, " at ", (n as Node3D).global_position)
+			var mm: MultiMesh = wk.get("mm")
+			print("  people mm: visible ", mm.visible_instance_count, " mesh surfaces ", mm.mesh.get_surface_count(), " aabb ", mm.mesh.get_aabb(),
+				" first ", mm.get_instance_transform(0).origin, " custom ", mm.get_instance_custom_data(0), " cam ", (view.get("player") as Node).get("cam").global_position)
 
 
 # ------------------------------------------------------------------ LOD probe (trellis bug)
@@ -492,6 +548,23 @@ func _walk_test() -> void:
 	for f in 10:
 		await get_tree().physics_frame
 	print("WALK drone round trip: walker moved %.2f m, drone camera current: %s" % [pl.global_position.distance_to(before), str((view.get("drone_cam") as Camera3D).current)])
+	# leave the 3D view and come back without set_view (the UI keeps the place): drone and walker must resume
+	var mid: Vector3 = pl.global_position
+	view.set_view("drone")
+	var dpos: Vector3 = (view.get("drone_cam") as Camera3D).global_position
+	view.visible = false
+	for f in 10:
+		await get_tree().process_frame
+	view.visible = true
+	for f in 10:
+		await get_tree().physics_frame
+	var drone_ok: bool = view.get("drone") and (view.get("drone_cam") as Camera3D).current and (view.get("drone_cam") as Camera3D).global_position.distance_to(dpos) < 0.5
+	view.call("_drone_off", true)
+	for f in 10:
+		await get_tree().physics_frame
+	var walk_ok: bool = pl.global_position.distance_to(mid) < 0.3 and pl.cam.current and bool(pl.get("enabled"))
+	print("RESUME %s: drone kept across hide/show: %s, walker back at its spot (%.2f m) with input on: %s, sound running: %s" % [
+		"PASS" if drone_ok and walk_ok and bool(view.get("ambience").get("running")) else "FAIL", str(drone_ok), pl.global_position.distance_to(mid), str(walk_ok), str(view.get("ambience").get("running"))])
 	var est: Dictionary = vy.get("estate")
 	var trk: Array = vy.get("track")
 	var o: Vector3 = est["origin"]
@@ -577,4 +650,34 @@ func _walk_test() -> void:
 	await get_tree().process_frame
 	var again := loops.filter(func(p): return p.playing and not p.stream_paused).size()
 	print("SOUND %s: %d loops playing again after showing it" % ["PASS" if again == playing_before else "FAIL", again])
+	get_tree().quit()
+
+
+## Diagnostic: how fast real crews pick each Block (pickedPct per day after the order), per Plot and labour tier.
+func _pick_rates() -> void:
+	var plots := ["mosel-blauschiefer", "mosel-terrassen", "mosel-seitental", "cotedor-premiercru", "cotedor-plaine", "napa-bench", "napa-mountain", "napa-floor"]
+	for pid in plots:
+		for lab in ["Low", "High"]:
+			Sim.NewGame(JSON.stringify({"plotId": pid, "plantingYear": 2012, "seed": 5}))
+			Sim.Command("programme", "labour", lab, "", "", "")
+			var s := _snap()
+			var g := 0
+			while g < 400 and not s["blocks"].any(func(b): return b.get("inWindow", false)):
+				Sim.Advance(1, false); g += 1
+				s = _snap()
+			var ids := []
+			for b in s["blocks"]:
+				if b.get("inWindow", false):
+					ids.append([b["id"], float(b.get("area", 0))])
+			var line := "PICK %s %s:" % [pid, lab]
+			for e in ids:
+				Sim.Command("harvest", e[0], "hand", "Table", "", "")
+			var days := []
+			for d in 4:
+				Sim.Advance(1, false)
+				var row := []
+				for e in ids:
+					row.append(str(_block(_snap(), e[0]).get("pickedPct")) + ("" if _block(_snap(), e[0]).get("picking", false) else "✓"))
+				days.append(" ".join(row))
+			print(line, " blocks ", ids, " | ", " / ".join(days))
 	get_tree().quit()
