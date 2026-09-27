@@ -42,6 +42,7 @@ var cellar_on := true
 var screens_on := true
 var probes: Array[ReflectionProbe] = []
 var probe_frames := 0
+var panel_t := 0.0
 
 
 func build() -> void:
@@ -123,7 +124,7 @@ func set_active(zone: String, near: bool) -> void:
 	if screens != screens_on:
 		screens_on = screens
 		for p in panels:
-			(p["vp"] as SubViewport).render_target_update_mode = SubViewport.UPDATE_ALWAYS if screens else SubViewport.UPDATE_DISABLED
+			(p["vp"] as SubViewport).render_target_update_mode = SubViewport.UPDATE_ONCE if screens else SubViewport.UPDATE_DISABLED
 
 
 ## "hall" | "cellar" | "" (outside) for a point in the building frame. The upper half of the stairs counts as hall.
@@ -470,6 +471,11 @@ func _omni(parent: Node3D, pos: Vector3, col: Color, energy: float, rng: float, 
 	o.omni_attenuation = 1.6
 	o.shadow_enabled = shadow
 	o.set_meta("shadow", shadow)
+	o.omni_shadow_mode = OmniLight3D.SHADOW_DUAL_PARABOLOID
+	o.distance_fade_enabled = true
+	o.distance_fade_begin = 24.0
+	o.distance_fade_length = 6.0
+	o.distance_fade_shadow = 10.0
 	o.shadow_blur = 1.5
 	o.light_size = 0.04
 	o.light_volumetric_fog_energy = 1.4
@@ -482,7 +488,7 @@ func _gi(parent: Node3D, size: Vector3, center: Vector3) -> VoxelGI:
 	var v := VoxelGI.new()
 	v.size = size
 	v.position = center
-	v.subdiv = VoxelGI.SUBDIV_128
+	v.subdiv = VoxelGI.SUBDIV_64            # 128 cost ~5 fps for no visible difference in these rooms
 	parent.add_child(v)
 	var probe := ReflectionProbe.new()
 	probe.size = size
@@ -541,7 +547,10 @@ func _build_hall() -> void:
 		sp.spot_range = 14.0
 		sp.spot_angle = 58.0
 		sp.spot_attenuation = 1.2
-		sp.shadow_enabled = int(p[0]) % 8 == 2 or int(p[0]) % 8 == -6
+		sp.shadow_enabled = int(p[0]) == -2      # two key lights (one over each tank row); the rest unshadowed
+		sp.distance_fade_enabled = true
+		sp.distance_fade_begin = 30.0
+		sp.distance_fade_length = 8.0
 		sp.set_meta("shadow", sp.shadow_enabled)
 		sp.light_volumetric_fog_energy = 0.8
 		add_child(sp)
@@ -561,7 +570,7 @@ func _tank_panel(tank: Node3D, id: String, pnl: Dictionary) -> void:
 	var vp := SubViewport.new()
 	vp.size = Vector2i(600, 392)
 	vp.transparent_bg = false
-	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 	var ui := Control.new()
 	ui.set_script(TankPanel)
 	ui.size = Vector2(600, 392)
@@ -664,7 +673,7 @@ func _build_cellar() -> void:
 			var fwd := Vector3(f[0], f[1], f[2])
 			var wall := Vector3(pos.x, pos.y, -fwd.z * 3.04)
 			_prop(cellar, "props/industrial_caged_sconce/industrial_caged_sconce.gltf", Transform3D(A.look_basis(fwd), wall), "industrial_caged_sconce_c")
-			cellar_lights.append(_omni(cellar, wall + fwd * 0.13 + Vector3(0, 0.02, 0), col, 2.2, 10.0))
+			cellar_lights.append(_omni(cellar, wall + fwd * 0.13 + Vector3(0, 0.02, 0), col, 2.2, 10.0, false))
 		else:
 			var bulb := MeshInstance3D.new()
 			var sm := SphereMesh.new(); sm.radius = 0.045; sm.height = 0.1
@@ -822,6 +831,11 @@ func _process(_delta: float) -> void:
 				p.update_mode = ReflectionProbe.UPDATE_ONCE
 	if not screens_on:
 		return
+	panel_t += _delta
+	if panel_t >= 0.2:                     # the screens only change with a snapshot and a 0.6 s blink: 5 Hz is plenty
+		panel_t = 0.0
+		for p in panels:
+			(p["vp"] as SubViewport).render_target_update_mode = SubViewport.UPDATE_ONCE
 	var blink := fmod(Time.get_ticks_msec() / 1000.0, 1.2) < 0.6
 	for m in led_mats:
 		if m.emission.g > 0.5:
