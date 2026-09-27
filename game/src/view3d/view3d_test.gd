@@ -15,6 +15,9 @@ const MOSEL := {"plotId": "mosel-blauschiefer", "plantingYear": 2012, "seed": 42
 	"D": {"variety": "PinotNoir", "rootstock": "SO4", "training": "Einzelpfahl", "density": 8000},
 	"E": {"variety": "Riesling", "rootstock": "SO4", "training": "Guyot", "density": 5000, "rows": "DownSlope"}}}
 
+const COTEDOR := {"plotId": "cotedor-premiercru", "plantingYear": 2012, "seed": 7}
+const NAPA := {"plotId": "napa-bench", "plantingYear": 2012, "seed": 9}
+
 const SHOTS := [
 	{"name": "mosel_budburst", "game": MOSEL, "until": "stage:Budburst", "extra": 6, "dry": true, "view": "vineyard", "cam": "row", "block": 1},
 	{"name": "mosel_budburst_close", "game": MOSEL, "until": "stage:Budburst", "extra": 6, "dry": true, "view": "vineyard", "cam": "close", "block": 1},
@@ -23,13 +26,30 @@ const SHOTS := [
 	{"name": "mosel_harvest", "game": MOSEL, "until": "window", "extra": 0, "harvest": ["A"], "after": 1, "dry": true, "view": "vineyard", "cam": "close", "block": 4},
 	{"name": "mosel_harvest_overview", "game": MOSEL, "until": "window", "extra": 0, "harvest": ["A"], "after": 1, "dry": true, "view": "vineyard", "cam": "overview"},
 	{"name": "mosel_leaffall", "game": MOSEL, "until": "stage:LeafFall", "extra": 12, "dry": true, "view": "vineyard", "cam": "row", "block": 4},
-	{"name": "cotedor_winter", "game": {"plotId": "cotedor-premiercru", "plantingYear": 2012, "seed": 7}, "until": "date:02-10", "dry": true, "view": "vineyard", "cam": "row", "block": 1},
-	{"name": "cotedor_august", "game": {"plotId": "cotedor-premiercru", "plantingYear": 2012, "seed": 7}, "until": "date:08-16", "dry": true, "view": "vineyard", "cam": "row", "block": 0},
-	{"name": "napa_september", "game": {"plotId": "napa-bench", "plantingYear": 2012, "seed": 9}, "until": "date:09-12", "dry": true, "view": "vineyard", "cam": "row", "block": 1},
-	{"name": "cellar", "game": MOSEL, "until": "winery", "view": "cellar", "cam": "cellar"},
-	{"name": "cellar_labels", "game": MOSEL, "until": "winery", "view": "cellar", "cam": "cellar_heads"},
+	{"name": "cotedor_winter", "game": COTEDOR, "until": "date:02-10", "dry": true, "view": "vineyard", "cam": "row", "block": 1},
+	{"name": "cotedor_august", "game": COTEDOR, "until": "date:08-16", "dry": true, "view": "vineyard", "cam": "row", "block": 0},
+	{"name": "napa_september", "game": NAPA, "until": "date:09-12", "dry": true, "view": "vineyard", "cam": "row", "block": 1},
+	# the one walkable Estate: vineyard → track → door → hall → stairs → cellar
+	{"name": "mosel_estate", "game": MOSEL, "until": "winery", "view": "vineyard", "cam": "estate"},
+	{"name": "mosel_estate_high", "game": MOSEL, "until": "winery", "view": "vineyard", "cam": "estate_high"},
+	{"name": "mosel_track", "game": MOSEL, "until": "winery", "view": "vineyard", "cam": "track"},
+	{"name": "mosel_door", "game": MOSEL, "until": "winery", "view": "hall", "cam": "door"},
 	{"name": "hall", "game": MOSEL, "until": "winery", "view": "hall", "cam": "hall"},
 	{"name": "hall_panel", "game": MOSEL, "until": "winery", "view": "hall", "cam": "hall_panel"},
+	{"name": "hall_stairs", "game": MOSEL, "until": "winery", "view": "hall", "cam": "hall_stairs"},
+	{"name": "stairs_down", "game": MOSEL, "until": "winery", "view": "hall", "cam": "stairs_down"},
+	{"name": "stairs_up", "game": MOSEL, "until": "winery", "view": "cellar", "cam": "stairs_up"},
+	{"name": "cellar", "game": MOSEL, "until": "winery", "view": "cellar", "cam": "cellar"},
+	{"name": "cellar_labels", "game": MOSEL, "until": "winery", "view": "cellar", "cam": "cellar_heads"},
+	{"name": "cellar_door", "game": MOSEL, "until": "winery", "view": "cellar", "cam": "cellar_door"},
+	{"name": "cotedor_estate", "game": COTEDOR, "until": "date:08-16", "dry": true, "view": "vineyard", "cam": "estate"},
+	{"name": "cotedor_estate_high", "game": COTEDOR, "until": "date:08-16", "dry": true, "view": "vineyard", "cam": "estate_high"},
+	{"name": "cotedor_track", "game": COTEDOR, "until": "date:08-16", "dry": true, "view": "vineyard", "cam": "track"},
+	{"name": "cotedor_hall", "game": COTEDOR, "until": "date:08-16", "dry": true, "view": "hall", "cam": "hall"},
+	{"name": "napa_estate", "game": NAPA, "until": "date:09-12", "dry": true, "view": "vineyard", "cam": "estate"},
+	{"name": "napa_estate_high", "game": NAPA, "until": "date:09-12", "dry": true, "view": "vineyard", "cam": "estate_high"},
+	{"name": "napa_track", "game": NAPA, "until": "date:09-12", "dry": true, "view": "vineyard", "cam": "track"},
+	{"name": "napa_cellar", "game": NAPA, "until": "date:09-12", "dry": true, "view": "cellar", "cam": "cellar"},
 ]
 
 var view: Control
@@ -44,6 +64,8 @@ func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	view = View3D.instantiate()
 	add_child(view)
+	if not "--sound" in OS.get_cmdline_user_args():
+		view.set("sound_on", false)          # the mix still runs (and is logged); the bus is muted
 	var i := args.find("--capture3d")
 	if i < 0:
 		_manual()
@@ -51,6 +73,9 @@ func _ready() -> void:
 	perf = "--perf" in args
 	if "--trellis" in args:
 		_trellis_probe()
+		return
+	if "--walktest" in args:
+		_walk_test()
 		return
 	var only: PackedStringArray = []
 	if i + 1 < args.size() and not args[i + 1].begins_with("--"):
@@ -207,8 +232,11 @@ func _run() -> void:
 				"frames": times.size(), "draw_calls": RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
 				"primitives": RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)}
 			print("  perf ", results[shot["name"]])
-			if "--breakdown" in OS.get_cmdline_user_args() and shot["view"] == "vineyard":
-				await _breakdown()
+			if "--breakdown" in OS.get_cmdline_user_args():
+				if shot["view"] == "vineyard" and String(view.get("zone")) == "":
+					await _breakdown()
+				else:
+					await _breakdown_indoor()
 	if perf:
 		results["gpu"] = RenderingServer.get_video_adapter_name()
 		var f := FileAccess.open(ProjectSettings.globalize_path("res://shots/3d_perf.json"), FileAccess.WRITE)
@@ -257,6 +285,36 @@ func _breakdown() -> void:
 			n.visible = true
 
 
+## Diagnostic: fps with individual features switched off, for the camera's current (indoor) environment.
+func _breakdown_indoor() -> void:
+	var cam: Camera3D = (view.get("player") as Node).get("cam")
+	var env: Environment = cam.environment
+	var wy: Node = view.get("winery")
+	var out := {"base": await _fps()}
+	env.volumetric_fog_enabled = false
+	out["no_volfog"] = await _fps()
+	env.ssil_enabled = false
+	out["+no_ssil"] = await _fps()
+	env.ssr_enabled = false
+	out["+no_ssr"] = await _fps()
+	var lights: Array = wy.get("cellar_lights") + wy.get("hall_lights")
+	for l in lights:
+		l.set_meta("sh", l.shadow_enabled)
+		l.shadow_enabled = false
+	out["+no_light_shadows"] = await _fps()
+	for g in [wy.get("voxel_hall"), wy.get("voxel_cellar")]:
+		(g as Node3D).visible = false
+	out["+no_voxelgi"] = await _fps()
+	print("  breakdown ", out)
+	env.volumetric_fog_enabled = true
+	env.ssil_enabled = true
+	env.ssr_enabled = true
+	for l in lights:
+		l.shadow_enabled = l.get_meta("sh")
+	for g in [wy.get("voxel_hall"), wy.get("voxel_cellar")]:
+		(g as Node3D).visible = true
+
+
 func _log_state(shot: Dictionary) -> void:
 	var parts := []
 	for b in snap.get("blocks", []):
@@ -266,6 +324,9 @@ func _log_state(shot: Dictionary) -> void:
 	for l in snap.get("lots", []):
 		lots.append("%s %s %s v%s" % [l["id"], l["variety"], l["phase"], str(l.get("choices", {}).get("Vessel", "-"))])
 	print("  state: ", ", ".join(parts), " | lots: ", "; ".join(lots))
+	var amb: Node = view.get("ambience")
+	if amb:
+		print("  sound: ", amb.call("debug_state"))
 
 
 # ------------------------------------------------------------------ LOD probe (trellis bug)
@@ -354,3 +415,109 @@ func _diff(a0: Image, b0: Image) -> float:
 				n += 1
 			tot += 1
 	return float(n) / tot
+
+
+# ------------------------------------------------------------------ walk test
+## Walks the capsule controller (scripted direction, real physics) from the vineyard along the farm track, in at
+## the hall door, through the hall, down the stairs into the barrel cellar and back up to the hall. Fails if it
+## falls through the world (safety net used), gets stuck (no progress for 4 s) or ends up in the wrong place.
+##   --walktest [mosel|cotedor|napa]
+func _walk_test() -> void:
+	var args := OS.get_cmdline_user_args()
+	var which := "mosel"
+	var i := args.find("--walktest")
+	if i + 1 < args.size() and not args[i + 1].begins_with("--"):
+		which = args[i + 1]
+	var game: Dictionary = {"mosel": MOSEL, "cotedor": COTEDOR, "napa": NAPA}[which]
+	snap = _play({"game": game, "until": "winery" if which == "mosel" else "date:09-10"})
+	view.apply_snapshot(snap)
+	view.set_view("vineyard")
+	var vy: Node3D = view.get("vineyard")
+	var wy: Node3D = view.get("winery")
+	var pl: CharacterBody3D = view.get("player")
+	var est: Dictionary = vy.get("estate")
+	var trk: Array = vy.get("track")
+	var o: Vector3 = est["origin"]
+	var door: Vector2 = est["door"]
+	var b0: float = vy.get("band_x0")
+	var hz: float = vy.get("hz")
+	var pts := []                       # [name, global target (y ignored outside, used for the finish), radius]
+	if est.get("steep", false):
+		var top: Vector4 = trk[1]
+		pts.append(["track top", Vector3(top.z, 0, top.w), 1.2])
+		pts.append(["track bend", Vector3(top.x, 0, top.y), 1.2])
+		pts.append(["yard", Vector3((trk[0] as Vector4).x, 0, (trk[0] as Vector4).y), 1.2])
+	else:
+		pts.append(["headland", Vector3(b0 - 3.0, 0, hz + 2.0), 1.2])
+		pts.append(["track junction", Vector3(b0 - 3.0, 0, o.z), 1.2])
+		pts.append(["yard", Vector3(door.x + 4.0, 0, o.z), 1.2])
+	var B := func(x: float, y: float, z: float) -> Vector3: return wy.to_global(Vector3(x, y, z))
+	var cx: Dictionary = (wy.get("B") as Dictionary)["cellarXform"]
+	var co: Array = cx["origin"]
+	var C := func(x: float, z: float) -> Vector3: return wy.to_global(Vector3(co[0] + z, co[1], co[2] - x))
+	pts.append(["door", B.call(13.2, 0.0, 0.0), 0.7])
+	pts.append(["in the hall", B.call(9.5, 0.0, 1.6), 0.7])
+	pts.append(["hall, west end", B.call(-9.4, 0.0, 1.6), 0.6])
+	pts.append(["stair top", B.call(-10.75, 0.0, 2.2), 0.45])
+	pts.append(["on the stairs", B.call(-10.75, -1.5, -1.3), 0.45])
+	pts.append(["stair bottom", B.call(-10.75, -5.25, -7.6), 0.45])
+	pts.append(["cellar door", B.call(-10.75, -5.25, -9.3), 0.45])
+	pts.append(["cellar", C.call(-7.0, 0.0), 0.7])
+	pts.append(["cellar, far end", C.call(6.0, 0.0), 0.7])
+	pts.append(["back to the door", C.call(-10.2, 0.0), 0.5])
+	pts.append(["stair bottom (up)", B.call(-10.75, -5.25, -7.6), 0.45])
+	pts.append(["stair top (up)", B.call(-10.75, 0.0, 1.9), 0.45])
+	pts.append(["hall again", B.call(-6.0, 0.0, 1.6), 0.7])
+	var t0 := Time.get_ticks_msec()
+	var ok := true
+	var log := []
+	var game_t := 0.0
+	for wp in pts:
+		var target: Vector3 = wp[1]
+		var rad: float = wp[2]
+		var leg_t := 0.0
+		var best := INF
+		var best_t := 0.0
+		while true:
+			var p: Vector3 = pl.global_position
+			var d := Vector2(target.x - p.x, target.z - p.z)
+			if d.length() < rad:
+				break
+			pl.set("auto_dir", Vector3(d.x, 0, d.y))
+			await get_tree().physics_frame
+			leg_t += get_physics_process_delta_time()
+			if d.length() < best - 0.25:
+				best = d.length()
+				best_t = leg_t
+			if leg_t - best_t > 4.0 or leg_t > 240.0 or int(pl.get("rescues")) > 0:
+				ok = false
+				break
+		game_t += leg_t
+		var p2: Vector3 = pl.global_position
+		var zn := String(wy.call("zone_at", wy.to_local(p2 + Vector3(0, 1.0, 0))))
+		log.append("%s: %.1f s, at (%.1f, %.2f, %.1f), zone %s" % [wp[0], leg_t, p2.x, p2.y, p2.z, zn if zn != "" else "outside"])
+		print("WALK ", log[-1])
+		if not ok:
+			print("WALK FAIL at '%s' (rescues %d)" % [wp[0], int(pl.get("rescues"))])
+			break
+	pl.set("auto_dir", Vector3.ZERO)
+	if ok:
+		var fin: Vector3 = pl.global_position
+		var zn := String(wy.call("zone_at", wy.to_local(fin + Vector3(0, 1.0, 0))))
+		ok = zn == "hall" and absf(fin.y - o.y) < 0.3
+		print("WALK %s: %d legs in %.1f s of game time (%d ms wall), ended in zone '%s' at floor height %+.2f m" % [
+			"PASS" if ok else "FAIL", pts.size(), game_t, Time.get_ticks_msec() - t0, zn, fin.y - o.y])
+	# hiding the view (Tab back to the dashboard) must silence every looping sound and stop the walker
+	var amb: Node = view.get("ambience")
+	var loops: Array = amb.call("_players")
+	var playing_before := loops.filter(func(p): return p.playing and not p.stream_paused).size()
+	view.visible = false
+	await get_tree().process_frame
+	var still := loops.filter(func(p): return p.playing and not p.stream_paused).size()
+	var quiet: bool = still == 0 and not bool(amb.get("running")) and not pl.is_physics_processing()
+	print("SOUND %s: %d loops playing in the view, %d after hiding it" % ["PASS" if quiet and playing_before > 0 else "FAIL", playing_before, still])
+	view.visible = true
+	await get_tree().process_frame
+	var again := loops.filter(func(p): return p.playing and not p.stream_paused).size()
+	print("SOUND %s: %d loops playing again after showing it" % ["PASS" if again == playing_before else "FAIL", again])
+	get_tree().quit()

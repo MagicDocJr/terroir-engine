@@ -27,6 +27,10 @@ TEXTURES = [
     "grey_plaster_02",          # hall walls
     "oak_veneer_01",            # barrels, racks
     "rusty_metal_02",           # barrel hoops
+    "painted_plaster_wall",     # winery facade (tinted per Region)
+    "grey_roof_tiles_02",       # Mosel: slate roof
+    "red_slate_roof_tiles_01",  # Côte d'Or: flat Burgundy tiles
+    "clay_roof_tiles_02",       # Napa: barrel (mission) tiles
 ]
 PROPS = ["hanging_industrial_lamp", "industrial_caged_sconce", "plastic_crate_01", "ladder_sectioned_01"]
 
