@@ -116,7 +116,7 @@ public static class Snapshot
             ["yieldKgHa"] = R(b.YieldKgHa, 0), ["cropKg"] = R(b.CropKg, 0), ["exposure"] = R(b.Exposure, 2), ["lai"] = R(b.Lai, 2), ["berriesPerVine"] = R(b.BerriesPerVine, 0), ["berryWeight"] = R(b.BerryWeight, 2),
             ["budLoad"] = b.BudLoad.ToString(), ["thinning"] = b.CropThinning, ["budsPerVine"] = R(VineyardModel.BudsPerVine(b), 1), ["leafSide"] = b.LeafSide.ToString(), ["leafTiming"] = b.LeafTiming.ToString(),
             ["harvested"] = b.Harvested, ["picking"] = b.Picking, ["pickedPct"] = R(b.CropKg > 0 ? 100 * b.PickedKg / Math.Max(1, b.PickTargetKg) : 0, 0), ["lotId"] = b.LotId ?? "",
-            ["sorting"] = Arr(new[] { SortingLevel.None, SortingLevel.Table, SortingLevel.Rigorous }.Select(sl =>
+            ["sortingOptions"] = Arr(new[] { SortingLevel.None, SortingLevel.Table, SortingLevel.Rigorous }.Select(sl =>
             {
                 var so = WineryModel.Sorting(sl);
                 double lossPct = 100 * (so.soundLoss + d.GreyRot * so.rotRemoved);
@@ -124,6 +124,8 @@ public static class Snapshot
                 return (JsonNode)new JsonObject { ["level"] = sl.ToString(), ["rotRemovedPct"] = R(so.rotRemoved * 100, 0), ["cropLossPct"] = R(lossPct, 1), ["rotLeftPct"] = R(rotLeft, 1),
                     ["extraCost"] = R(b.CropKg * so.hoursPerKg * EconomyTables.LabourRate(g.Region.Id), 0), ["slower"] = so.hoursPerKg > 0 };
             })),
+            ["harvestMethod"] = b.Order == null ? "" : b.Order.HandPick ? "hand" : "machine", ["sorting"] = b.Order?.Sorting.ToString() ?? "",
+            ["lastSpray"] = D(d.LastSpray), ["daysSinceSpray"] = d.LastSpray == null ? null : g.Date.DayNumber - d.LastSpray.Value.DayNumber,
             ["inWindow"] = !b.Harvested && b.Veraison != null && b.SugarGL >= g.HarvestWindowSugar(b),
             ["must"] = b.Veraison == null ? null : new JsonObject { ["oe"] = R(must.Oe, 0), ["brix"] = R(must.Brix, 1), ["pa"] = R(must.PotentialAlcohol, 1), ["ta"] = R(must.TaGL, 1), ["ph"] = R(must.Ph, 2), ["malic"] = R(must.MalicGL, 1), ["yan"] = R(must.YanMgL, 0), ["seeds"] = R(b.SeedMaturity * 100, 0), ["anth"] = R(b.Anthocyanin, 2), ["ibmp"] = R(b.Ibmp, 1) },
             ["samples"] = Arr(b.Samples.Select(s => (JsonNode)new JsonObject { ["date"] = Dates.Short(s.Date), ["oe"] = s.Oe, ["brix"] = s.Brix, ["ta"] = s.TaGL, ["ph"] = s.Ph, ["malic"] = s.MalicGL, ["seeds"] = R(s.SeedMaturity * 100, 0), ["anth"] = s.Anthocyanin, ["ibmp"] = s.IbmpNgL, ["berry"] = s.BerryWeightG, ["grey"] = s.GreyRotPct, ["noble"] = s.NobleRotPct })),

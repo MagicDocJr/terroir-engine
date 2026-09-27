@@ -32,6 +32,7 @@ var viewport: SubViewport
 var container: SubViewportContainer
 var vineyard: Node3D
 var winery: Node3D
+var workers: Node3D
 var player: CharacterBody3D
 var ambience: Node3D
 var current := "vineyard"
@@ -76,6 +77,7 @@ func _ready() -> void:
 	missing = not A.available()
 	vineyard = _make(viewport, "res://src/view3d/vineyard.gd", "Vineyard")
 	winery = _make(vineyard, "res://src/view3d/winery.gd", "Winery")
+	workers = _make(vineyard, "res://src/view3d/workers.gd", "Workers")
 	player = CharacterBody3D.new()
 	player.name = "Player"
 	player.set_script(load("res://src/view3d/player.gd"))
@@ -159,6 +161,9 @@ func apply_snapshot(snap: Dictionary) -> void:
 		moved = true
 	winery.call("apply_snapshot", snap)
 	winery.call("sync_hall_env", vineyard.get("env"))
+	if workers.get("vy") == null:
+		workers.call("setup", vineyard, winery)
+	workers.call("apply", snap)
 	player.set("bounds", vineyard.call("walk_rect"))
 	_configure_sound()
 	if moved or not has_view:
@@ -208,6 +213,12 @@ func camera_preset(name: String, bi := 0) -> void:
 	if name == "drone":
 		set_view("drone")
 		return
+	if name == "crew":                     # whoever is at work (harvest crew, sprayer, pruners); else the Block row view
+		var cv: Array = workers.call("crew_view")
+		if not cv.is_empty():
+			set_camera(cv[0], cv[1])
+			return
+		name = "row"
 	var pt: Array = winery.call("camera_preset", name)
 	if not pt.is_empty():
 		set_camera(winery.to_global(pt[0]), winery.to_global(pt[1]))
@@ -291,6 +302,14 @@ func _on_visibility_changed() -> void:
 		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
 	if ambience:
 		ambience.call("set_running", on and not missing)
+	if workers:
+		workers.call("set_active", on and not missing)
+	# re-entry without set_view (the UI keeps the place): walker, drone and sound carry on where they were
+	if on and not missing and placed_key != "":
+		(drone_cam if drone else player.cam).current = true
+		if ambience:
+			ambience.call("snap")
+		_update_zone(true)
 	if not on and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
@@ -347,6 +366,9 @@ func _process(delta: float) -> void:
 	if show_hud:
 		var p: Vector3 = _cam().global_position
 		hud_label.text = String(winery.call("hud_text", zone)) if zone != "" else String(vineyard.call("hud_text", p))
+		var at_work := String(workers.get("summary"))
+		if at_work != "":
+			hud_label.text += "\nAt work: " + at_work
 	hud_label.visible = show_hud
 	hint_label.visible = show_hud
 

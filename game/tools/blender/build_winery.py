@@ -41,6 +41,12 @@ C.MAT.update({
     "tractor_paint": ((0.60, 0.10, 0.06), 0.45, False),
     "tractor_tyre": ((0.03, 0.03, 0.03), 0.90, False),
     "tractor_metal": ((0.08, 0.08, 0.09), 0.55, False),
+    "sprayer_tank": ((0.85, 0.85, 0.82), 0.40, False),
+    "w_skin":       ((0.60, 0.42, 0.32), 0.60, False),
+    "w_shirt":      ((0.30, 0.40, 0.55), 0.80, False),
+    "w_trousers":   ((0.15, 0.17, 0.22), 0.80, False),
+    "w_hat":        ((0.70, 0.60, 0.35), 0.80, False),
+    "w_gear":       ((0.10, 0.10, 0.10), 0.60, False),
     "facade":       ((0.85, 0.84, 0.80), 0.90, False),
     "plinth":       ((0.30, 0.30, 0.32), 0.90, False),
     "roof":         ((0.12, 0.12, 0.14), 0.70, False),
@@ -699,8 +705,9 @@ SIGN = dict(z=(-2.5, 2.5), y=(4.85, 5.75))
 OFFICE_DOOR = dict(z=(3.4, 4.4), top=2.2)
 OFFICE_WIN = dict(z=(5.1, 6.7), y=(1.0, 2.3))
 LEANTO = dict(x=(3.0, 11.6), depth=3.2, y_wall=3.4, y_edge=2.8)
-PRESS = (6.2, HALL["z1"] + WALL_T + 1.55)
-DESTEM = (9.6, HALL["z1"] + WALL_T + 1.5)
+PRESS = (7.7, HALL["z1"] + WALL_T + 1.55)
+DESTEM = (10.35, HALL["z1"] + WALL_T + 1.5)
+SORTING = (4.35, HALL["z1"] + WALL_T + 1.9)          # sorting table (shown by workers.gd while grapes are sorted)
 BINS = [(16.4, 0.0, 6.4), (17.8, 0.0, 6.4), (16.4, 0.76, 6.4)]
 PALLET = (15.2, -6.6)
 TRACTOR = dict(pos=[19.2, 0.0, -5.2], yaw=0.0)
@@ -837,7 +844,7 @@ def build_yard():
     yard = make_object("yard", Y, smooth=False)
     info = {"sign": {"pos": [X1 + 0.085, (SIGN["y"][0] + SIGN["y"][1]) / 2, 0.0], "w": SIGN["z"][1] - SIGN["z"][0], "h": SIGN["y"][1] - SIGN["y"][0]},
             "lamp": {"pos": [X1, 2.75, 2.85], "facing": [1, 0, 0]},
-            "tractor": TRACTOR}
+            "tractor": TRACTOR, "sortingTable": {"pos": [SORTING[0], 0.0, SORTING[1]], "yaw": 0.0}}
     col = []
     b = lambda a, c: col.append(_box_entry(a, c))
     for x in (lx0 + 0.1, (lx0 + lx1) / 2, lx1 - 0.1):
@@ -850,7 +857,7 @@ def build_yard():
     b((X1, 0.0, d0 - 0.25), (X1 + 0.55, 0.15, d1 + 0.25))
     t = TRACTOR["pos"]
     b((t[0] - 1.5, 0.0, t[2] - 1.0), (t[0] + 1.9, 2.4, t[2] + 1.0))
-    b((4.0, 0.0, Z1 + 2.2), (5.6, 1.0, Z1 + 3.0))                                          # crate stack
+    b((3.05, 0.0, Z1 + 2.3), (3.9, 1.0, Z1 + 3.05))                                         # crate stack
     return yard, info, col
 
 
@@ -919,6 +926,92 @@ def build_tractors():
     return obs
 
 
+# =========================================================================== field workers, trailer, sprayer, bins
+# workers.glb (glTF coords, metres): "person" faces -Z, feet at the origin. UV2.x carries a part code the worker
+# shader animates by (game/src/view3d/shaders/worker.gdshader): 1/2 left/right leg (+boot), 3/4 left/right arm
+# (right arm carries the spray lance), 5 torso/head/hat, 6 bucket (on the ground by the right foot; lifted to the
+# hand when carried), 7 backpack sprayer. Materials w_skin/w_shirt/w_trousers/w_hat/w_gear are tinted per person.
+def build_workers():
+    obs = []
+    P = {k: Acc() for k in ("w_skin", "w_shirt", "w_trousers", "w_hat", "w_gear")}
+
+    def part(acc, code, fn):
+        n0 = len(acc.v)
+        fn()
+        for i in range(n0, len(acc.v)):
+            acc.uv2[i] = (float(code), 0.0)
+
+    for side, code in ((-1, 1), (1, 2)):
+        x0, x1 = (side * 0.03, side * 0.17) if side > 0 else (side * 0.17, side * 0.03)
+        part(P["w_trousers"], code, lambda x0=x0, x1=x1: box(P["w_trousers"], (x0, 0.07, -0.075), (x1, 0.93, 0.075)))
+        part(P["w_gear"], code, lambda x0=x0, x1=x1: box(P["w_gear"], (x0 - 0.01, 0.0, -0.15), (x1 + 0.01, 0.08, 0.08)))
+    part(P["w_shirt"], 5, lambda: box(P["w_shirt"], (-0.2, 0.9, -0.115), (0.2, 1.46, 0.115)))
+    part(P["w_trousers"], 5, lambda: box(P["w_trousers"], (-0.19, 0.86, -0.11), (0.19, 0.95, 0.11)))      # belt / hips
+    for side, code in ((-1, 3), (1, 4)):
+        x0, x1 = (0.205, 0.3) if side > 0 else (-0.3, -0.205)
+        part(P["w_shirt"], code, lambda x0=x0, x1=x1: box(P["w_shirt"], (x0, 0.84, -0.055), (x1, 1.44, 0.055)))
+        part(P["w_skin"], code, lambda x0=x0, x1=x1: box(P["w_skin"], (x0 + 0.005, 0.72, -0.045), (x1 - 0.005, 0.84, 0.045)))
+    part(P["w_skin"], 5, lambda: box(P["w_skin"], (-0.05, 1.46, -0.05), (0.05, 1.5, 0.05)))
+    part(P["w_skin"], 5, lambda: C.berry_sphere(P["w_skin"], gl(0.0, 1.6, 0.0), 0.115, (1, 1, 1), seg=10, rings=7))
+    part(P["w_hat"], 5, lambda: cylinder(P["w_hat"], (0.0, 1.685, 0.0), "y", 0.2, 0.02, 12))
+    part(P["w_hat"], 5, lambda: cylinder(P["w_hat"], (0.0, 1.73, 0.0), "y", 0.115, 0.08, 12))
+    # bucket (open top) by the right foot
+    def bucket():
+        cylinder(P["w_gear"], (0.34, 0.13, -0.02), "y", 0.12, 0.25, 12, caps=False)
+        cylinder(P["w_gear"], (0.34, 0.01, -0.02), "y", 0.1, 0.02, 12)
+    part(P["w_gear"], 6, bucket)
+    # backpack sprayer + lance in the right hand
+    part(P["w_gear"], 7, lambda: box(P["w_gear"], (-0.15, 0.98, 0.115), (0.15, 1.46, 0.3)))
+    part(P["w_gear"], 4, lambda: box(P["w_gear"], (0.24, 0.76, -0.62), (0.265, 0.785, -0.02)))
+    obs.append(make_object("person", P, smooth=False))
+
+    # trailer with two picking bins (hitched behind a tractor facing +x: drawbar towards +x)
+    T = {k: Acc() for k in ("tractor_paint", "tractor_tyre", "tractor_metal", "bin_plastic")}
+    box(T["tractor_metal"], (-1.3, 0.5, -0.8), (1.3, 0.6, 0.8))
+    box(T["tractor_metal"], (1.3, 0.48, -0.05), (2.3, 0.56, 0.05))
+    for z in (-0.9, 0.9):
+        cylinder(T["tractor_tyre"], (0.0, 0.33, z), "z", 0.33, 0.2, 12)
+    for x in (-0.65, 0.65):
+        w, h, d, t, y = 1.15, 0.72, 1.0, 0.04, 0.6
+        box(T["bin_plastic"], (x - w / 2, y, -d / 2), (x + w / 2, y + 0.06, d / 2))
+        box(T["bin_plastic"], (x - w / 2, y, -d / 2), (x + w / 2, y + h, -d / 2 + t))
+        box(T["bin_plastic"], (x - w / 2, y, d / 2 - t), (x + w / 2, y + h, d / 2))
+        box(T["bin_plastic"], (x - w / 2, y, -d / 2), (x - w / 2 + t, y + h, d / 2))
+        box(T["bin_plastic"], (x + w / 2 - t, y, -d / 2), (x + w / 2, y + h, d / 2))
+    obs.append(make_object("trailer", T, smooth=False))
+    # air-blast vineyard sprayer: tank on two wheels, fan housing at the back
+    S = {k: Acc() for k in ("tractor_tyre", "tractor_metal", "sprayer_tank")}
+    cylinder(S["sprayer_tank"], (0.1, 0.9, 0.0), "x", 0.45, 1.5, 14)
+    box(S["tractor_metal"], (-0.8, 0.42, -0.35), (0.9, 0.5, 0.35))
+    box(S["tractor_metal"], (0.9, 0.46, -0.05), (1.9, 0.52, 0.05))
+    cylinder(S["tractor_metal"], (-0.95, 0.95, 0.0), "x", 0.5, 0.35, 16)
+    cylinder(S["tractor_tyre"], (-1.13, 0.95, 0.0), "x", 0.42, 0.02, 16)
+    for z in (-0.55, 0.55):
+        cylinder(S["tractor_tyre"], (0.1, 0.3, z), "z", 0.3, 0.18, 12)
+    obs.append(make_object("sprayer", S, smooth=False))
+    # a single picking bin
+    B = {"bin_plastic": Acc()}
+    w, h, d, t = 1.15, 0.72, 1.0, 0.04
+    box(B["bin_plastic"], (-w / 2, 0.0, -d / 2), (w / 2, 0.06, d / 2))
+    box(B["bin_plastic"], (-w / 2, 0.0, -d / 2), (w / 2, h, -d / 2 + t))
+    box(B["bin_plastic"], (-w / 2, 0.0, d / 2 - t), (w / 2, h, d / 2))
+    box(B["bin_plastic"], (-w / 2, 0.0, -d / 2), (-w / 2 + t, h, d / 2))
+    box(B["bin_plastic"], (w / 2 - t, 0.0, -d / 2), (w / 2, h, d / 2))
+    obs.append(make_object("bin", B, smooth=False))
+    # sorting table: stainless tray on legs, dark belt, a bin at the discharge end (long axis x)
+    Q = {k: Acc() for k in ("tank_steel", "tractor_tyre", "hall_steel", "bin_plastic")}
+    for x in (-1.1, 1.1):
+        for z in (-0.3, 0.3):
+            box(Q["hall_steel"], (x - 0.03, 0.0, z - 0.03), (x + 0.03, 0.9, z + 0.03))
+    box(Q["tank_steel"], (-1.3, 0.88, -0.38), (1.3, 0.92, 0.38))
+    for z in (-0.38, 0.34):
+        box(Q["tank_steel"], (-1.3, 0.92, z), (1.3, 1.02, z + 0.04))
+    box(Q["tractor_tyre"], (-1.25, 0.92, -0.3), (1.25, 0.935, 0.3))
+    box(Q["bin_plastic"], (1.35, 0.0, -0.45), (2.3, 0.62, 0.45))
+    obs.append(make_object("sorting_table", Q, smooth=False))
+    return obs
+
+
 # =========================================================================== main
 bpy.ops.wm.read_factory_settings(use_empty=True)
 C.set_out(OUT)
@@ -942,6 +1035,8 @@ export(yard_ob, "yard.glb")
 C.clear_scene()
 export(build_tractors(), "tractors.glb")
 C.clear_scene()
+export(build_workers(), "workers.glb")
+C.clear_scene()
 for kind in ("barriques", "fuder"):                       # slots only: contents come from the simulation
     for i, it in enumerate(cellar_items[kind]):
         it["slot"] = i + 1
@@ -960,7 +1055,7 @@ stair_lights = [{"pos": [ST["x0"] + 0.02, -1.1, -3.3], "facing": [1, 0, 0], "col
                 {"pos": [ST["x0"] + 0.02, ST_FLOOR + 2.05, -8.3], "facing": [1, 0, 0], "color": [1.0, 0.74, 0.46]}]
 Z1o = HALL["z1"] + WALL_T
 ext_props = [{"model": "plastic_crate_01", "pos": [14.9 + 0.62 * (k % 2), 0.13 + 0.33 * (k // 4), -6.82 + 0.45 * ((k // 2) % 2)], "yaw": 0.0} for k in range(12)]
-ext_props += [{"model": "plastic_crate_01", "pos": [4.4 + 0.62 * (k % 2), 0.33 * (k // 4), Z1o + 2.45 + 0.45 * ((k // 2) % 2)], "yaw": 0.0} for k in range(8)]
+ext_props += [{"model": "plastic_crate_01", "pos": [3.2 + 0.45 * ((k // 2) % 2), 0.33 * (k // 4), Z1o + 2.4 + 0.45 * (k % 2)], "yaw": math.pi / 2} for k in range(8)]
 C2B = cellar_to_building
 eye = 1.65
 layout = {
@@ -980,6 +1075,7 @@ layout = {
         "door": {"position": [20.0, eye, 3.5], "target": [6.0, 1.5, -1.0]},
         "yard": {"position": [23.5, 1.9, 11.5], "target": [12.3, 2.6, 1.5]},
         "yard_leanto": {"position": [15.0, 1.7, 13.2], "target": [7.0, 1.3, 8.9]},
+        "sorting": {"position": [7.4, 2.5, 13.4], "target": [4.3, 0.8, 9.1]},
     },
     # teleport spots (feet position + look target, building frame) for set_view("hall" | "cellar")
     "spawn": {

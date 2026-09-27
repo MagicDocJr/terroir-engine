@@ -1021,10 +1021,14 @@ func _dress_blocks() -> void:
 		var t2 := clampf((oe - 55.0) / 40.0, 0.0, 1.0)
 		var ripe := Color(0.10, 0.012, 0.03).lerp(Color(0.022, 0.008, 0.036), t2) if red else Color(0.36, 0.42, 0.10).lerp(Color(0.50, 0.42, 0.11), t2)
 		var show := 1.0
+		var plane := Vector4(0.0, 0.0, 0.0, 0.0)
 		if b.get("harvested", false) or st == "Harvested":
 			show = 0.0
 		elif b.get("picking", false) or st == "Picking":
-			show = 1.0 - _num(b, "pickedPct") / 100.0
+			# the crew works across the Block row by row: rows on the picked side carry no bunches
+			var fr := block_frame(blk)
+			var w_front: float = lerpf(fr["wmin"], fr["wmax"], clampf(_num(b, "pickedPct") / 100.0, 0.0, 1.0))
+			plane = Vector4(fr["W"].x, fr["W"].y, w_front, 1.0)
 		show *= 1.0 - clampf(_num(b, "frostLoss") / 100.0, 0.0, 0.9)
 		var flowering := 1.0 if st == "Flowering" else 0.0
 		var autumn := 0.0
@@ -1052,6 +1056,7 @@ func _dress_blocks() -> void:
 		bm.set_shader_parameter("berry_col", berry_col)
 		bm.set_shader_parameter("berry_state", berry_state)
 		bm.set_shader_parameter("berry_state2", berry_state2)
+		bm.set_shader_parameter("pick_plane", plane)
 	_dress_neighbours()
 	_dress_season(doy)
 
@@ -1722,6 +1727,46 @@ func _apply_rain_visibility() -> void:
 
 
 # =============================================================================================== camera & HUD
+## A Block's row frame: U along the rows, W across them (rows at w = k·spacing), the w range of the planted
+## rectangle and the rectangle itself. Stake-trained (Einzelpfahl) Blocks: a square grid, "rows" along z.
+func block_frame(blk: Dictionary) -> Dictionary:
+	var sp := _spacing(blk)
+	var u := _row_dir(blk) if blk["vsp"] else Vector2(0, 1)
+	var wv := Vector2(-u.y, u.x)
+	var r := Rect2(blk["x0"] + 1.2, -hz + 1.2, blk["x1"] - blk["x0"] - 2.4, 2.0 * hz - 2.4)
+	var wmin := INF; var wmax := -INF
+	for c in [r.position, Vector2(r.end.x, r.position.y), Vector2(r.position.x, r.end.y), r.end]:
+		wmin = minf(wmin, c.dot(wv)); wmax = maxf(wmax, c.dot(wv))
+	return {"U": u, "W": wv, "row": sp.x, "wmin": wmin, "wmax": wmax, "rect": r}
+
+
+## The part of the line {u·U + w·W} inside the Block's planted rectangle: Vector2(u_min, u_max), or empty (x > y).
+func row_span(fr: Dictionary, w: float) -> Vector2:
+	var u: Vector2 = fr["U"]
+	var wv: Vector2 = fr["W"]
+	var r: Rect2 = fr["rect"]
+	var o := wv * w
+	var lo := -INF
+	var hi := INF
+	for axis in 2:
+		var d := u[axis]
+		var a := r.position[axis]
+		var b := r.end[axis]
+		if absf(d) < 1e-6:
+			if o[axis] < a or o[axis] > b:
+				return Vector2(1, 0)
+			continue
+		var t0 := (a - o[axis]) / d
+		var t1 := (b - o[axis]) / d
+		lo = maxf(lo, minf(t0, t1))
+		hi = minf(hi, maxf(t0, t1))
+	return Vector2(lo, hi)
+
+
+func ground_normal(x: float, z: float) -> Vector3:
+	return _normal(x, z)
+
+
 func block_center(i: int) -> Vector3:
 	if blocks.is_empty():
 		return Vector3.ZERO

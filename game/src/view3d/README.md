@@ -35,6 +35,7 @@ view is hidden.
 | `winery.gd` | The building: exterior shell, hall with tanks and screens (`tank_panel.gd`), stairs and cellar. Also builds the collision boxes, occluders, VoxelGI and the per-room environments. |
 | `player.gd` | Capsule walker (`CharacterBody3D`): gravity, slopes up to ~50°, and stairs (a ramp collider under the steps). |
 | `ambience.gd` | Ambient sound per Region and place (see below). |
+| `workers.gd` | People and machines at work, staged from the snapshot (see below). One MultiMesh for all people, posed in `shaders/worker.gdshader`. |
 | `view3d_test.gd` | Test harness: screenshots, FPS, the walk test and the LOD probe. |
 
 ## The Estate layout
@@ -77,6 +78,26 @@ view is hidden.
   through the door and windows.
 - Rain particles and their heightfield exist only outdoors.
 - Vine LODs share exact visibility thresholds (no hysteresis margin; that margin made the nearest vines vanish).
+
+## People at work (spec §8.2 "processes you can watch")
+
+Everything is read from the snapshot; `workers.gd` only stages it.
+
+| snapshot | what you see |
+|---|---|
+| Block `picking` (+ `pickedPct`) with `harvestMethod` "hand" | A picking crew at the picking front: pickers bent at the vines, a step along the row now and then, one in four carrying buckets to two picking bins at the row end. The Region's tractor waits on the headland with a trailer of bins. The front's position across the Block follows `pickedPct`; rows behind it carry no bunches (`pick_plane` in `berry.gdshader`). |
+| labour Programme (`programmes` → `labour`) | Crew size: Low 6, Medium 9, High 12 people (the Programme text says 8/12/20 pickers; the view shows a readable share). |
+| `harvestMethod` "machine" | A harvester (drawn with the straddle-tractor model) going up and down the front row, a trailer of bins and one person. *Game simplification: no dedicated harvester model.* |
+| `sorting` Table / Rigorous while any Block is hand-picked | A sorting table under the winery's lean-to with 2 (Table) or 4 (Rigorous) people. |
+| `daysSinceSpray` ≤ 1 | The spray pass (the snapshot is the morning after the simulated day): tractor + air-blast sprayer in the alleys; a straddle tractor over the rows in the Côte d'Or and in narrow rows; a person with a backpack sprayer on steep Mosel slopes and on stake-trained vines. |
+| date + Block stage | Dec–Mar (dormant): 3 pruners in one Block; May–Jul: a canopy crew of 3 in one Block. *Game simplification: the sim books pruning and canopy work as labour hours, not as dated tasks, so the view picks the months and the Block.* |
+
+Harvests in the sim are fast (a 0.15–0.4 ha Block is usually picked in the one simulated day after the order;
+`view3d_test --pickrates` prints the rates), so the crew is mostly seen on the order day (`pickedPct` 0, crew at
+the first rows) and occasionally at ~97 %. The parked tractor in the yard is hidden while it is out in the
+vineyard. The HUD shows "At work: …". Camera preset `crew` looks at whoever is working. Cost: ≤ 32 people in one
+MultiMesh (≈ 90 triangles each, posed in the vertex shader) plus a few machine meshes; it is only animated while
+the view is shown.
 
 ## Sound
 
@@ -139,8 +160,12 @@ low-pass filter, and the fermentation is a simmering pot plus bubbles blown thro
   (real physics) from the vineyard along the track, through the door and the hall, down the stairs into the
   cellar and back up, then checks that sound stops when the view is hidden. It prints `WALK PASS/FAIL` and
   `SOUND PASS/FAIL`.
+- Work shots: `mosel_harvest_crew`, `mosel_harvest_late`, `mosel_harvest_wide`, `mosel_sorting`,
+  `cotedor_harvest_crew`, `cotedor_sorting`, `napa_harvest_machine`, `napa_harvest_crew`, `mosel_pruning`,
+  `cotedor_canopy`, `mosel_spray`, `cotedor_spray`, `napa_spray` (the log prints `at work: …`).
 - Drone shots: `mosel_drone`, `cotedor_drone`, `napa_drone`; yard shots: `mosel_yard`, `mosel_leanto`,
   `cotedor_yard`, `napa_yard`. The walk test starts with a drone round trip (4 on, 4 off) and checks the walker
-  did not move.
+  did not move, then hides and shows the view without `set_view` (as the UI does on Tab) and checks the drone,
+  the walker's spot and the sound resume (`RESUME PASS`).
 - LOD probe: `view3d_test.tscn -- --capture3d none --trellis`. The picture at a place must not depend on the
   direction you walked there from; `--trellis-old` restores the old bug to show the difference.

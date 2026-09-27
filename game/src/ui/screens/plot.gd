@@ -130,7 +130,7 @@ static func build(D: Dictionary, shell) -> Control:
 		# the trade-off of each sorting level for this Block's fruit today (numbers from the simulation)
 		var sg := GridContainer.new(); sg.columns = 5; sg.add_theme_constant_override("h_separation", 18); sg.add_theme_constant_override("v_separation", 3)
 		for hname in ["", "Rot left in the wine", "Crop lost", "Extra labour", ""]: sg.add_child(UI.label(hname, 12, UI.MUTED, UI.f_body_b))
-		for so in B.get("sorting", []):
+		for so in B.get("sortingOptions", []):
 			var chosen: bool = String(so["level"]) == sorting
 			var col := UI.GOLD if chosen else UI.INK2
 			sg.add_child(UI.label(("▸ " if chosen else "  ") + String(so["level"]), 14, col, UI.f_body_b if chosen else null))
