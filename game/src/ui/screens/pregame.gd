@@ -95,7 +95,20 @@ static func _region(shell) -> Control:
 			h.add_child(UI.spacer())
 			h.add_child(UI.num(UI.euro(int(p["price"])), 16, UI.INK if float(p["price"]) < cap * 0.8 else UI.SERIOUS))
 			cv.add_child(h)
-		cv.add_child(UI.spacer(false))
+		# a spinning model of the Region's signature Plot fills the card
+		var sig: Dictionary = r["plots"][0]
+		for p in r["plots"]:
+			if int(p["ratings"]["Prestige"]) > int(sig["ratings"]["Prestige"]) and int(p["price"]) <= cap: sig = p
+		var dwrap := PanelContainer.new(); dwrap.add_theme_stylebox_override("panel", UI.sb(Color("1a2127"), 6, UI.LINE, 1, 0))
+		dwrap.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		var dio = load("res://src/ui/diorama.gd").new()
+		dio.custom_minimum_size = Vector2(0, 300)
+		dio.set_plot(sig)
+		dwrap.add_child(dio)
+		var cap_l := UI.label("  Signature Plot: " + String(sig["name"]) + " · drag to turn", 13, UI.INK2); cap_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cap_l.vertical_alignment = VERTICAL_ALIGNMENT_TOP; cap_l.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+		dwrap.add_child(cap_l)
+		cv.add_child(dwrap)
 		var b := UI.button("Look at plots in %s ›" % r["name"], true, 17); b.custom_minimum_size = Vector2(0, 48)
 		var rid: String = r["id"]
 		b.pressed.connect(func(): shell.setup["region"] = rid; shell.setup.erase("plot"); shell.show_screen("plots"))
@@ -149,7 +162,7 @@ static func _plots(shell) -> Control:
 		facts.add_child(UI.chip(f, UI.INK2, 13))
 	ov.add_child(facts)
 	var spacer := Control.new(); spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL; spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE; ov.add_child(spacer)
-	var hint := UI.label("Drag to turn · scroll to zoom · edges show each Block's soil (depth ×6) · mist marks frost pockets", 13, UI.MUTED)
+	var hint := UI.label("Drag to turn · scroll to zoom · edges show each Block's soil (depth ×8) · mist marks frost pockets", 13, UI.MUTED)
 	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE; ov.add_child(hint)
 	dp.add_child(over)
 	mid.add_child(dp)

@@ -5,7 +5,7 @@
 extends Control
 
 const UI := preload("res://src/ui/ui.gd")
-const SOIL_EXAG := 6.0
+const SOIL_EXAG := 8.0
 
 var plot: Dictionary = {}
 var viewport: SubViewport
@@ -13,7 +13,7 @@ var world_root: Node3D
 var pivot: Node3D
 var cam: Camera3D
 var yaw := 0.6
-var pitch := -0.55
+var pitch := -0.42
 var dist := 16.0
 var auto_spin := true
 var dragging := false
@@ -39,7 +39,7 @@ func _ready() -> void:
 	e.background_color = Color("1a2127")
 	e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	e.ambient_light_color = Color("9fb1c0")
-	e.ambient_light_energy = 0.55
+	e.ambient_light_energy = 0.3
 	e.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	env.environment = e
 	viewport.add_child(env)
@@ -108,9 +108,9 @@ func _region() -> String: return String(plot.get("region", "mosel"))
 
 func _margin_colour() -> Color:
 	match _region():
-		"napa": return Color("b59a5a")       # dry golden grass
-		"cote-dor": return Color("6f8a45")
-	return Color("4d6b3a")                    # Mosel: forest and neighbouring vines
+		"napa": return Color("8f7a45")       # dry golden grass
+		"cote-dor": return Color("56703a")
+	return Color("3f5a30")                    # Mosel: forest and neighbouring vines
 
 func _soil_colour(b: Dictionary) -> Color:
 	var tex := String(b.get("texture", "loam")).to_lower()
@@ -171,7 +171,7 @@ func _terrain(tile: Node3D, strips: Array, ext: Vector2) -> void:
 			var cz: float = (q0.z + q2.z) / 2.0
 			var s: Variant = _strip_at(strips, cx, cz)
 			var col := mc.lerp(Color("3c5530"), 0.5 + 0.5 * sin(cx * 0.07) * sin(cz * 0.05)) if s == null else _block_colour(s["b"])
-			if s == null and absf(cz) <= half.y and absf(cx) <= half.x: col = Color("a58c68")   # tracks between Blocks
+			if s == null and absf(cz) <= half.y and absf(cx) <= half.x: col = Color("8d7656")   # tracks between Blocks
 			for t in [0, 1, 2, 0, 2, 3]:
 				st.set_color(col)
 				st.add_vertex(quad[t])
@@ -180,6 +180,7 @@ func _terrain(tile: Node3D, strips: Array, ext: Vector2) -> void:
 	mi.mesh = st.commit()
 	var mat := StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
+	mat.vertex_color_is_srgb = true
 	mat.roughness = 0.95
 	mi.material_override = mat
 	tile.add_child(mi)
@@ -187,7 +188,7 @@ func _terrain(tile: Node3D, strips: Array, ext: Vector2) -> void:
 func _block_colour(b: Dictionary) -> Color:
 	var id := String(b["id"])
 	var bc: Color = UI.BLOCK.get(id, Color("888888"))
-	return bc.lerp(_soil_colour(b), 0.45).darkened(0.1)
+	return bc.lerp(_soil_colour(b), 0.6).darkened(0.18)
 
 ## Soil cut-away on all four edges: topsoil, subsoil to rooting depth, bedrock to a flat base (depths ×6).
 func _skirt(tile: Node3D, strips: Array, ext: Vector2) -> void:
@@ -197,7 +198,9 @@ func _skirt(tile: Node3D, strips: Array, ext: Vector2) -> void:
 	for iz in 21:
 		for ix in 21:
 			base = minf(base, _h(-ext.x + 2 * ext.x * ix / 20.0, -ext.y + 2 * ext.y * iz / 20.0))
-	base -= 12.0 * SOIL_EXAG * 0.5
+	var deepest := 1.0
+	for s in strips: deepest = maxf(deepest, float(s["b"].get("depth", 100)) / 100.0)
+	base -= (deepest + 1.2) * SOIL_EXAG   # a slab of bedrock below the deepest roots
 	var edges := [[Vector2(-ext.x, ext.y), Vector2(ext.x, ext.y)], [Vector2(ext.x, ext.y), Vector2(ext.x, -ext.y)],
 		[Vector2(ext.x, -ext.y), Vector2(-ext.x, -ext.y)], [Vector2(-ext.x, -ext.y), Vector2(-ext.x, ext.y)]]
 	var rock := _bedrock_colour()
@@ -237,6 +240,7 @@ func _skirt(tile: Node3D, strips: Array, ext: Vector2) -> void:
 	mi.mesh = st.commit()
 	var mat := StandardMaterial3D.new()
 	mat.vertex_color_use_as_albedo = true
+	mat.vertex_color_is_srgb = true
 	mat.roughness = 1.0
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mi.material_override = mat
@@ -302,8 +306,8 @@ func _water(tile: Node3D, ext: Vector2) -> void:
 	q.position = Vector3(0, edge_h - 1.5, ext.y + w / 2.0)
 	tile.add_child(q)
 	var l := Label3D.new(); l.text = "Mosel" if river else "stream"; l.font = UI.f_body; l.font_size = 64
-	l.modulate = Color("cfe3ee"); l.pixel_size = 0.004 / scale_k; l.rotation.x = -PI / 2
-	l.position = Vector3(0, edge_h - 1.2, ext.y + w / 2.0)
+	l.modulate = Color("cfe3ee"); l.pixel_size = 0.004 / scale_k; l.billboard = BaseMaterial3D.BILLBOARD_ENABLED; l.outline_size = 12; l.outline_modulate = Color(0, 0, 0, 0.7)
+	l.position = Vector3(0, edge_h + 2.0, ext.y + w / 2.0)
 	tile.add_child(l)
 
 func _mist(tile: Node3D, strips: Array) -> void:
@@ -315,7 +319,7 @@ func _mist(tile: Node3D, strips: Array) -> void:
 		var pm := PlaneMesh.new(); pm.size = Vector2(w * 1.1, half.y * 0.9)
 		q.mesh = pm
 		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(0.92, 0.95, 1.0, 0.38)
+		mat.albedo_color = Color(0.92, 0.95, 1.0, 0.5)
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
@@ -323,6 +327,7 @@ func _mist(tile: Node3D, strips: Array) -> void:
 		var z := half.y * 0.5
 		q.position = Vector3(cx, _h(cx, z) + 2.5, z)
 		q.rotation.x = atan(slope) * 0.8
+		q.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		tile.add_child(q)
 
 func _compass_and_sun(ext: Vector2) -> void:
@@ -340,7 +345,7 @@ func _compass_and_sun(ext: Vector2) -> void:
 	world_root.add_child(arrow)
 	# the sun stands in the south at a mid-latitude midday elevation (~45°)
 	var sun := DirectionalLight3D.new()
-	sun.light_energy = 1.25
+	sun.light_energy = 0.95
 	sun.light_color = Color("fff1d6")
 	sun.shadow_enabled = true
 	sun.rotation = Vector3(deg_to_rad(-42), 0, 0)    # pointing from +z (south) towards −z
@@ -353,6 +358,7 @@ func _compass_and_sun(ext: Vector2) -> void:
 	var dm := StandardMaterial3D.new(); dm.albedo_color = Color("ffd66b"); dm.emission_enabled = true; dm.emission = Color("ffcf55"); dm.emission_energy_multiplier = 2.0
 	dm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	disc.material_override = dm
+	disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	disc.position = Vector3(0, 4.2, r * 1.05)
 	world_root.add_child(disc)
 	var sl := Label3D.new(); sl.text = "sun (south)"; sl.font = UI.f_body; sl.font_size = 48; sl.modulate = Color("ffe3a0")
