@@ -202,6 +202,14 @@ Format: mean (min–max across years).
 - **Mosel (Bernkastel): the raw grid is too cold, as expected.** Grid HI 1384 and GST 13.5 °C would put Riesling below its Huglin band (1700–1800). Correcting to a 150 m riverside slope adds ~+290 HI (lapse rate, §3.1). A steep south-facing slope adds +150–300 HI (DWD), for a total of **~1800–2000 HI (1991–2020)** on the best Blocks. That's at or just above Riesling's band, matching the game's premise that the steep south slate Plot is premium and the flat, high or north-facing Plots are marginal. **Acceptance check:** after adjustments, the Mosel steep-south Block must reach HI 1750–2000 (1991–2020 mean), and the flat riverbank frost-pocket Block about 1500–1650 (`UNVERIFIED` target band derived from the sources above).
 - **Warming is visible everywhere in Europe:** Mosel HI +176 and Beaune HI +166 between 1981–2000 and 2001–2020. For scale, Würzburg's HI rose from 1452 (1961–1990) to 1600 (1981–2010) (Maaß & Schwab 2011). The continuous historical Timeline (ADR 0002) reproduces this automatically.
 
+### 5.2 Block-model calibration results (27 Sep 2026, `sim climcheck`)
+
+The grid-cell elevations in the data are Mosel **106 m**, Côte d'Or **224 m** and Napa **45 m**. That is lower than the station elevations assumed in §3.1, so the Mosel Blocks get no lapse-rate warming. Two calibration terms were added, both `UNVERIFIED` fits. Rerun `sim climcheck` after any climate change.
+
+- **South-slope warmth** (`SiteWarmthC` = 1.2 °C on Tmax, half on Tmin, scaled by how south-facing the Block is and by slope/60 %). The beam-ratio term alone gave steep south slopes only about +10 HI. With the new term, the steep south Mosel Blocks reach **HI 1700–1790** (Terrassen 1702–1791, Blauschiefer 1662–1755) and the flat riverbank frost pocket **1544–1572**, which meets the §5.1 acceptance check.
+- **Napa correction revised.** The region correction was −3.2/−1.6 °C (Tmax/Tmin), with fog −2.5 °C × fog frequency. That double-counted the bias and put the valley floor at about 1,250–1,450 Winkler (Region I–II). It is now −1.0/−0.5 °C for the region, fog −2.0 °C × frequency, and a sea breeze of −3.0 °C × wind exposure (only where fog reaches). 1991–2020 Winkler: floor **1546–1739**, Rutherford bench **1708–1819** (Region III), Carneros **1569–1594** (Region II, coolest), mountain **1468–1770**.
+- **Night inversion.** Blocks above the grid elevation in the thermal belt escape part of the lapse-rate cooling at night (Game simplification).
+
 ## 6. Synthetic weather (interface only)
 
 Synthetic weather must reproduce, per Region, the recent-climate distributions of the table above (1991–2020 means and year-to-year range), plus the warming trend beyond 2025. Its generator is out of scope for this doc; these anchors are its acceptance tests.

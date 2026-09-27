@@ -77,6 +77,7 @@ func _ready() -> void:
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://shots/sfx"))
 		for n in fx.players: (fx.players[n].stream as AudioStreamWAV).save_to_wav(ProjectSettings.globalize_path("res://shots/sfx/%s.wav" % n))
 		print("SFX saved"); get_tree().quit(); return
+	if "--pregame" in args: capture = true; _pregame_shots.call_deferred(); return
 	if "--avatars" in args: capture = true; _avatar_sheet.call_deferred(); return
 	if "--fuzz" in args: capture = true; _run_fuzz.call_deferred()
 	elif capture: _run_capture.call_deferred()
@@ -606,4 +607,13 @@ func _avatar_sheet() -> void:
 	var small := UI.hbox(10); small.position = Vector2(40, 700); add_child(small)
 	for p in people.slice(0, 7): small.add_child(load("res://src/ui/avatar.gd").make(p[0], p[1], 36))
 	await _shot("avatars")
+	get_tree().quit()
+
+func _pregame_shots() -> void:
+	show_screen("region"); await _shot("pre_region")
+	for spec in [["mosel", "mosel-blauschiefer", "mosel-uferflur"], ["cote-dor", "cotedor-village", ""], ["napa", "napa-mountain", "napa-floor"]]:
+		setup = {"region": spec[0], "plot": spec[1], "compare": spec[2]}
+		show_screen("plots")
+		await get_tree().create_timer(2.0).timeout
+		await _shot("pre_plots_" + spec[1])
 	get_tree().quit()

@@ -29,7 +29,7 @@ public sealed record Variety(
     public static readonly Variety PinotNoir = new(VarietyId.PinotNoir, "Pinot Noir", true, 158, 1219, 2511, 2700,
         1.7, 90, 1.2, 0.45, 0.5, 0.5, 7.2, 0.85, 0.65, 0, 0.1, 0.02, 1.4, 0.5, "thin skins, low colour (no acylated anthocyanins), rot-prone");
     public static readonly Variety CabernetSauvignon = new(VarietyId.CabernetSauvignon, "Cabernet Sauvignon", true, 200, 1299, 2689, 3100,
-        1.5, 110, 1.05, 0.50, 0.2, 0.2, 6.8, 1.1, 1.4, 30, 0.1, 0.02, 0.8, 1.0, "small thick-skinned berries, loose bunches, late, pyrazine-prone");
+        1.5, 110, 1.05, 0.50, 0.2, 0.2, 6.8, 1.0, 1.4, 30, 0.1, 0.02, 0.8, 1.0, "small thick-skinned berries, loose bunches, late, pyrazine-prone");
 
     public static readonly IReadOnlyList<Variety> All = new[] { Riesling, Chardonnay, PinotNoir, CabernetSauvignon };
     public static Variety Get(VarietyId id) => All.First(v => v.Id == id);
@@ -134,7 +134,7 @@ public sealed class GameData
 {
     public string DataRoot { get; }
     public PlotsFile Plots { get; }
-    public static double NapaSoilK = 1.2;
+    public static double NapaSoilK = 1.0;
     public double StartingCapital => Plots.StartingCapitalEur;
 
     public GameData(string dataRoot)

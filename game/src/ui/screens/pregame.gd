@@ -2,6 +2,7 @@
 extends RefCounted
 
 const UI := preload("res://src/ui/ui.gd")
+const Charts := preload("res://src/ui/charts.gd")
 
 static func build(_D: Dictionary, shell, step: String) -> Control:
 	match step:
@@ -108,89 +109,158 @@ static func _region(shell) -> Control:
 static func _cost_to_first_vintage(p: Dictionary) -> int:
 	return int(p["price"]) + int(p["plantingCost"]) + int(p["runningCostYear"]) * 3
 
+const RATING_AXES := ["Heat", "Frost safety", "Water reserve", "Drainage", "Workability", "Prestige", "Value"]
+const RATING_TIPS := {"Heat": "Huglin heat index with each Block's microclimate, 2001–2020 average.", "Frost safety": "Spring frost nights around budburst and cold-air pockets.",
+	"Water reserve": "Plant-available water the roots can reach (mm).", "Drainage": "Stones and sand: dries out fast after rain.",
+	"Workability": "Slope. Steep sites need hand work (expensive).", "Prestige": "Classification and reputation — sets the price per bottle.",
+	"Value": "How cheap the land is per hectare."}
+
 static func _plots(shell) -> Control:
 	var R := _region_data(shell, shell.setup.get("region", "mosel"))
 	var plots: Array = R["plots"]
 	if not shell.setup.has("plot"): shell.setup["plot"] = plots[0]["id"]
 	var P := _plot_data(shell, shell.setup["plot"])
+	var cmp_id: String = shell.setup.get("compare", "")
+	var C := _plot_data(shell, cmp_id) if cmp_id != "" and cmp_id != P["id"] else {}
 	var cap: int = int(_cat(shell)["startingCapital"])
-	var v := UI.vbox(16)
+	var v := UI.vbox(14)
 	var back := UI.button("‹ Regions"); back.pressed.connect(func(): shell.show_screen("region"))
-	v.add_child(UI.page_header("%s: compare Plots" % R["name"], "Ratings are 1–20 against all twelve Plots in the game. Hover a rating for what it means.", [_steps(1), back]))
-	# comparison table
-	var tp: Array = UI.panel("", "", 4)
-	var hdr := UI.hbox(2)
-	var cols := ["Plot", "Heat", "Frost safety", "Water reserve", "Drainage", "Workability", "Prestige", "Value", "Area", "Price", "To first vintage"]
-	var widths := [300, 92, 112, 122, 100, 112, 96, 84, 80, 140, 170]
-	var tips := {"Heat": "Huglin heat index with each Block's microclimate, 2001–2020 average.", "Frost safety": "Spring frost nights around budburst and cold-air pockets.",
-		"Water reserve": "Plant-available water the roots can reach (mm).", "Drainage": "Stones and sand: dries out fast after rain.",
-		"Workability": "Slope. Steep sites need hand work (expensive).", "Prestige": "Classification and reputation — sets the price per bottle.",
-		"Value": "How cheap the land is per hectare.", "To first vintage": "Land + planting + 3 years of running costs, before the first sale."}
-	for i in cols.size():
-		var c := UI.table_cell(cols[i], widths[i], UI.MUTED, Color(0, 0, 0, 0), tips.get(cols[i], ""), UI.f_body_b, 14, 32)
-		hdr.add_child(c)
-	tp[1].add_child(hdr)
+	v.add_child(UI.page_header("%s: choose your land" % R["name"], "Click a Plot to inspect it. Drag the model to turn it, scroll to zoom. Ratings are 1–20 against all twelve Plots in the game.", [_steps(1), back]))
+	var row := UI.hbox(16); row.size_flags_vertical = Control.SIZE_EXPAND_FILL; v.add_child(row)
+	# ---- left: Plot cards
+	var left := UI.vbox(10); left.custom_minimum_size = Vector2(390, 0); row.add_child(left)
 	for p in plots:
-		var sel: bool = p["id"] == P["id"]
-		var row := UI.hbox(2)
-		row.mouse_filter = Control.MOUSE_FILTER_STOP
-		var bg := Color(UI.GOLD, 0.12) if sel else Color(0, 0, 0, 0)
-		row.add_child(UI.table_cell("%s  ·  %s" % [p["name"], p["tier"]], widths[0], UI.INK, bg, p["summary"], UI.f_body_b if sel else UI.f_body, 16, 44))
-		var k := 1
-		for rname in ["Heat", "Frost safety", "Water reserve", "Drainage", "Workability", "Prestige", "Value"]:
-			var val := int(p["ratings"][rname])
-			var cell := UI.table_cell(str(val), widths[k], UI.rating_col(val), bg, tips.get(rname, ""), UI.f_head, 20, 44)
-			(cell.get_child(0) as Label).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			row.add_child(cell); k += 1
-		row.add_child(UI.table_cell("%.1f ha" % float(p["ha"]), widths[8], UI.INK2, bg, "", null, 16, 44))
-		row.add_child(UI.table_cell(UI.euro(int(p["price"])), widths[9], UI.INK, bg, "", null, 16, 44))
-		var total := _cost_to_first_vintage(p)
-		row.add_child(UI.table_cell(UI.euro(total) + ("" if total <= cap else "  ✕"), widths[10], UI.INK if total <= cap else UI.CRIT, bg,
-			"Affordable with your %s." % UI.euro(cap) if total <= cap else "More than your starting capital: you would run out of cash.", null, 16, 44))
-		var pid: String = p["id"]
-		UI.on_click(row, func(): shell.setup["plot"] = pid; shell.show_screen("plots"))
-		for c in row.get_children(): c.mouse_filter = Control.MOUSE_FILTER_PASS
-		tp[1].add_child(row)
-	v.add_child(tp[0])
-	# detail of selected plot
-	var det := UI.hbox(16); det.size_flags_vertical = Control.SIZE_EXPAND_FILL; v.add_child(det)
-	var left: Array = UI.panel(P["name"], P["classification"])
-	left[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left[1].add_child(UI.label(P["summary"], 16, UI.INK2, null, true))
-	var g := GridContainer.new(); g.columns = 2; g.add_theme_constant_override("h_separation", 30); g.add_theme_constant_override("v_separation", 4)
-	for pair in [["Area", "%.1f ha in %d Blocks" % [float(P["ha"]), P["blocks"].size()]], ["Slope · aspect", "%d %% · %s" % [int(P["slope"]), P["aspect"]]],
-			["Elevation", "%d m" % int(P["elevation"])], ["Mechanisation", String(P["mechanisation"])],
-			["Winkler (GDD >10 °C)", "%d" % int(P["winkler"])], ["Huglin index", "%d" % int(P["huglin"])],
-			["Spring frost nights", "%.1f per year" % float(P["springFrostNights"])], ["Labour", "%d h/ha/year" % int(P["labourHoursHa"])],
-			["Land price", UI.euro(int(P["price"]))], ["Planting cost", UI.euro(int(P["plantingCost"]))],
-			["Running cost", UI.euro(int(P["runningCostYear"])) + " / year"], ["Training allowed", ", ".join(P["training"])]]:
-		g.add_child(UI.label(pair[0], 15, UI.INK2)); g.add_child(UI.num(pair[1], 17))
-	left[1].add_child(g)
-	left[1].add_child(UI.head("Blocks", 18))
+		left.add_child(_plot_card(shell, p, p["id"] == P["id"], p["id"] == cmp_id, cap))
+	left.add_child(UI.label("Tip: \"Compare\" overlays a second Plot on the rating chart.", 13, UI.MUTED, null, true))
+	# ---- centre: the diorama
+	var mid := UI.vbox(10); mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(mid)
+	var dp := PanelContainer.new(); dp.add_theme_stylebox_override("panel", UI.sb(Color("1a2127"), 8, UI.LINE, 1, 0))
+	dp.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var dio = load("res://src/ui/diorama.gd").new()
+	dio.custom_minimum_size = Vector2(0, 560)
+	dio.set_plot(P)
+	dp.add_child(dio)
+	var over := MarginContainer.new(); over.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side in ["left", "top", "right", "bottom"]: over.add_theme_constant_override("margin_" + side, 16)
+	var ov := UI.vbox(4); ov.mouse_filter = Control.MOUSE_FILTER_IGNORE; over.add_child(ov)
+	var tl := UI.head(String(P["name"]), 30, UI.INK); tl.mouse_filter = Control.MOUSE_FILTER_IGNORE; ov.add_child(tl)
+	var facts := UI.hbox(6); facts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for f in ["%.1f ha" % float(P["ha"]), "%d %% slope" % int(P["slope"]), "facing %s" % P["aspect"], "%d m" % int(P["elevation"]), String(P["tier"])]:
+		facts.add_child(UI.chip(f, UI.INK2, 13))
+	ov.add_child(facts)
+	var spacer := Control.new(); spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL; spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE; ov.add_child(spacer)
+	var hint := UI.label("Drag to turn · scroll to zoom · edges show each Block's soil (depth ×6) · mist marks frost pockets", 13, UI.MUTED)
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE; ov.add_child(hint)
+	dp.add_child(over)
+	mid.add_child(dp)
+	var bl := HFlowContainer.new(); bl.add_theme_constant_override("h_separation", 10); bl.add_theme_constant_override("v_separation", 8)
 	for b in P["blocks"]:
-		var h := UI.hbox(10)
-		h.add_child(UI.block_tag(b["id"], 15))
-		var bl := UI.label("%s — %s, %d %% stones, %d cm deep, %d mm water, lime %d %%, %s-facing %d %%%s" % [b["name"], b["texture"], int(b["stones"]), int(b["depth"]), int(b["taw"]), int(b["lime"]), b["aspect"], int(b["slope"]),
-			", frost pocket" if float(b["frostPocket"]) > 0.5 else ""], 14, UI.INK2, null, true)
-		bl.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(bl)
-		left[1].add_child(h)
-	det.add_child(left[0])
-	var right: Array = UI.panel("The Mentor's view", "")
-	right[0].custom_minimum_size = Vector2(620, 0)
-	for m in P["mentor"]:
-		var h := UI.hbox(10)
-		h.add_child(UI.label("❝", 20, UI.GOLD))
-		var l := UI.label(m, 16, UI.INK, null, true); l.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(l)
-		right[1].add_child(h)
-	right[1].add_child(UI.spacer(false))
-	var total := _cost_to_first_vintage(P)
-	if total > cap:
-		right[1].add_child(UI.label("This Plot costs more than your starting capital before the first Vintage is sold. You can buy it, but you will go into debt.", 15, UI.SERIOUS, null, true))
-	var go := UI.button("Buy %s and plan the Planting ›" % P["name"], true, 17); go.custom_minimum_size = Vector2(0, 50)
+		var bc := PanelContainer.new(); bc.add_theme_stylebox_override("panel", UI.sb(UI.SURFACE, 6, UI.LINE, 1, 10))
+		var bh := UI.hbox(8); bc.add_child(bh)
+		bh.add_child(UI.block_tag(b["id"], 15))
+		var bv := UI.vbox(0); bh.add_child(bv)
+		bv.add_child(UI.label(String(b["name"]), 14, UI.INK, UI.f_body_b))
+		bv.add_child(UI.label("%s · %d cm · %d mm water%s" % [b["texture"], int(b["depth"]), int(b["taw"]), " · frost pocket" if float(b["frostPocket"]) > 0.5 else ""], 12, UI.MUTED))
+		bc.tooltip_text = String(b.get("notes", ""))
+		bl.add_child(bc)
+	mid.add_child(bl)
+	# ---- right: budget, ratings, Mentor, buy
+	var right := UI.vbox(12); right.custom_minimum_size = Vector2(470, 0); row.add_child(right)
+	right.add_child(_budget_card(P, cap))
+	var rp: Array = UI.panel("Ratings", "gold: %s%s" % [P["name"], ("  ·  blue: " + String(C["name"])) if not C.is_empty() else ""], 4)
+	var radar = Charts.RadarChart.new()
+	radar.axes = RATING_AXES
+	var vals := []
+	for a in RATING_AXES: vals.append(int(P["ratings"][a]))
+	radar.series = [{"name": P["name"], "values": vals, "color": UI.GOLD}]
+	if not C.is_empty():
+		var cv := []
+		for a in RATING_AXES: cv.append(int(C["ratings"][a]))
+		radar.series.push_front({"name": C["name"], "values": cv, "color": UI.SEQ})
+	radar.custom_minimum_size = Vector2(0, 280)
+	rp[1].add_child(radar)
+	var rg := GridContainer.new(); rg.columns = 4; rg.add_theme_constant_override("h_separation", 12)
+	for a in RATING_AXES:
+		var al := UI.label(a, 13, UI.INK2); al.tooltip_text = RATING_TIPS[a]; al.mouse_filter = Control.MOUSE_FILTER_PASS
+		rg.add_child(al)
+		var val := int(P["ratings"][a])
+		rg.add_child(UI.head(str(val), 18, UI.rating_col(val)))
+	rp[1].add_child(rg)
+	right.add_child(rp[0])
+	var mp: Array = UI.panel("The Mentor's view", "", 6)
+	for m in (P["mentor"] as Array).slice(0, 3):
+		var mh := UI.hbox(8)
+		mh.add_child(UI.label("❝", 16, UI.GOLD))
+		var ml := UI.label(m, 14, UI.INK, null, true); ml.size_flags_horizontal = Control.SIZE_EXPAND_FILL; mh.add_child(ml)
+		mp[1].add_child(mh)
+	right.add_child(mp[0])
+	var go := UI.button("Buy %s ›" % P["name"], true, 18); go.custom_minimum_size = Vector2(0, 52)
 	go.pressed.connect(func(): shell.setup.erase("planting"); shell.show_screen("planting"))
-	right[1].add_child(go)
-	det.add_child(right[0])
+	right.add_child(go)
 	return UI.scroll(v)
+
+static func _plot_card(shell, p: Dictionary, sel: bool, cmp: bool, cap: int) -> Control:
+	var c := UI.card(sel, 14)
+	if cmp and not sel: c.add_theme_stylebox_override("panel", UI.sb(UI.SURFACE, 6, UI.SEQ, 2, 14))
+	var v := UI.vbox(6); c.add_child(v)
+	var top := UI.hbox(8)
+	top.add_child(UI.head(String(p["name"]), 22, UI.INK))
+	top.add_child(UI.chip(String(p["tier"]), UI.GOLD if sel else UI.INK2, 12))
+	top.add_child(UI.spacer())
+	var total := _cost_to_first_vintage(p)
+	var ok := total <= cap
+	top.add_child(UI.chip("✓ affordable" if ok else "✕ over budget", UI.GOOD if ok else UI.CRIT, 12, true))
+	v.add_child(top)
+	var ph := UI.hbox(10)
+	ph.add_child(UI.num(UI.euro(int(p["price"])), 26, UI.INK))
+	var sub := UI.label("%.1f ha · %s/ha" % [float(p["ha"]), UI.euro(int(p["pricePerHa"]))], 13, UI.MUTED); sub.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	ph.add_child(sub)
+	v.add_child(ph)
+	for a in ["Heat", "Frost safety", "Prestige"]:
+		var h := UI.hbox(8)
+		var l := UI.label(a, 13, UI.INK2); l.custom_minimum_size = Vector2(96, 0); h.add_child(l)
+		var mt = Charts.Meter.new(); mt.value = float(p["ratings"][a]) / 20.0; mt.color = UI.rating_col(int(p["ratings"][a])); mt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(mt)
+		h.add_child(UI.head(str(int(p["ratings"][a])), 16, UI.rating_col(int(p["ratings"][a]))))
+		v.add_child(h)
+	var pid: String = p["id"]
+	var bh := UI.hbox(8)
+	bh.add_child(UI.label(String(p["summary"]).left(70) + ("…" if String(p["summary"]).length() > 70 else ""), 12, UI.MUTED, null, true))
+	bh.get_child(0).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if not sel:
+		var cb := UI.button("Compare" if not cmp else "✓ Comparing", false, 12)
+		cb.pressed.connect(func(): shell.setup["compare"] = "" if cmp else pid; shell.show_screen("plots"))
+		bh.add_child(cb)
+	v.add_child(bh)
+	UI.on_click(c, func(): shell.setup["plot"] = pid; shell.show_screen("plots"))
+	return c
+
+## What the first Vintage costs against the starting capital: land + planting + three years of running costs.
+static func _budget_card(p: Dictionary, cap: int) -> Control:
+	var bp: Array = UI.panel("Your budget", "starting capital " + UI.euro(cap), 8)
+	var land := float(p["price"]); var plant := float(p["plantingCost"]); var run := float(p["runningCostYear"]) * 3.0
+	var total := land + plant + run
+	var scale := maxf(total, float(cap)) * 1.05
+	var bar := Control.new(); bar.custom_minimum_size = Vector2(0, 34)
+	var parts := [[land, Color("c98500"), "Land"], [plant, Color("199e70"), "Planting"], [run, Color("3987e5"), "3 years running"]]
+	bar.draw.connect(func():
+		var w := bar.size.x; var x := 0.0
+		bar.draw_style_box(UI.sb(UI.SUNKEN, 4, Color(0, 0, 0, 0), 0, 0), Rect2(0, 6, w, 22))
+		for pt in parts:
+			var pw := w * float(pt[0]) / scale
+			bar.draw_rect(Rect2(x, 6, pw, 22), pt[1]); x += pw
+		var cx := w * cap / scale
+		bar.draw_line(Vector2(cx, 0), Vector2(cx, 34), UI.INK, 2.0)
+		bar.draw_string(UI.f_body, Vector2(minf(cx + 4, w - 120), 12), "your capital", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, UI.INK))
+	bp[1].add_child(bar)
+	var g := GridContainer.new(); g.columns = 3; g.add_theme_constant_override("h_separation", 14)
+	for pt in parts:
+		var sw := ColorRect.new(); sw.color = pt[1]; sw.custom_minimum_size = Vector2(12, 12); sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		g.add_child(sw); g.add_child(UI.label(pt[2], 14, UI.INK2)); g.add_child(UI.num(UI.euro(int(pt[0])), 16))
+	bp[1].add_child(g)
+	var left := cap - int(total)
+	bp[1].add_child(UI.label(("Leaves %s for staff, the cellar and bottling before the first sale." % UI.euro(left)) if left >= 0 else ("%s short: you would go into debt (no loans in this version)." % UI.euro(-left)), 14, UI.GOOD if left >= 0 else UI.CRIT, UI.f_body_b, true))
+	return bp[0]
 
 # ------------------------------------------------------------------ planting
 static func _planting(shell) -> Control:

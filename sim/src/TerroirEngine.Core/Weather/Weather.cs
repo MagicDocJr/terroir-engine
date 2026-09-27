@@ -148,11 +148,18 @@ public static class Solar
 public sealed class BlockClimate
 {
     public const double LapseRate = 0.0065;          // °C per m (FAO-56 eq. 7)
-    public const double SlopeHeatCoeff = 11.5;       // a_T, calibrated: 30–35° south slope at 50° N ≈ +200–250 Huglin. UNVERIFIED fit
+    public static double SlopeHeatCoeff = 11.5;       // a_T, calibrated: 30–35° south slope at 50° N ≈ +200–250 Huglin. UNVERIFIED fit
+    // Napa: region bias correction so the 1991–2020 Winkler normal lands near 1,850 °C·d (weather-validation.md §4), then fog and
+    // sea-breeze cooling by Block (Carneros coolest, Region I–II). All UNVERIFIED calibration.
+    public static double NapaTmax = -1.0, NapaTmin = -0.5, NapaFog = -2.0, NapaBreeze = -3.0;
     public const double KPocket = 4.0;               // °C extra cooling in a full frost pocket on radiation nights; calibrated to Côte d'Or 7 Apr 2021. UNVERIFIED
     public const double KBelt = 1.5;                 // °C night warming in the thermal belt. UNVERIFIED
     private readonly double[] _beam = new double[367];
-    private readonly double _lat, _dz, _pocket, _belt, _fogTmax, _radiative, _wind, _slopePct;
+    private readonly double _lat, _dz, _pocket, _belt, _fogTmax, _radiative, _wind, _slopePct, _siteWarmth;
+    /// <summary>Extra warmth of steep south-facing slopes (°C on Tmax; half on Tmin): soil and rock heat storage, better
+    /// cold-air drainage and shelter that the beam-ratio term alone does not capture. Fitted so a 35–37° south slope at
+    /// 50° N gains ≈ +200 Huglin over flat ground at the same elevation (DWD: +150–300). UNVERIFIED fit.</summary>
+    public static double SiteWarmthC = 1.2;
     private readonly double _regionTmin, _regionTmax, _regionRain;
     public double SkyView { get; }
 
@@ -165,11 +172,18 @@ public sealed class BlockClimate
         _wind = block.Microclimate.WindExposure;
         _belt = M.Clamp(_slopePct / 40.0, 0, 1) * (1 - _pocket) * 0.8;
         _radiative = block.Microclimate.RadiativeHeat;
+        double southness = Math.Max(0, -Math.Cos(block.Topography.AspectDeg * Math.PI / 180.0));
+        _siteWarmth = SiteWarmthC * southness * M.Clamp(_slopePct / 60.0, 0, 1);
         SkyView = (1 + Math.Cos(Math.Atan(_slopePct / 100.0))) / 2;
         for (int doy = 1; doy <= 366; doy++) _beam[doy] = Solar.BeamRatio(_lat, doy, _slopePct, block.Topography.AspectDeg);
         // Documented grid bias (docs/science/weather-validation.md): the Oakville ERA5 cell runs ≈ +2.4 °C warm on the daily mean
         // (+510 GDD vs the published ~1,736) because it misses the marine fog; rainfall ≈ 21 % low. Game simplification: fixed correction.
-        if (plot.Region.Id == "napa") { _regionTmax = -3.2; _regionTmin = -1.6; _regionRain = 1.25; _fogTmax = -2.5 * block.Microclimate.FogFrequency; }
+        if (plot.Region.Id == "napa")
+        {
+            _regionTmax = NapaTmax; _regionTmin = NapaTmin; _regionRain = 1.25;
+            var mc = block.Microclimate;
+            _fogTmax = NapaFog * mc.FogFrequency + NapaBreeze * mc.WindExposure * Math.Min(1, mc.FogFrequency * 2);   // the marine breeze comes with the fog
+        }
         else { _regionTmax = 0; _regionTmin = 0; _regionRain = 1.0; _fogTmax = 0; }
     }
 
@@ -185,7 +199,8 @@ public sealed class BlockClimate
         double dTmin = 0.2 * dTmax + 0.6 * _radiative * clear;
         bool radiationNight = clear > 0.6 && w.WindKmh < 11;
         if (radiationNight) dTmin += -KPocket * _pocket * (1 - 0.5 * _wind) + KBelt * _belt;
-        return w.With(lapse + dTmin + _regionTmin, lapse + dTmax + _regionTmax + _fogTmax, _regionRain);
+        double lapseNight = lapse * (1 - (_dz > 0 ? _belt : 0));   // nights: slopes above the valley sit in the inversion (thermal belt). Game simplification.
+        return w.With(lapseNight + dTmin + _regionTmin + 0.5 * _siteWarmth, lapse + dTmax + _regionTmax + _fogTmax + _siteWarmth, _regionRain);
     }
 
     /// <summary>Extra leaf-wetness hours from morning fog (river valleys, Carneros), used by the disease model.</summary>

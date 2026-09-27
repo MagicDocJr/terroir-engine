@@ -333,3 +333,48 @@ class WeatherIcon extends Control:
 				if kind == "rain":
 					for i in 3:
 						draw_line(c + Vector2(-7 + i * 7, 14), c + Vector2(-10 + i * 7, 21), Color("3987e5"), 2.0, true)
+
+
+## FM-style attribute radar: one polygon per series on 1–20 scales, axis labels outside, values on hover-free labels.
+class RadarChart extends Control:
+	var axes: Array = []            # axis names
+	var series: Array = []          # {name, values: Array (1–20), color}
+	var max_value := 20.0
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(320, 300)
+		mouse_filter = Control.MOUSE_FILTER_PASS
+
+	func _draw() -> void:
+		if axes.is_empty(): return
+		var c := size / 2.0 + Vector2(0, 6)
+		var r := minf(size.x * 0.5 - 70.0, size.y * 0.5 - 30.0)
+		var n := axes.size()
+		for ring in [5, 10, 15, 20]:
+			var pts := PackedVector2Array()
+			for i in n + 1:
+				var a := -PI / 2 + TAU * (i % n) / n
+				pts.append(c + Vector2(cos(a), sin(a)) * r * ring / max_value)
+			draw_polyline(pts, Color(UI.LINE, 0.9 if ring == 20 else 0.5), 1.0, true)
+		for i in n:
+			var a := -PI / 2 + TAU * i / n
+			var tip := c + Vector2(cos(a), sin(a)) * r
+			draw_line(c, tip, Color(UI.LINE, 0.6), 1.0)
+			var lp := c + Vector2(cos(a), sin(a)) * (r + 16)
+			var txt := String(axes[i])
+			var w := UI.f_body.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x
+			var off := Vector2(-w / 2.0, 5)
+			if cos(a) > 0.3: off.x = 0
+			elif cos(a) < -0.3: off.x = -w
+			draw_string(UI.f_body, lp + off, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UI.INK2)
+		for s in series:
+			var pts := PackedVector2Array()
+			var vals: Array = s["values"]
+			for i in n:
+				var a := -PI / 2 + TAU * i / n
+				pts.append(c + Vector2(cos(a), sin(a)) * r * clampf(float(vals[i]), 0, max_value) / max_value)
+			var col: Color = s["color"]
+			draw_colored_polygon(pts, Color(col, 0.22))
+			pts.append(pts[0])
+			draw_polyline(pts, col, 2.0, true)
+			for i in n: draw_circle(pts[i], 3.5, col)

@@ -99,7 +99,7 @@ TA (g/L as tartaric) ≈ tartaric + malic × 1.12, because malic acid's equivale
 
 Berry potassium accumulates during ripening. High soil K, vigorous rootstocks, shaded canopies and hot conditions give **high-K, high-pH** musts. Warm sites combine that with low malic acid, so Napa Cabernet reaches pH 3.6–3.9 at harvest, while Mosel Riesling stays around 2.9–3.2.
 
-**Game calibration (`UNVERIFIED`):** Napa soils get a potassium-supply factor of 1.2 relative to the other Regions. Without it, the simulated Napa Cabernet harvest pH was 3.2–3.5, below the calibration target. With it, pH is 3.30–3.68 (mostly ≥ 3.5) and TA 5.2–6.7 g/L across 2010–2021. A factor of 1.3 reached pH 3.6–3.8 but pushed TA below 5.5, so 1.2 is the compromise. Replace this with measured soil or petiole K data when available.
+**Game calibration (`UNVERIFIED`):** with the corrected Napa climate (weather-and-climate.md §5.2), no extra soil-potassium factor is needed: Napa valley-floor Cabernet picked at 25 °Brix reaches pH 3.34–3.86 and TA 4.3–6.3 g/L over 2010–2021 (low TA in hot years, when the Cellar master proposes tartaric acidification). The code keeps a `NapaSoilK` hook set to 1.0.
 
 ```
 K_berry(t) = K_veraison · (1 + k_k · TT_from_veraison) · rootstockKFactor · soilK
@@ -184,7 +184,7 @@ Volatile thiols (3MH, 3MHA: grapefruit, passion fruit) are released from odourle
 | GSR thermal time to 200 g/L (°C·d, base 0 °C from 1 April) | ≈ 2,850 | ≈ 2,700 | ≈ 2,650 | ≈ 3,050 | `UNVERIFIED` (my estimate; take real values from Parker et al. 2020, Table S) |
 | Ripening group | mid-late | early-mid | early | late | standard |
 | Tartaric at veraison (g/L equiv.) | 7–9 | 6–8 | 6–8 | 6–7 | `UNVERIFIED` |
-| Malic retention (lower k_m multiplier) | high (×0.8) | medium (×1.0) | medium (×1.0) | medium-low (×1.1) | `UNVERIFIED` |
+| Malic retention (lower k_m multiplier) | high (×0.8) | medium (×1.0) | medium (×1.0) | medium (×1.0; was ×1.1, lowered after the Napa climate recalibration so warm-year TA stays ≥ 4 g/L) | `UNVERIFIED` |
 | Anthocyanin potential | – | – | low | high | standard direction |
 | IBMP potential | ≈ 0 | ≈ 0 | ≈ 0 | high | standard |
 | TDN potential | high | low | low | low | standard (TDN is characteristic of Riesling) |

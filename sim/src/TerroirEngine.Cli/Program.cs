@@ -147,6 +147,44 @@ if (cmd == "play")
     var json = TerroirEngine.Game.Snapshot.Json(g); Console.WriteLine($"Snapshot JSON {json.Length / 1024} KB");
 }
 
-if (cmd == "catalog") { var sw = System.Diagnostics.Stopwatch.StartNew(); var j = TerroirEngine.Game.SetupCatalog.Json(data); Console.WriteLine($"catalog {j.Length / 1024} KB in {sw.ElapsedMilliseconds} ms"); Console.WriteLine(j[..Math.Min(1500, j.Length)]); }
+if (cmd == "climcheck")
+{
+    if (Environment.GetEnvironmentVariable("TE_SW") is { } sw) BlockClimate.SiteWarmthC = double.Parse(sw, System.Globalization.CultureInfo.InvariantCulture);
+    if (Environment.GetEnvironmentVariable("TE_AT") is { } at) BlockClimate.SlopeHeatCoeff = double.Parse(at, System.Globalization.CultureInfo.InvariantCulture);
+    if (Environment.GetEnvironmentVariable("TE_NAPA") is { } nc) { var v = nc.Split(','); BlockClimate.NapaTmax = double.Parse(v[0], System.Globalization.CultureInfo.InvariantCulture); BlockClimate.NapaTmin = double.Parse(v[1], System.Globalization.CultureInfo.InvariantCulture); BlockClimate.NapaFog = double.Parse(v[2], System.Globalization.CultureInfo.InvariantCulture); }
+    // climcheck: raw grid vs Block-adjusted Winkler/Huglin (1991–2020 means) for every Plot — the acceptance checks in weather-and-climate.md §5.1
+    foreach (var r in data.Plots.Regions)
+    {
+        var archive = new WeatherArchive(dataRoot, r.WeatherFile);
+        (double wi, double hi) Idx(Func<DailyWeather, DailyWeather> f, double lat)
+        {
+            double wi = 0, hi = 0; int n = 0;
+            for (int y = 1991; y <= 2020; y++)
+            {
+                if (!archive.Has(new DateOnly(y, 1, 1))) continue;
+                n++;
+                for (var d = new DateOnly(y, 4, 1); d <= new DateOnly(y, 10, 31); d = d.AddDays(1))
+                {
+                    var x = f(archive.Get(d));
+                    wi += Math.Max(0, x.Tmean - 10);
+                    if (d.Month <= 9) hi += Math.Max(0, ((x.Tmean - 10) + (x.Tmax - 10)) / 2) * TerroirEngine.Vineyard.VineyardModel.HuglinK(lat);
+                }
+            }
+            return (wi / n, hi / n);
+        }
+        var p0 = r.Plots[0];
+        var raw = Idx(w => w, p0.Lat);
+        Console.WriteLine($"{r.Name}: grid {archive.GridElevationM:0} m  raw WI {raw.wi:0}  HI {raw.hi:0}");
+        foreach (var p in r.Plots)
+            foreach (var bd in p.Blocks)
+            {
+                var clim = new BlockClimate(p, bd, archive.GridElevationM);
+                var a = Idx(clim.Adjust, p.Lat);
+                Console.WriteLine($"   {p.Id,-20} {bd.Id} {bd.Topography.ElevationM,4:0} m {bd.Topography.SlopePct,3:0}% {TerroirEngine.Game.Snapshot.Aspect(bd.Topography.AspectDeg),-3}  WI {a.wi,5:0}  HI {a.hi,5:0}");
+            }
+    }
+}
+
+if (cmd == "catalog") { var sw = System.Diagnostics.Stopwatch.StartNew(); var j = TerroirEngine.Game.SetupCatalog.Json(data); Console.WriteLine($"catalog {j.Length / 1024} KB in {sw.ElapsedMilliseconds} ms"); Console.WriteLine(args.Length > 1 && args[1] == "full" ? j : j[..Math.Min(1500, j.Length)]); }
 
 static VarietyId DefaultVariety(PlotData p) => p.Region.Id switch { "mosel" => VarietyId.Riesling, "cote-dor" => VarietyId.PinotNoir, _ => VarietyId.CabernetSauvignon };

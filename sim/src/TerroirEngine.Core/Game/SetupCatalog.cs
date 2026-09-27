@@ -93,7 +93,7 @@ public static class SetupCatalog
             blocks.Add(new JsonObject
             {
                 ["id"] = b.Id, ["name"] = b.Name, ["area"] = b.AreaHa, ["texture"] = b.Soil.Texture, ["stones"] = b.Soil.StonesPctVol, ["depth"] = b.Soil.RootingDepthCm, ["taw"] = b.Soil.TawMm,
-                ["ph"] = b.Soil.PH, ["lime"] = b.Soil.ActiveLimePct, ["slope"] = b.Topography.SlopePct, ["aspect"] = Snapshot.Aspect(b.Topography.AspectDeg), ["elevation"] = b.Topography.ElevationM,
+                ["ph"] = b.Soil.PH, ["lime"] = b.Soil.ActiveLimePct, ["slope"] = b.Topography.SlopePct, ["aspect"] = Snapshot.Aspect(b.Topography.AspectDeg), ["aspectDeg"] = b.Topography.AspectDeg, ["elevation"] = b.Topography.ElevationM, ["sand"] = b.Soil.SandPct, ["clay"] = b.Soil.ClayPct,
                 ["frostPocket"] = b.Microclimate.FrostPocket, ["fog"] = b.Microclimate.FogFrequency, ["notes"] = b.Notes,
                 ["default"] = new JsonObject { ["variety"] = def.Variety.ToString(), ["rootstock"] = def.Rootstock.ToString(), ["training"] = def.Training.ToString(), ["density"] = def.DensityVinesHa, ["rows"] = def.Rows.ToString() },
             });
@@ -101,7 +101,7 @@ public static class SetupCatalog
         return new JsonObject
         {
             ["id"] = p.Id, ["name"] = p.Name, ["tier"] = p.Tier, ["summary"] = p.Summary, ["classification"] = p.Classification, ["ha"] = p.AreaHa, ["slope"] = p.SlopePct,
-            ["aspect"] = Snapshot.Aspect(p.AspectDeg), ["elevation"] = p.ElevationM, ["price"] = Math.Round(p.Price), ["pricePerHa"] = p.PricePerHaEur, ["mechanisation"] = p.Mechanisation,
+            ["aspect"] = Snapshot.Aspect(p.AspectDeg), ["aspectDeg"] = p.AspectDeg, ["region"] = p.Region.Id, ["lat"] = p.Lat, ["elevation"] = p.ElevationM, ["price"] = Math.Round(p.Price), ["pricePerHa"] = p.PricePerHaEur, ["mechanisation"] = p.Mechanisation,
             ["training"] = new JsonArray(p.TrainingAllowed.Select(t => (JsonNode)t).ToArray()),
             ["winkler"] = Math.Round(wink), ["huglin"] = Math.Round(hug), ["springFrostNights"] = Math.Round(frostNights, 1),
             ["plantingCost"] = Math.Round(planting), ["runningCostYear"] = Math.Round(labour + EconomyTables.MaterialsPerHaYear(p.Region.Id) * p.AreaHa + EconomyTables.SprayCostPerHaYear(Tier.Medium, p.SlopePct >= 30) * p.AreaHa),
