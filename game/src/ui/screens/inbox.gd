@@ -20,6 +20,9 @@ static func build(D: Dictionary, shell) -> Control:
 		if filt == "Cellar" and not ("cellar" in role): continue
 		if filt == "Mentor" and not ("mentor" in role): continue
 		shown.append(m)
+	var ids := []
+	for m in shown: ids.append(int(m["id"]))
+	shell.state["inbox_ids"] = ids
 	var sel_id := int(shell.state.get("inbox_sel", -1))
 	var sel = null
 	for m in shown:
@@ -33,13 +36,14 @@ static func build(D: Dictionary, shell) -> Control:
 	if sel != null:
 		for i in range(shown.size() - 1, -1, -1):
 			if not shown[i]["read"] and shown[i]["id"] != sel["id"]: next_unread = shown[i]; break
+	if sel != null: shell.state["inbox_current"] = int(sel["id"])
 	if sel != null and not sel["read"]:
 		Sim.Command("read", str(int(sel["id"])), "", "", "", "")
 		sel["read"] = true
 		sel["_was_unread"] = true
 		D["unreadAlerts"] = maxi(0, int(D.get("unreadAlerts", 0)) - (1 if sel["priority"] == "high" else 0))
 		shell.call_deferred("_topbar_refresh_count")
-	var hdr := UI.page_header("Inbox", "%d messages, %d unread. Alerts stop time until you've seen them." % [msgs.size(), unread - (1 if sel != null and sel.get("_was_unread", false) else 0)],
+	var hdr := UI.page_header("Inbox", "%d messages, %d unread. Alerts stop time until you've seen them. ↑ ↓ move through messages." % [msgs.size(), unread - (1 if sel != null and sel.get("_was_unread", false) else 0)],
 		[_mark_all_button(shell, unread), UI.segmented(["All", "Unread", "Vineyard", "Cellar", "Mentor"], filt, func(x): shell.state["inbox_filter"] = x; shell.show_screen("inbox"), 90)])
 	v.add_child(hdr); v.move_child(hdr, header_at)
 	# the Mentor's plan: open by default for the first steps, collapsible, hidden for good from its own button
@@ -52,7 +56,12 @@ static func build(D: Dictionary, shell) -> Control:
 	var lp: Array = UI.panel("", "", 2)
 	lp[0].custom_minimum_size = Vector2(560, 0)
 	var list := UI.vbox(2)
-	for m in shown:
+	# long inboxes: render the newest 30 (plus the selected one), older ones on request — keeps the screen fast
+	var limit: int = shell.state.get("inbox_limit", 30)
+	var visible_msgs := []
+	for i in shown.size():
+		if i < limit or (sel != null and shown[i]["id"] == sel["id"]): visible_msgs.append(shown[i])
+	for m in visible_msgs:
 		var is_sel: bool = sel != null and m["id"] == sel["id"]
 		var c := PanelContainer.new()
 		c.add_theme_stylebox_override("panel", UI.sb(UI.RAISED if is_sel else Color(0, 0, 0, 0), 4, UI.GOLD if is_sel else Color(0, 0, 0, 0), 1 if is_sel else 0, 12))
@@ -78,6 +87,10 @@ static func build(D: Dictionary, shell) -> Control:
 		UI.on_click(c, func(): shell.state["inbox_sel"] = id; shell.show_screen("inbox"))
 		list.add_child(c)
 	if shown.is_empty(): list.add_child(UI.label("Nothing here.", 15, UI.MUTED))
+	if shown.size() > limit:
+		var more := UI.button("Show %d older messages" % (shown.size() - limit), false, 14)
+		more.pressed.connect(func(): shell.state["inbox_limit"] = limit + 50; shell.show_screen("inbox"))
+		list.add_child(more)
 	lp[1].add_child(UI.scroll(list))
 	lp[1].size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_child(lp[0])

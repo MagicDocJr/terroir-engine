@@ -10,6 +10,8 @@ const HAIR := [Color("2b2019"), Color("4f341f"), Color("7d5230"), Color("c49a5c"
 
 var person := ""
 var role := "vineyard"
+static var _fill_cache := {}   # clipped polygons are the expensive part; they only depend on person, role, size and order
+var _fill_idx := 0
 
 func _init() -> void:
 	custom_minimum_size = Vector2(44, 44)
@@ -32,10 +34,17 @@ func _ellipse(c: Vector2, rx: float, ry: float, n := 32, a0 := 0.0, a1 := TAU) -
 
 ## Draw a polygon clipped to the round frame.
 func _fill(poly: PackedVector2Array, disc: PackedVector2Array, col: Color) -> void:
-	for piece in Geometry2D.intersect_polygons(poly, disc):
+	var key := "%s|%s|%d|%d" % [person, role, int(size.x), _fill_idx]
+	_fill_idx += 1
+	var pieces: Array = _fill_cache.get(key, [])
+	if not _fill_cache.has(key):
+		pieces = Geometry2D.intersect_polygons(poly, disc)
+		_fill_cache[key] = pieces
+	for piece in pieces:
 		if piece.size() >= 3: draw_colored_polygon(piece, col)
 
 func _draw() -> void:
+	_fill_idx = 0
 	var s := minf(size.x, size.y)
 	var c := size / 2.0
 	var r := s / 2.0 - 0.5

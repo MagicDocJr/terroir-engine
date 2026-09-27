@@ -48,6 +48,8 @@ var playing := false            # continuous play: advances every tick until an 
 var play_speed := 1             # days per 0.25 s tick (4 days a second)
 var play_timer: Timer
 var sfx: Node
+var _screen_cache := {}          # screen id → {node, ver, ret}: built screens reused while the game state is unchanged
+var _chrome_ver := 0             # bumps whenever a new snapshot is shown
 
 func _ready() -> void:
 	theme = UI.make_theme()
@@ -77,6 +79,7 @@ func _ready() -> void:
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://shots/sfx"))
 		for n in fx.players: (fx.players[n].stream as AudioStreamWAV).save_to_wav(ProjectSettings.globalize_path("res://shots/sfx/%s.wav" % n))
 		print("SFX saved"); get_tree().quit(); return
+	if "--perf" in args: capture = true; _perf.call_deferred(); return
 	if "--pregame" in args: capture = true; _pregame_shots.call_deferred(); return
 	if "--avatars" in args: capture = true; _avatar_sheet.call_deferred(); return
 	if "--fuzz" in args: capture = true; _run_fuzz.call_deferred()
@@ -183,12 +186,31 @@ func show_screen(id: String) -> void:
 	if not SCREENS.has(id): id = "inbox"
 	if not Sim.HasGame() and not (id in PREGAME): id = "title"
 	if id != current and sfx: sfx.play("page")
-	current = id
-	for c in host.get_children(): c.queue_free()
+	# re-rendering the same screen (after a choice) keeps the scroll position instead of jumping to the top
+	var cur_e: Dictionary = _screen_cache.get(current, {})
+	var keep_scroll := -1
+	if id == current and not cur_e.is_empty() and is_instance_valid(cur_e["node"]): keep_scroll = _scroll_pos(cur_e["node"])
 	var pre: bool = id in PREGAME
+	# switching tabs reuses a screen built for the same game state (fast); a same-screen call always rebuilds it
+	var cached: Dictionary = _screen_cache.get(id, {})
+	var reuse: bool = id != current and not pre and not cached.is_empty() and is_instance_valid(cached["node"]) \
+		and int(cached["ver"]) == _chrome_ver and String(cached["ret"]) == String(state.get("return_to", ""))
+	current = id
+	for k in _screen_cache.keys():
+		var e: Dictionary = _screen_cache[k]
+		var stale: bool = not is_instance_valid(e["node"]) or int(e["ver"]) != _chrome_ver or (k == id and not reuse)
+		if stale:
+			if is_instance_valid(e["node"]): e["node"].queue_free()
+			_screen_cache.erase(k)
+	for c in host.get_children():
+		if _is_cached_node(c): c.visible = reuse and c == cached["node"]
+		else: c.queue_free()
 	topbar.visible = not pre
 	nav_panel.visible = not pre
 	statusbar.visible = not pre
+	if reuse:
+		_refresh_nav()
+		return
 	var def: Array = SCREENS[id]
 	var mod = load(def[1])
 	var node: Control = mod.build(D, self, def[2]) if def[2] != "" else mod.build(D, self)
@@ -219,7 +241,31 @@ func show_screen(id: String) -> void:
 		wrap.add_child(node)
 		node = wrap
 	host.add_child(node)
+	if not pre: _screen_cache[id] = {"node": node, "ver": _chrome_ver, "ret": String(state.get("return_to", ""))}
+	if keep_scroll > 0: _restore_scroll(node, keep_scroll)
 	if not pre: _refresh_nav()
+
+func _is_cached_node(c: Node) -> bool:
+	for e in _screen_cache.values():
+		if e["node"] == c: return true
+	return false
+
+func _find_scroll(n: Node) -> ScrollContainer:
+	if n is ScrollContainer and not n.is_queued_for_deletion(): return n
+	for c in n.get_children():
+		var f := _find_scroll(c)
+		if f != null: return f
+	return null
+
+func _scroll_pos(n: Node) -> int:
+	var s := _find_scroll(n)
+	return s.scroll_vertical if s != null else -1
+
+func _restore_scroll(n: Node, pos: int) -> void:
+	for f in 2: await get_tree().process_frame
+	if not is_instance_valid(n): return
+	var s := _find_scroll(n)
+	if s != null: s.scroll_vertical = pos
 
 func _unhandled_input(e: InputEvent) -> void:
 	if capture or not (e is InputEventKey and e.pressed and not e.echo): return
@@ -231,13 +277,23 @@ func _unhandled_input(e: InputEvent) -> void:
 	if k >= KEY_1 and k <= KEY_9: state.erase("return_to"); show_screen(NAV[k - KEY_1])
 	elif k == KEY_0: show_screen("glossary")
 	elif k == KEY_TAB: toggle_3d()
+	elif current == "inbox" and (k == KEY_UP or k == KEY_DOWN):
+		var ids: Array = state.get("inbox_ids", [])
+		if ids.is_empty(): return
+		var i := ids.find(int(state.get("inbox_current", ids[0])))
+		i = clampi(i + (1 if k == KEY_DOWN else -1), 0, ids.size() - 1)
+		state["inbox_sel"] = ids[i]
+		show_screen("inbox")
+		get_viewport().set_input_as_handled()
 	elif k == KEY_SPACE: advance(1, false)
 	elif k == KEY_P: toggle_play()
 	elif k == KEY_M: notify("Sound " + ("on" if sfx.toggle() else "off") + ".")
 	elif k == KEY_ENTER or k == KEY_KP_ENTER: advance(continue_days(), true)
 
 # ------------------------------------------------------------------ 3D
-func toggle_3d(kind := "vineyard") -> void:
+## kind "" (Tab or the 3D button) resumes where you left the 3D view; a named place ("vineyard", "hall", "cellar") goes there.
+func toggle_3d(kind := "") -> void:
+	var first := view3d == null
 	if view3d == null:
 		if not ResourceLoader.exists("res://src/view3d/view3d.tscn"):
 			notify("The 3D walkaround isn't installed in this build yet."); return
@@ -249,7 +305,7 @@ func toggle_3d(kind := "vineyard") -> void:
 	root_box.visible = false
 	view3d.visible = true
 	if view3d.has_method("apply_snapshot"): view3d.apply_snapshot(D)
-	if view3d.has_method("set_view"): view3d.set_view(kind)
+	if view3d.has_method("set_view") and (kind != "" or first): view3d.set_view(kind if kind != "" else "vineyard")
 
 func _shot3d(name: String, kind: String) -> void:
 	if not ResourceLoader.exists("res://src/view3d/view3d.tscn"): return
@@ -266,6 +322,7 @@ func _hide_3d() -> void:
 
 # ------------------------------------------------------------------ chrome
 func _build_chrome() -> void:
+	_chrome_ver += 1
 	for c in topbar.get_children(): c.queue_free()
 	for c in nav_panel.get_children(): c.queue_free()
 	for c in statusbar.get_children(): c.queue_free()
@@ -326,7 +383,7 @@ func _topbar() -> void:
 	bell.gui_input.connect(func(e): if e is InputEventMouseButton and e.pressed: show_screen("inbox"))
 	h.add_child(bell)
 	var b3 := UI.button("3D", false, 15); b3.custom_minimum_size = Vector2(52, 40); b3.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	b3.tooltip_text = "Walk the vineyard and winery in 3D (Tab)"; b3.pressed.connect(toggle_3d.bind("vineyard")); h.add_child(b3)
+	b3.tooltip_text = "Walk the vineyard and winery in 3D (Tab)"; b3.pressed.connect(toggle_3d.bind("")); h.add_child(b3)
 	var sv := UI.button("Save", false, 15); sv.size_flags_vertical = Control.SIZE_SHRINK_CENTER; sv.custom_minimum_size = Vector2(0, 40)
 	sv.tooltip_text = "Save the game (Ctrl+S). The game also autosaves after every time advance."
 	sv.pressed.connect(func(): Sim.SaveGame("manual"); notify("Game saved.")); h.add_child(sv)
@@ -616,4 +673,38 @@ func _pregame_shots() -> void:
 		show_screen("plots")
 		await get_tree().create_timer(2.0).timeout
 		await _shot("pre_plots_" + spec[1])
+	get_tree().quit()
+
+# ------------------------------------------------------------------ perf probe: snapshot, parse and screen build times
+func _perf() -> void:
+	Sim.NewGame(JSON.stringify({"plotId": "mosel-blauschiefer", "plantingYear": 2015, "seed": 7}))
+	Sim.Advance(270, false)
+	for b in JSON.parse_string(Sim.Snapshot())["blocks"]: Sim.Command("harvest", b["id"], "hand", "Table", "", "")
+	Sim.Advance(200, false)
+	var t := Time.get_ticks_usec(); var js := ""
+	for i in 10: js = Sim.Snapshot()
+	print("PERF snapshot %.1f ms (%d KB)" % [(Time.get_ticks_usec() - t) / 10000.0, js.length() / 1024])
+	t = Time.get_ticks_usec()
+	for i in 10: D = JSON.parse_string(js)
+	print("PERF parse %.1f ms" % ((Time.get_ticks_usec() - t) / 10000.0))
+	t = Time.get_ticks_usec()
+	for i in 5: _build_chrome()
+	print("PERF chrome %.1f ms" % ((Time.get_ticks_usec() - t) / 5000.0))
+	for id in NAV:
+		var tb := 0; var tf := 0
+		for i in 5:
+			t = Time.get_ticks_usec()
+			show_screen(id)
+			tb += Time.get_ticks_usec() - t
+			t = Time.get_ticks_usec()
+			await get_tree().process_frame
+			tf += Time.get_ticks_usec() - t
+		print("PERF screen %-10s build %.1f ms · first frame %.1f ms" % [id, tb / 5000.0, tf / 5000.0])
+	# tab hopping with an unchanged game state should reuse the cached screens
+	var th := Time.get_ticks_usec()
+	for rep_i in 3:
+		for id in NAV:
+			show_screen(id)
+			await get_tree().process_frame
+	print("PERF tab switch (cached) %.1f ms per switch" % ((Time.get_ticks_usec() - th) / 1000.0 / (3 * NAV.size())))
 	get_tree().quit()
