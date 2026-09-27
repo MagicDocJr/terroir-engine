@@ -14,11 +14,13 @@ const A := preload("res://src/view3d/assets3d.gd")
 const SH := "res://src/view3d/shaders/"
 const EYE := 1.7
 const CHUNK := 12.0           # scatter / trellis cells
-const VCHUNK_NEAR := 6.0      # vine cells for the near LODs (visibility ranges are per cell, so keep them small)
+const VCHUNK_NEAR := 3.0      # vine cells for the near LODs (visibility ranges are per cell centre, so keep them small)
 const VCHUNK_FAR := 18.0      # vine cells for the far LOD
-const LOD0_END := 4.5
-const LOD1_END := 22.0
-const SHADOW_END := 45.0      # beyond this the far LOD stops casting shadows
+const LOD0_END := 3.0
+const LOD1_END := 13.0
+const HYBRID_LOD0 := true     # near vines: LOD0 bunches on LOD1 leaves/wood (see _hybrid)
+const SHADOW_END := 38.0      # beyond this the far LOD stops casting shadows
+const OUT_SHADOW := 70.0      # sun shadow distance outdoors
 const PZ0 := -2600.0          # profile start (z) and step
 const PSTEP := 1.0
 const PN := 5600
@@ -226,8 +228,26 @@ func _vine_mesh(training: String, g: int, seed: int, lod: int) -> Mesh:
 	var d := A.glb_meshes("models/vine_%s_g%d.glb" % [training, g])
 	var mesh: Mesh = d.get("s%d_lod%d" % [seed, lod], BoxMesh.new())
 	_prep(mesh)
+	if lod == 0 and HYBRID_LOD0 and d.has("s%d_lod1" % seed):
+		mesh = _hybrid(mesh, _prep(d["s%d_lod1" % seed]))
 	_vine_cache[key] = mesh
 	return mesh
+
+
+## Near vines: the LOD0 bunches (the berries are what you look at) on the LOD1 leaves and wood, which look the
+## same at arm's length. The full LOD0 foliage is thousands of tiny triangles and cost ~3 ms a frame close up.
+func _hybrid(near: Mesh, mid: Mesh) -> Mesh:
+	var out := ArrayMesh.new()
+	var berry := _mat("vine_berry")
+	for i in near.get_surface_count():
+		if near.surface_get_material(i) == berry:
+			out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, near.surface_get_arrays(i))
+			out.surface_set_material(out.get_surface_count() - 1, berry)
+	for i in mid.get_surface_count():
+		if mid.surface_get_material(i) != berry:
+			out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, mid.surface_get_arrays(i))
+			out.surface_set_material(out.get_surface_count() - 1, mid.surface_get_material(i))
+	return out
 
 
 # =============================================================================================== environment
@@ -272,7 +292,7 @@ func _setup_sun() -> void:
 	sun.light_energy = 2.2
 	sun.shadow_enabled = true
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
-	sun.directional_shadow_max_distance = 90.0
+	sun.directional_shadow_max_distance = OUT_SHADOW
 	sun.directional_shadow_split_1 = 0.05
 	sun.directional_shadow_split_2 = 0.15
 	sun.directional_shadow_split_3 = 0.4

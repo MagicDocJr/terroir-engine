@@ -264,30 +264,64 @@ func _fps(sec := 2.5) -> float:
 
 ## Diagnostic: fps with individual features switched off (vineyard only).
 func _breakdown() -> void:
+	# each group switched off on its own (fps and primitives), then everything back on
 	var vy: Node3D = view.get("vineyard")
 	var env: Environment = vy.get("env")
 	var sun: DirectionalLight3D = vy.get("sun")
-	var out := {}
+	var out := {"base": await _fps_prims()}
+	var groups := {
+		"lod0": func(n): return n in _lod_nodes(vy, [0]),
+		"lod1": func(n): return n in _lod_nodes(vy, [1]),
+		"lod2": func(n): return n in _lod_nodes(vy, [2]),
+		"lod3_shadow_proxy": func(n): return n in _lod_nodes(vy, [3]),
+		"lod4_far": func(n): return n in _lod_nodes(vy, [4]),
+		"neighbours": func(n): return (vy.get("neighbour_mm") as Array).any(func(e): return e["mmi"] == n),
+		"scatter_trellis": func(n): return n is MultiMeshInstance3D and n.visibility_range_end > 25.0 and n.visibility_range_end <= 120.0 and not n in _lod_nodes(vy, [0, 1, 2, 3, 4]),
+		"trees": func(n): return n is MultiMeshInstance3D and n.visibility_range_end == 0.0 and not n in _lod_nodes(vy, [0, 1, 2, 3, 4]) and not (vy.get("neighbour_mm") as Array).any(func(e): return e["mmi"] == n),
+	}
+	for g in groups:
+		var hidden := []
+		for n in vy.get("world").get_children():
+			if n is GeometryInstance3D and n.visible and groups[g].call(n):
+				n.visible = false
+				hidden.append(n)
+		out["no_" + g] = await _fps_prims()
+		for n in hidden:
+			n.visible = true
+	# the nearest vines drawn with the LOD1 mesh instead (same coverage, far fewer, bigger triangles)
+	var swapped := []
+	for blk in vy.get("blocks"):
+		for e in blk["mm"]:
+			if int(e["lod"]) == 0:
+				var mm: MultiMesh = (e["mmi"] as MultiMeshInstance3D).multimesh
+				swapped.append([mm, mm.mesh])
+				mm.mesh = vy.call("_block_mesh", blk, blk["training"], blk["g"], e["seed"], 1)
+	out["lod0_as_lod1"] = await _fps_prims()
+	for sw in swapped:
+		(sw[0] as MultiMesh).mesh = sw[1]
 	env.ssil_enabled = false
-	out["no_ssil"] = await _fps()
 	env.ssr_enabled = false
 	env.ssao_enabled = false
-	out["no_ssil_ssr_ssao"] = await _fps()
-	sun.shadow_enabled = false
-	out["+no_sun_shadow"] = await _fps()
-	view.get("viewport").msaa_3d = Viewport.MSAA_DISABLED
-	out["+no_msaa"] = await _fps()
-	for n in vy.get("world").get_children():
-		if n is MultiMeshInstance3D and n.visibility_range_end > 0.0 and n.visibility_range_end <= 5.0:
-			n.visible = false      # vines at LOD0 (nearest cells)
-	out["+no_lod0"] = await _fps()
-	print("  breakdown ", out)
+	out["no_ssil_ssr_ssao"] = await _fps_prims()
 	env.ssil_enabled = true; env.ssr_enabled = true; env.ssao_enabled = true
+	sun.shadow_enabled = false
+	out["no_sun_shadow"] = await _fps_prims()
 	sun.shadow_enabled = true
-	view.get("viewport").msaa_3d = Viewport.MSAA_2X
-	for n in vy.get("world").get_children():
-		if n is MultiMeshInstance3D:
-			n.visible = true
+	print("  breakdown ", out)
+
+
+func _lod_nodes(vy: Node, lods: Array) -> Array:
+	var out := []
+	for blk in vy.get("blocks"):
+		for e in blk["mm"]:
+			if int(e["lod"]) in lods:
+				out.append(e["mmi"])
+	return out
+
+
+func _fps_prims() -> String:
+	var f: float = await _fps(1.5)
+	return "%.0f fps %.1fM" % [f, RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME) / 1e6]
 
 
 ## Diagnostic: fps with individual features switched off, for the camera's current (indoor) environment.

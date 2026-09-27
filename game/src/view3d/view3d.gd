@@ -222,7 +222,7 @@ func _update_zone(force := false) -> void:
 	var sun: DirectionalLight3D = vineyard.get("sun")
 	sun.visible = zone != "cellar"
 	# indoors the sun only reaches in through the door and windows: a shorter, cheaper shadow cascade
-	sun.directional_shadow_max_distance = 90.0 if zone == "" else 40.0
+	sun.directional_shadow_max_distance = 70.0 if zone == "" else 40.0      # 70 = vineyard.gd OUT_SHADOW
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS if zone == "" else DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	vineyard.call("set_outdoors", zone == "")
 	if changed:
