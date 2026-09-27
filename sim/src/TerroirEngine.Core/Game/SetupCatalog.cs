@@ -37,9 +37,12 @@ public static class SetupCatalog
         }
         var varieties = new JsonArray();
         foreach (var v in Variety.All)
-            varieties.Add(new JsonObject { ["id"] = v.Id.ToString(), ["name"] = v.Name, ["red"] = v.Red, ["note"] = v.SkinNote, ["heatNeed"] = v.Id == VarietyId.CabernetSauvignon ? 1950 : 1700 });
+            varieties.Add(new JsonObject { ["id"] = v.Id.ToString(), ["name"] = v.Name, ["red"] = v.Red, ["note"] = v.SkinNote, ["heatNeed"] = v.Id == VarietyId.CabernetSauvignon ? 1950 : 1700,
+                ["budburstGdd"] = v.BudburstForcingGdd5, ["ripeningNeed"] = v.GsrF200, ["veraisonGfv"] = v.GfvVeraison, ["berryWeight"] = v.BerryWeightG, ["compactness"] = v.BotrytisCompactness,
+                ["coulure"] = v.CoulureProne, ["millerandage"] = v.MillerandageProne, ["colour"] = v.AnthocyaninMax, ["pyrazine"] = v.IbmpBase, ["tannin"] = v.TanninPotential });
         var rootstocks = new JsonArray();
-        foreach (var rs in Rootstock.All) rootstocks.Add(new JsonObject { ["id"] = rs.Id.ToString(), ["name"] = rs.Name, ["note"] = rs.Note });
+        foreach (var rs in Rootstock.All) rootstocks.Add(new JsonObject { ["id"] = rs.Id.ToString(), ["name"] = rs.Name, ["note"] = rs.Note,
+            ["vigour"] = rs.VigourFactor, ["rootDepth"] = rs.RootDepthFactor, ["drought"] = rs.DroughtShiftMPa, ["lime"] = rs.MaxChlorosisIndex, ["phylloxera"] = rs.PhylloxeraResistant });
         _cache = new JsonObject
         {
             ["startingCapital"] = data.StartingCapital, ["regions"] = regions, ["varieties"] = varieties, ["rootstocks"] = rootstocks,

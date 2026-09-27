@@ -338,6 +338,7 @@ static func _planting(shell) -> Control:
 		tp[1].add_child(row)
 		tp[1].add_child(UI.divider())
 	v.add_child(tp[0])
+	v.add_child(load("res://src/ui/planting_guide.gd").build(shell, P, cat))
 	var bottom := UI.hbox(16); v.add_child(bottom)
 	var a: Array = UI.panel("Timeline", "")
 	a[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL

@@ -674,6 +674,13 @@ func _avatar_sheet() -> void:
 
 func _pregame_shots() -> void:
 	show_screen("region"); await _shot("pre_region")
+	setup = {"region": "mosel", "plot": "mosel-blauschiefer"}
+	for tab in ["Varieties", "Rootstocks", "Training", "Density & rows"]:
+		setup["guide_tab"] = tab
+		show_screen("planting"); await get_tree().process_frame
+		var sc := _find_scroll(host)
+		if sc: sc.scroll_vertical = 420
+		await _shot("pre_planting_" + tab.get_slice(" ", 0).to_lower())
 	for spec in [["mosel", "mosel-blauschiefer", "mosel-uferflur"], ["cote-dor", "cotedor-village", ""], ["napa", "napa-mountain", "napa-floor"]]:
 		setup = {"region": spec[0], "plot": spec[1], "compare": spec[2]}
 		show_screen("plots")
