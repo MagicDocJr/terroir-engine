@@ -2,6 +2,7 @@
 extends RefCounted
 
 const UI := preload("res://src/ui/ui.gd")
+const Metrics := preload("res://src/ui/metrics.gd")
 const Charts := preload("res://src/ui/charts.gd")
 
 static func build(D: Dictionary, shell) -> Control:
@@ -71,8 +72,12 @@ static func build(D: Dictionary, shell) -> Control:
 		items.append(["Colour", "%d mg/L" % int(L["anth"]), "anthocyanins"])
 	if String(L["phase"]) == "Ageing":
 		items.append(["Ageing", "%d / %d months" % [int(L["ageingDay"]) / 30, int(L["ageingMonths"])], ""])
+	var tile_keys := {"Temperature": "temp", "Sugar": "sugar", "Alcohol": "alcohol", "TA · pH": "ta", "Malic": "malic", "YAN": "yan", "Free SO₂": "molSo2", "Volatile acidity": "va", "Tannin": "tannin", "Colour": "colour"}
 	for it in items:
 		var t := UI.tile(it[0], it[1], it[2])
+		if tile_keys.has(it[0]):
+			t.tooltip_text = Metrics.tip(tile_keys[it[0]]) + ("\n\n" + Metrics.tip("ph") if it[0] == "TA · pH" else "")
+			t.mouse_filter = Control.MOUSE_FILTER_PASS
 		t.add_theme_stylebox_override("panel", UI.sb(UI.RAISED, 6, Color(0, 0, 0, 0), 0, 12))
 		t.custom_minimum_size = Vector2(150, 0)
 		tiles.add_child(t)

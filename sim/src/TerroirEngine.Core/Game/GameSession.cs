@@ -338,7 +338,8 @@ public sealed partial class GameSession
         double crew = EconomyTables.CrewHoursPerDay(Ctx.Labour);
         foreach (var b in Blocks.Where(x => x.Picking && !x.Harvested))
         {
-            double hpk = EconomyTables.HarvestHoursPerKg(Plot, b.Order!.HandPick);
+            // sorting slows the crew down: sorters are part of the harvest labour
+            double hpk = EconomyTables.HarvestHoursPerKg(Plot, b.Order!.HandPick) + WineryModel.Sorting(b.Order.Sorting).hoursPerKg;
             double kgToday = crew / hpk;
             double remaining = Math.Max(0, b.CropKg - b.PickedKg);
             double picked = Math.Min(kgToday, remaining);

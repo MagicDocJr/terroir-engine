@@ -115,13 +115,23 @@ public static class WineryModel
 {
     public const double CellarTempC = 14.0;
 
+    /// <summary>Sorting trade-off (game simplification, UNVERIFIED shares): share of the grey rot removed, share of sound fruit
+    /// lost with it, and the extra sorting labour in hours per kg picked.</summary>
+    public static (double rotRemoved, double soundLoss, double hoursPerKg) Sorting(SortingLevel s) => s switch
+    {
+        SortingLevel.Rigorous => (0.9, 0.08, 0.012),
+        SortingLevel.Table => (0.6, 0.03, 0.004),
+        _ => (0.1, 0.0, 0.0),
+    };
+
     public static Lot FromBlock(BlockState b, string lotId, DateOnly date, double grapeKg, SortingLevel sorting)
     {
         var must = Chemistry.MustFromBlock(b);
         var v = b.Variety;
         double rot = b.Disease.GreyRot;
-        double removed = sorting switch { SortingLevel.Rigorous => 0.9, SortingLevel.Table => 0.6, _ => 0.1 };
-        double kgLoss = sorting switch { SortingLevel.Rigorous => 0.08, SortingLevel.Table => 0.03, _ => 0 } + rot * removed;
+        var so = Sorting(sorting);
+        double removed = so.rotRemoved;
+        double kgLoss = so.soundLoss + rot * removed;
         double kg = grapeKg * (1 - kgLoss);
         var lot = new Lot
         {

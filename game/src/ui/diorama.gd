@@ -20,6 +20,7 @@ var dragging := false
 var scale_k := 0.1
 var half := Vector2(50, 50)     # half extents in metres (x across the slope, z downhill)
 var slope := 0.1
+var label_text := {}            # optional Block id → extra label line (e.g. the Variety planted there)
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -279,7 +280,7 @@ func _labels(tile: Node3D, strips: Array) -> void:
 		var id := String(s["b"]["id"])
 		var cx := (float(s["x0"]) + float(s["x1"])) / 2.0
 		var l := Label3D.new()
-		l.text = id
+		l.text = id + (("\n" + String(label_text[id])) if label_text.has(id) else "")
 		l.font = UI.f_head
 		l.font_size = 96
 		l.outline_size = 18

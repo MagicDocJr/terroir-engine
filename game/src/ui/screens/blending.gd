@@ -15,6 +15,13 @@ static func build(D: Dictionary, shell) -> Control:
 	if not B.has("filtration"): B["filtration"] = "Sterile"
 	if not B.has("fining"): B["fining"] = "Bentonite"
 	shell.state["blend"] = B
+	var how: Array = UI.panel("How bottling works", "", 4)
+	how[0].add_theme_stylebox_override("panel", UI.sb(UI.SUNKEN, 6, UI.LINE, 1, 14))
+	for line in ["Choose how much of each ready Lot goes into this Wine. 100 % bottles the whole Lot. 25–75 % bottles part of it and keeps the rest in the Lot for another Wine later.",
+			"To blend, give two or more Lots a share: 50 % of Lot A plus 50 % of Lot B makes one Wine from both. Blending can balance acidity, body and flavour, but it can change the label (see the notes under the blend).",
+			"Ready Lots can wait: there is no rush to bottle the moment a Lot is ready."]:
+		how[1].add_child(UI.label("·  " + line, 14, UI.INK2, null, true))
+	v.add_child(how[0])
 	var row := UI.hbox(16); v.add_child(row)
 	var lp: Array = UI.panel("Ready Lots", "choose how much of each")
 	lp[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -65,6 +72,30 @@ static func build(D: Dictionary, shell) -> Control:
 		bp[1].add_child(h)
 		bp[1].add_child(UI.label(spec[3], 13, UI.MUTED, null, true))
 	bp[1].add_child(UI.divider())
+	# what's in the blend (shares only; the wine itself is judged by the simulation when you bottle)
+	var comp := {}
+	var reds := 0.0; var whites := 0.0
+	for l in ready:
+		var sh := int(B["parts"].get(l["id"], 0))
+		if sh <= 0: continue
+		var litres := float(l["volume"]) * sh / 100.0
+		comp[String(l["variety"])] = float(comp.get(String(l["variety"]), 0.0)) + litres
+		if l["red"]: reds += litres
+		else: whites += litres
+	if total > 0:
+		var parts_txt := []
+		for vname in comp: parts_txt.append("%d %% %s" % [roundi(100.0 * float(comp[vname]) / total), vname])
+		bp[1].add_child(UI.kv("Blend", ", ".join(parts_txt)))
+		var top := 0.0
+		for vname in comp: top = maxf(top, float(comp[vname]) / total)
+		var notes := []
+		if comp.size() > 1:
+			match String(D["region"]["id"]):
+				"mosel": notes.append("A single-vineyard name needs ≥ 85 % Riesling (or Pinot Noir)." if top < 0.85 else "One Variety is ≥ 85 %, so a single-vineyard name is still allowed.")
+				"cote-dor": notes.append("Burgundy AOCs allow Pinot Noir and Chardonnay; other Varieties make it Vin de France.")
+				_: notes.append("A varietal label (e.g. \"Cabernet Sauvignon\") needs ≥ 75 % of that Variety." if top < 0.75 else "One Variety is ≥ 75 %, so the varietal label is kept.")
+		if reds > 0 and whites > 0: notes.append("Mixing red and white wine to make rosé isn't allowed for these still wines in the EU; in Napa it's legal but unusual.")
+		for n in notes: bp[1].add_child(UI.label("ⓘ " + n, 13, UI.INK2, null, true))
 	bp[1].add_child(UI.kv("Volume", "%s L · about %s bottles" % [UI.thousands(int(total)), UI.thousands(int(total / 0.75))] if total > 0 else "choose at least one Lot"))
 	var go := UI.button("Bottle this Wine", true, 17); go.custom_minimum_size = Vector2(0, 48); go.disabled = total <= 0
 	go.pressed.connect(func():

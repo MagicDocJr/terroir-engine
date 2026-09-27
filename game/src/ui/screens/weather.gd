@@ -63,7 +63,7 @@ static func build(D: Dictionary, shell) -> Control:
 	bc.custom_minimum_size = Vector2(0, 250)
 	rp[1].add_child(bc)
 	row2.add_child(rp[0])
-	var kp: Array = UI.panel("Disease risk", "last 120 days · 0–100")
+	var kp: Array = UI.panel("Disease risk", "last 120 days · 0–100 · above 35 = serious")
 	kp[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var risk: Array = W.get("risk", [])
 	var rl2 := []; var dn := []; var pw := []; var bt := []

@@ -2,6 +2,7 @@
 extends RefCounted
 
 const UI := preload("res://src/ui/ui.gd")
+const Metrics := preload("res://src/ui/metrics.gd")
 const Charts := preload("res://src/ui/charts.gd")
 
 static func build(D: Dictionary, shell) -> Control:
@@ -15,13 +16,14 @@ static func build(D: Dictionary, shell) -> Control:
 	var v := UI.vbox(16)
 	var b3 := UI.button("Walk the vineyard in 3D"); b3.pressed.connect(func(): shell.toggle_3d("vineyard"))
 	v.add_child(UI.page_header("Plot & Blocks", "%s · %.1f ha · %s · %d %% slope facing %s · %d m" % [P["name"], float(P["ha"]), P["classification"], int(P["slope"]), P["aspect"], int(P["elevation"])], [b3]))
+	# overview: the Plot model with what's planted where, and the Planting per Block
+	v.add_child(_overview(D, shell))
 	# table
 	var tp: Array = UI.panel("", "", 2)
 	var cols := ["Block", "Variety", "Stage", "Health", "Water", "Downy", "Powdery", "Botrytis", "Crop est.", "Must", "Yield"]
 	var widths := [220, 240, 130, 90, 190, 84, 90, 90, 120, 180, 130]
-	var tips := {"Health": "Canopy health: disease on leaves, rot, chlorosis and frost damage.", "Water": "Midday stem water potential (Ψstem). Weak stress helps quality; severe stress stops ripening.",
-		"Downy": "Downy mildew infection risk today (0–100).", "Powdery": "Powdery mildew risk index (0–100, UC Davis-style).", "Botrytis": "Botrytis infection risk today (0–100).",
-		"Crop est.": "Crop on the vine now (kg). Changes with frost, set, disease and thinning.", "Must": "Latest must analysis (after véraison).", "Yield": "Crop on the vine per hectare now."}
+	var tips := {"Health": Metrics.tip("health"), "Water": Metrics.tip("water"), "Downy": Metrics.tip("downy"), "Powdery": Metrics.tip("powdery"), "Botrytis": Metrics.tip("botrytis"),
+		"Crop est.": Metrics.tip("crop"), "Must": "Latest must analysis (after véraison): sugar and titratable acidity.\n\n" + Metrics.tip("brix" if napa else "oe"), "Yield": Metrics.tip("yield")}
 	var hdr := UI.hbox(2)
 	for i in cols.size(): hdr.add_child(UI.table_cell(cols[i], widths[i], UI.MUTED, Color(0, 0, 0, 0), tips.get(cols[i], ""), UI.f_body_b, 14, 32))
 	tp[1].add_child(hdr)
@@ -38,11 +40,11 @@ static func build(D: Dictionary, shell) -> Control:
 		if b["picking"]: stage = "Picking %d %%" % int(b["pickedPct"])
 		row.add_child(UI.table_cell(stage, widths[2], UI.GOLD if b.get("inWindow", false) else UI.INK, bg, "In the harvest window" if b.get("inWindow", false) else "", UI.f_body, 15, 44))
 		var hp := int(float(b["health"]) * 100)
-		row.add_child(UI.table_cell("%d %%" % hp, widths[3], UI.GOOD if hp >= 85 else (UI.WARN if hp >= 65 else UI.CRIT), bg))
-		row.add_child(UI.table_cell("%.1f MPa · %s" % [float(b["water"]), b["waterClass"]], widths[4], UI.INK2, bg, "", null, 15, 44))
+		row.add_child(UI.table_cell("%d %%" % hp, widths[3], UI.GOOD if hp >= 85 else (UI.WARN if hp >= 65 else UI.CRIT), bg, Metrics.tip("health")))
+		row.add_child(UI.table_cell("%.1f MPa · %s" % [float(b["water"]), b["waterClass"]], widths[4], UI.INK2, bg, Metrics.value_tip("water", float(b["water"])), null, 15, 44))
 		for k in [["downy", 5], ["powdery", 6], ["botrytis", 7]]:
 			var r := float(b[k[0]])
-			row.add_child(UI.table_cell("%d" % int(r), widths[k[1]], UI.risk_col(r), bg))
+			row.add_child(UI.table_cell("%d / 100" % int(r), widths[k[1]], UI.risk_col(r), bg, Metrics.value_tip(k[0], r)))
 		row.add_child(UI.table_cell("%s kg" % UI.thousands(int(b["cropKg"])), widths[8], UI.INK, bg))
 		var must = b.get("must")
 		var mtxt := "—"
@@ -77,7 +79,11 @@ static func build(D: Dictionary, shell) -> Control:
 			["Leaf area index", "%.2f" % float(B["lai"])], ["Fruit exposure", "%.2f" % float(B["exposure"])], ["Berries / vine", UI.thousands(int(B["berriesPerVine"]))], ["Berry weight", "%.2f g" % float(B["berryWeight"])],
 			["Soil water", "%d %% of %d mm" % [int(B["soilWaterPct"]), int(B["taw"])]], ["Frost shoot loss", "%d %%" % int(B["frostLoss"])], ["Sunburn", "%.1f %%" % float(B["sunburn"])], ["Chlorosis", "%d %%" % int(B["chlorosis"])],
 			["Downy (leaf · bunch)", "%.1f %% · %.1f %%" % [float(B["downyLeaf"]), float(B["downyBunch"])]], ["Powdery (bunch)", "%.1f %%" % float(B["powderyBunch"])], ["Grey rot · noble rot", "%.1f %% · %.1f %%" % [float(B["greyRot"]), float(B["nobleRot"])]], ["Spray cover · passes", "%d %% · %d" % [int(B["protection"]), int(B["sprays"])]]]:
-		g.add_child(UI.label(pair[0], 14, UI.INK2))
+		var gl := UI.label(pair[0], 14, UI.INK2)
+		var mk: String = {"Leaf area index": "lai", "Fruit exposure": "exposure", "Berries / vine": "berries", "Berry weight": "berryWeight", "Soil water": "soilwater",
+			"Frost shoot loss": "frostLoss", "Sunburn": "sunburn", "Chlorosis": "chlorosis", "Downy (leaf · bunch)": "downy", "Grey rot · noble rot": "grey", "Spray cover · passes": "protection"}.get(pair[0], "")
+		if mk != "": gl.tooltip_text = Metrics.tip(mk); gl.mouse_filter = Control.MOUSE_FILTER_PASS; gl.text += " ⓘ"
+		g.add_child(gl)
 		g.add_child(UI.num(String(pair[1]) if pair[1] != null else "—", 17))
 	vp[1].add_child(g)
 	c2.add_child(vp[0])
@@ -120,8 +126,20 @@ static func build(D: Dictionary, shell) -> Control:
 		hp[1].add_child(h1)
 		var h2 := UI.hbox(12); var l2 := UI.label("Sorting", 15, UI.INK2); l2.custom_minimum_size = Vector2(110, 0); h2.add_child(l2)
 		h2.add_child(UI.segmented(["None", "Table", "Rigorous"], sorting, func(x): shell.state["h_sort"] = x; shell.show_screen("plot"), 110))
-		h2.add_child(UI.label("Sorting removes rotten and unripe bunches (less crop, cleaner wine).", 13, UI.MUTED))
 		hp[1].add_child(h2)
+		# the trade-off of each sorting level for this Block's fruit today (numbers from the simulation)
+		var sg := GridContainer.new(); sg.columns = 5; sg.add_theme_constant_override("h_separation", 18); sg.add_theme_constant_override("v_separation", 3)
+		for hname in ["", "Rot left in the wine", "Crop lost", "Extra labour", ""]: sg.add_child(UI.label(hname, 12, UI.MUTED, UI.f_body_b))
+		for so in B.get("sorting", []):
+			var chosen: bool = String(so["level"]) == sorting
+			var col := UI.GOLD if chosen else UI.INK2
+			sg.add_child(UI.label(("▸ " if chosen else "  ") + String(so["level"]), 14, col, UI.f_body_b if chosen else null))
+			sg.add_child(UI.num("%.1f %%" % float(so["rotLeftPct"]), 15, UI.CRIT if float(so["rotLeftPct"]) > 5 else col))
+			sg.add_child(UI.num("%.1f %%" % float(so["cropLossPct"]), 15, col))
+			sg.add_child(UI.num(UI.euro(int(so["extraCost"])) if int(so["extraCost"]) > 0 else "—", 15, col))
+			sg.add_child(UI.label("slower picking" if so["slower"] else "", 12, UI.MUTED))
+		hp[1].add_child(sg)
+		hp[1].add_child(UI.label("Sorting throws out rotten and unripe bunches: cleaner wine, but you lose some good fruit and the crew picks more slowly. Above ~5 % grey rot the wine tastes mouldy.", 13, UI.MUTED, null, true))
 		var must = B.get("must")
 		if must != null:
 			hp[1].add_child(UI.label("Now: %s, TA %.1f g/L, pH %.2f, potential alcohol %.1f %% · %s" % [("%.1f °Brix" % float(must["brix"])) if napa else ("%d °Oe" % int(must["oe"])), float(must["ta"]), float(must["ph"]), float(must["pa"]),
@@ -167,3 +185,39 @@ static func _soil(B: Dictionary) -> Control:
 	sc.custom_minimum_size = Vector2(480, 300)
 	sc.tooltip_text = "Sand %d %% · silt %d %% · clay %d %% · organic matter %.1f %% · drainage %s.\nHorizon depths are drawn schematically (game illustration); the numbers are this Block's." % [int(s["sand"]), int(s["silt"]), int(s["clay"]), float(s["om"]), String(s["drainage"])]
 	return sc
+
+## "Your Blocks": a small spinning model labelled with each Block's Variety, next to the Planting table.
+static func _overview(D: Dictionary, shell) -> Control:
+	var row := UI.hbox(16)
+	var cat_plot := {}
+	for r in shell.CAT.get("regions", []):
+		for p in r["plots"]:
+			if p["id"] == D["plot"]["id"]: cat_plot = p
+	var dp := PanelContainer.new(); dp.add_theme_stylebox_override("panel", UI.sb(Color("1a2127"), 8, UI.LINE, 1, 0))
+	dp.custom_minimum_size = Vector2(620, 300)
+	if not cat_plot.is_empty():
+		var dio = load("res://src/ui/diorama.gd").new()
+		for b in D["blocks"]: dio.label_text[String(b["id"])] = String(b["variety"])
+		dio.set_plot(cat_plot)
+		dp.add_child(dio)
+		var cap := UI.label("  Your Plot · drag to turn", 13, UI.INK2); cap.vertical_alignment = VERTICAL_ALIGNMENT_TOP; cap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		dp.add_child(cap)
+	row.add_child(dp)
+	var tp: Array = UI.panel("Your Blocks", "what you planted in %d" % int(D.get("plantingYear", 0)), 4)
+	tp[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var g := GridContainer.new(); g.columns = 7; g.add_theme_constant_override("h_separation", 18); g.add_theme_constant_override("v_separation", 6)
+	for h in ["", "Variety", "Rootstock", "Training", "Vines/ha", "Area", "Soil"]:
+		g.add_child(UI.label(h, 13, UI.MUTED, UI.f_body_b))
+	for b in D["blocks"]:
+		g.add_child(UI.block_tag(String(b["id"]), 14))
+		g.add_child(UI.label("%s %s" % [String(b["variety"]), "●" if b["red"] else "○"], 15, UI.INK, UI.f_body_b))
+		g.add_child(UI.label(String(b["rootstock"]), 14, UI.INK2))
+		g.add_child(UI.label("%s · rows %s" % [String(b["training"]), {"NorthSouth": "N–S", "EastWest": "E–W", "DownSlope": "downhill"}.get(String(b.get("rows", "")), "")], 14, UI.INK2))
+		g.add_child(UI.num(UI.thousands(int(b["density"])), 15))
+		g.add_child(UI.num("%.2f ha" % float(b["area"]), 15))
+		var sl := UI.label(String(b["soil"]), 13, UI.MUTED); sl.clip_text = true; sl.custom_minimum_size = Vector2(200, 0)
+		g.add_child(sl)
+	tp[1].add_child(g)
+	tp[1].add_child(UI.label("● red · ○ white. Click a Block in the table below for its soil, vines and choices.", 13, UI.MUTED))
+	row.add_child(tp[0])
+	return row

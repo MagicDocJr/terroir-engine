@@ -2,6 +2,7 @@
 extends RefCounted
 
 const UI := preload("res://src/ui/ui.gd")
+const Metrics := preload("res://src/ui/metrics.gd")
 const Charts := preload("res://src/ui/charts.gd")
 
 static func build(D: Dictionary, shell) -> Control:
@@ -15,14 +16,18 @@ static func build(D: Dictionary, shell) -> Control:
 	var B: Dictionary = blocks[0]
 	for b in blocks:
 		if b["id"] == sel_id: B = b
-	v.add_child(UI.page_header("Ripeness", "The lab samples each Block weekly from véraison. Sugar in %s; the bands are the must weights each wine style needs." % unit,
+	v.add_child(UI.page_header("Ripeness", "The lab samples each Block weekly from véraison. Sugar in %s. The shaded bands show how ripe the grapes must be for each wine style; the higher the band, the riper the wine." % unit,
 		[UI.segmented(ids, B["id"], func(x): shell.state["rip_sel"] = x; shell.show_screen("ripeness"), 52)]))
 	# planner
 	var pp: Array = UI.panel("Harvest planner", "")
-	var cols := ["Block", "Variety", "Stage", "Sugar", "Pot. alc.", "TA g/L", "pH", "Malic", "Seeds ripe", "Rot (grey · noble)", "Must weight reaches", ""]
+	var cols := ["Block", "Variety", "Stage", "Sugar", "Pot. alc.", "TA g/L", "pH", "Malic", "Seeds ripe", "Rot (grey · noble)", "Ripe enough for", ""]
 	var widths := [70, 190, 130, 100, 100, 80, 70, 80, 110, 160, 190, 190]
 	var hdr := UI.hbox(2)
-	for i in cols.size(): hdr.add_child(UI.table_cell(cols[i], widths[i], UI.MUTED, Color(0, 0, 0, 0), "", UI.f_body_b, 14, 32))
+	var ripe_tip := ("The best wine style today's sugar already qualifies for. In the Mosel these are the legal minimum must weights: Kabinett 73 °Oe, Spätlese 80, Auslese 88, Beerenauslese 110 (which also needs noble rot)." if not napa and D["region"]["id"] == "mosel"
+		else "The typical picking target today's sugar has reached. Sugar keeps rising as you wait, but acidity falls and rot risk grows.")
+	var col_tips := {"Ripe enough for": ripe_tip, "Sugar": Metrics.tip("brix" if napa else "oe"), "Pot. alc.": Metrics.tip("pa"), "TA g/L": Metrics.tip("ta"), "pH": Metrics.tip("ph"), "Malic": Metrics.tip("malic"),
+		"Seeds ripe": Metrics.tip("seeds"), "Rot (grey · noble)": Metrics.tip("grey") + "\n\n" + Metrics.tip("noble")}
+	for i in cols.size(): hdr.add_child(UI.table_cell(cols[i] + (" ⓘ" if col_tips.has(cols[i]) else ""), widths[i], UI.MUTED, Color(0, 0, 0, 0), col_tips.get(cols[i], ""), UI.f_body_b, 14, 32))
 	pp[1].add_child(hdr)
 	for b in blocks:
 		var row := UI.hbox(2)
@@ -43,7 +48,9 @@ static func build(D: Dictionary, shell) -> Control:
 			var tg := []
 			for t in b["targets"]:
 				if float(m["oe"]) >= float(t["oe"]): tg.append(t["style"])
-			row.add_child(UI.table_cell(tg[-1] if tg.size() > 0 else "below targets", widths[10], UI.INK2, Color(0, 0, 0, 0), "Highest style whose minimum must weight is reached. Beerenauslese and TBA also need noble-rotten (botrytised) berries.", UI.f_body, 14, 42))
+			var reach: String = tg[-1] if tg.size() > 0 else "below targets"
+			if ("Beerenauslese" in reach or "Trockenbeerenauslese" in reach) and float(b["nobleRot"]) < 30: reach = "Auslese (BA needs noble rot)"
+			row.add_child(UI.table_cell(reach, widths[10], UI.INK2, Color(0, 0, 0, 0), ripe_tip, UI.f_body, 14, 42))
 			var hb := UI.button("Harvest…", b.get("inWindow", false), 15); hb.custom_minimum_size = Vector2(widths[11] - 20, 36); hb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			var bid: String = b["id"]
 			hb.disabled = b["picking"]

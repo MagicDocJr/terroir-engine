@@ -180,6 +180,15 @@ Lifetime: a barrique is "new" for one fill, gives **most of its oak flavour in t
 
 ---
 
+### Sorting at harvest (game simplification, `UNVERIFIED`)
+| Sorting | Grey rot removed | Sound fruit lost | Extra labour |
+|---|---|---|---|
+| None | 10 % | 0 % | none |
+| Table | 60 % | 3 % | 0.004 h/kg |
+| Rigorous (berry by berry) | 90 % | 8 % | 0.012 h/kg |
+
+The extra labour is added to the picking hours, so sorting also slows the harvest.
+
 ## 8. Bottling and packaging (per 0.75 L bottle)
 
 | Item | Cost | Source |

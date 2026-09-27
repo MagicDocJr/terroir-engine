@@ -412,7 +412,13 @@ func _nav() -> void:
 	pv.add_child(UI.head(String(P.get("name", "")), 16, UI.INK))
 	pv.add_child(UI.label("%s, %.1f ha" % [P.get("region", ""), float(P.get("ha", 0))], 13, UI.MUTED))
 	pv.add_child(UI.label(String(P.get("leaf", "")), 13, UI.MUTED))
-	pv.add_child(UI.label(String(P.get("varieties", "")), 13, UI.MUTED))
+	for b in D.get("blocks", []):
+		var bh := UI.hbox(6)
+		bh.add_child(UI.block_tag(String(b["id"]), 11))
+		bh.add_child(UI.label("%s · %s" % [String(b["variety"]), String(b["training"])], 12, UI.INK2))
+		bh.tooltip_text = "%s on %s, %s vines/ha, %s" % [b["variety"], b["rootstock"], UI.thousands(int(b["density"])), b["soil"]]
+		bh.mouse_filter = Control.MOUSE_FILTER_PASS
+		pv.add_child(bh)
 	v.add_child(plot_card)
 
 func _refresh_nav_card() -> void:
