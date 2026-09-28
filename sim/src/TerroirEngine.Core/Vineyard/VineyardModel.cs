@@ -34,6 +34,7 @@ public static class VineyardModel
     // ------------------------------------------------------------------------------------------ season set-up
     public static void StartSeason(BlockState b, int year)
     {
+        if (b.SeasonYear > 0) b.Seasons.Add(Record(b));
         b.SeasonYear = year;
         b.Chill = b.NextSeasonChill > 0 || b.Leaf(year) > 1 ? b.NextSeasonChill : ChillRequirementDays;
         b.NextSeasonChill = 0;
@@ -59,6 +60,13 @@ public static class VineyardModel
         b.Raw = 0.45 * b.Taw;
         b.Dr = 0;
     }
+
+    /// <summary>The Block's current season as a record (also used for the live season in reports).</summary>
+    public static SeasonRecord Record(BlockState b) => new()
+    {
+        Year = b.SeasonYear, Leaf = b.Leaf(b.SeasonYear), Budburst = b.Budburst, Flowering = b.Flowering, Veraison = b.Veraison, HarvestDate = b.HarvestDate, LeafFall = b.LeafFall,
+        YieldKgHa = b.Harvested ? b.PickedKg / Math.Max(0.01, b.AreaHa) : 0, FrostShootLoss = b.FrostShootLoss, GreyRotPct = b.Disease.GreyRot * 100, Winkler = b.Winkler, RainSeason = b.RainSeason,
+    };
 
     /// <summary>Total available water in the root zone (FAO-56 TAW with stone correction; soil-and-water.md §3). Adds a fracture-water
     /// reserve for very stony slate/volcanic Blocks (regions-and-plots open question 4; UNVERIFIED design value) and young-vine rooting (§9).</summary>

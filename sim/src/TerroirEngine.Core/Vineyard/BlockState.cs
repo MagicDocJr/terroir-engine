@@ -98,6 +98,8 @@ public sealed class BlockState
     public HarvestOrder? Order { get; set; }
     // history for charts (weekly samples)
     public List<RipenessSample> Samples { get; } = new();
+    /// <summary>Closed seasons, oldest first (Establishment years included).</summary>
+    public List<SeasonRecord> Seasons { get; } = new();
 
     public BlockState(PlotData plot, BlockData data, BlockClimate climate) { Plot = plot; Data = data; Climate = climate; }
 
@@ -127,6 +129,23 @@ public sealed class BlockState
 
 public sealed record RipenessSample(DateOnly Date, double Oe, double Brix, double TaGL, double Ph, double MalicGL, double SeedMaturity,
     double Anthocyanin, double IbmpNgL, double BerryWeightG, double GreyRotPct, double NobleRotPct, double PsiStem, double DownyLeafPct, double PowderyBunchPct);
+
+/// <summary>One closed season of a Block, archived on 1 January because BlockState itself is reset (multi-vintage design §3.3).</summary>
+public sealed class SeasonRecord
+{
+    public int Year { get; init; }
+    public int Leaf { get; init; }
+    public DateOnly? Budburst { get; init; }
+    public DateOnly? Flowering { get; init; }
+    public DateOnly? Veraison { get; init; }
+    public DateOnly? HarvestDate { get; init; }
+    public DateOnly? LeafFall { get; init; }
+    public double YieldKgHa { get; init; }
+    public double FrostShootLoss { get; init; }
+    public double GreyRotPct { get; init; }
+    public double Winkler { get; init; }
+    public double RainSeason { get; init; }
+}
 
 public enum SortingLevel { None, Table, Rigorous }
 public sealed class HarvestOrder

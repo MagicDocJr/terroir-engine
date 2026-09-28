@@ -49,7 +49,8 @@ public static class Snapshot
             ["wines"] = Arr(g.Wines.Select(w => (JsonNode)WineObj(w))),
             ["finance"] = FinanceObj(g),
             ["inbox"] = Arr(g.Inbox.OrderByDescending(m => m.Id).Take(80).Select(m => (JsonNode)MsgObj(m))),
-            ["report"] = g.IsVintageBottled(g.FirstVintage) ? VintageReport.Build(g) : null,
+            ["report"] = g.BottledVintages.Count > 0 ? VintageReport.Build(g, g.BottledVintages.Max()) : null,
+            ["reports"] = Arr(g.BottledVintages.OrderByDescending(v => v).Select(v => (JsonNode)VintageReport.Build(g, v))),
             ["flags"] = Arr(g.Flags.OrderBy(f => f).Select(f => (JsonNode)f)),
             ["establishment"] = Arr(g.EstablishmentReports.Select(x => (JsonNode)x)),
         };

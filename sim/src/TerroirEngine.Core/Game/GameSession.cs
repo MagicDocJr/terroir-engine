@@ -83,6 +83,8 @@ public sealed partial class GameSession
     public bool IsVintageBottled(int vintage) => _bottledVintages.Contains(vintage);
     /// <summary>Wines containing any Lot of this Vintage (a cross-Vintage blend counts for each of its Vintages).</summary>
     public List<Wine> WinesOf(int vintage) => Wines.Where(w => w.Components.Any(c => Lots.FirstOrDefault(l => l.Id == c.LotId)?.Vintage == vintage)).ToList();
+    /// <summary>A Block's season for <paramref name="year"/>: the live state for the current season, else the archived record.</summary>
+    public SeasonRecord? Season(BlockState b, int year) => b.SeasonYear == year ? VineyardModel.Record(b) : b.Seasons.LastOrDefault(s => s.Year == year);
     public List<Command> Commands { get; } = new();
     /// <summary>UI progress flags (onboarding steps seen, screens visited). No effect on the simulation; saved via the command log.</summary>
     public HashSet<string> Flags { get; } = new();

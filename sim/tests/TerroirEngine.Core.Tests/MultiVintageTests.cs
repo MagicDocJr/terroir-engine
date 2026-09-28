@@ -78,3 +78,26 @@ public class MultiVintageLoopTests
         Assert.False(g.MentorRetired);   // the Mentor stays until the first Vintage is in bottle
     }
 }
+
+public class VintageReportTests
+{
+    [Fact]
+    public void VintageReports_ArePerVintage_FromSeasonRecords()
+    {
+        var g = Fixture.PlayVintages("mosel-seitental", 2014, 80, vintages: 2);
+        var r1 = VintageReport.Build(g, g.FirstVintage);
+        var r2 = VintageReport.Build(g, g.FirstVintage + 1);
+        Assert.Equal(g.FirstVintage, r1["vintage"]!.GetValue<int>());
+        Assert.Equal(g.FirstVintage + 1, r2["vintage"]!.GetValue<int>());
+        Assert.NotEqual(r1["weather"]!["winkler"]!.GetValue<double>(), r2["weather"]!["winkler"]!.GetValue<double>());
+        foreach (var r in new[] { r1, r2 })
+            foreach (var b in r["blocks"]!.AsArray()) { Assert.NotNull(b!["harvest"]); Assert.NotNull(b["wine"]); }
+        Assert.True(r1["farewell"]!.GetValue<bool>());
+        Assert.False(r2["farewell"]!.GetValue<bool>());
+        Assert.NotEmpty(r2["weekly"]!.AsArray());
+        Assert.All(g.Blocks, b => Assert.Contains(b.Seasons, s => s.Year == g.FirstVintage && s.HarvestDate != null && s.YieldKgHa > 0));
+        var snap = Snapshot.Build(g);
+        Assert.Equal(2, snap["reports"]!.AsArray().Count);
+        Assert.Equal(g.FirstVintage + 1, snap["report"]!["vintage"]!.GetValue<int>());
+    }
+}
