@@ -63,6 +63,8 @@ public sealed class Lot
     public string VarietyName { get; set; } = "";
     public bool Red { get; set; }
     public DateOnly Harvested { get; set; }
+    /// <summary>The Vintage this Lot belongs to: its harvest year (the December rule picks every Block within its year).</summary>
+    public int Vintage => Harvested.Year;
     public DateOnly? FermentStart, FermentEnd, MlfEnd, AgeingStart, ReadyDate;
     public double GrapeKg, VolumeL;
     public double VineyardHa;

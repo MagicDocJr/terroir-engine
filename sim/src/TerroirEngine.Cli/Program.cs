@@ -95,15 +95,18 @@ if (cmd == "play")
     var setup = new TerroirEngine.Game.GameSetup { PlotId = args.Length > 1 ? args[1] : "mosel-blauschiefer", PlantingYear = args.Length > 2 ? int.Parse(args[2]) : 2015, EstateName = "CLI Estate" };
     var sw = System.Diagnostics.Stopwatch.StartNew();
     var g = new TerroirEngine.Game.GameSession(data, setup);
-    Console.WriteLine($"{g.Plot.Name} ({g.Region.Name}), planted {setup.PlantingYear}, vintage {g.Vintage}. Setup+establishment {sw.ElapsedMilliseconds} ms. Cash €{g.Ledger.Cash:N0}");
+    Console.WriteLine($"{g.Plot.Name} ({g.Region.Name}), planted {setup.PlantingYear}, first Vintage {g.FirstVintage}. Setup+establishment {sw.ElapsedMilliseconds} ms. Cash €{g.Ledger.Cash:N0}");
     double targetOe = args.Length > 3 ? double.Parse(args[3], System.Globalization.CultureInfo.InvariantCulture) : g.Region.Id switch { "mosel" => 84, "cote-dor" => Units.OeFromBrix(22.5), _ => Units.OeFromBrix(25) };
     bool verbose = args.Length > 4;
+    int vintages = int.TryParse(Environment.GetEnvironmentVariable("TE_VINTAGES"), out var nv) ? Math.Max(1, nv) : 1;
+    int lastVintage = g.FirstVintage + vintages - 1;
     int guard = 0, stops = 0;
-    while (g.Phase != TerroirEngine.Game.GamePhase.Finished && guard++ < 3000)
+    while (!g.IsVintageBottled(lastVintage) && guard++ < 3000 * vintages)
     {
         int days = g.Advance(30);
         stops++;
         foreach (var m in g.Inbox.Where(m => !m.Read).OrderBy(m => m.Id)) { if (verbose) Console.WriteLine($"  [{Dates.Short(m.Date)}] {m.From}: {m.Subject}" + (args[4] == "full" ? $"\n      {m.Body.Replace("\n", "\n      ")}\n      WHY: {m.Why}" : "")); m.Read = true; }
+        if (g.Vintage <= lastVintage)
         foreach (var b in g.Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null))
         {
             var must = Chemistry.MustFromBlock(b);
@@ -117,7 +120,7 @@ if (cmd == "play")
             g.Apply(new TerroirEngine.Game.Command { Type = "wine", A = $"{lot.VarietyName} Block {lot.BlockId}", B = "Screwcap", C = "Sterile", D = "Bentonite", E = lot.Id });
         foreach (var lot in g.Lots.Where(l => l.Phase == LotPhase.Stuck).ToList()) g.Apply(new TerroirEngine.Game.Command { Type = "restart", A = lot.Id });
     }
-    Console.WriteLine($"Finished {g.FinishedDate} after {stops} stops, {sw.ElapsedMilliseconds} ms. Inbox {g.Inbox.Count} messages.");
+    Console.WriteLine($"{vintages} Vintage(s) bottled by {g.Date} (first on {g.FinishedDate}) after {stops} stops, {sw.ElapsedMilliseconds} ms. Inbox {g.Inbox.Count} messages.");
     var snapOut = Environment.GetEnvironmentVariable("TE_SNAPSHOT");
     if (!string.IsNullOrEmpty(snapOut)) File.WriteAllText(snapOut, TerroirEngine.Game.Snapshot.Json(g));
     foreach (var b in g.Blocks)

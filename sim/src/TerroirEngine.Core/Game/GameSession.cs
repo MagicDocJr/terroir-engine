@@ -8,7 +8,8 @@ using TerroirEngine.Winery;
 
 namespace TerroirEngine.Game;
 
-public enum GamePhase { Establishment, Vintage, Cellar, Finished }
+/// <summary>Establishment is fast-forwarded at game start; after it the game runs year after year on the Timeline (ADR 0002).</summary>
+public enum GamePhase { Establishment, Running }
 
 public sealed class GameSetup
 {
@@ -52,7 +53,7 @@ public sealed class Message
 
 public sealed class SaveFile { public GameSetup Setup { get; set; } = new(); public List<Command> Commands { get; set; } = new(); public string Date { get; set; } = ""; }
 
-/// <summary>One game: an Estate on one Plot, from bare land through Establishment and one fully played Vintage to bottling (spec §3).</summary>
+/// <summary>One game: an Estate on one Plot, from bare land through Establishment, then Vintage after Vintage on the Timeline (spec §3; multi-vintage design).</summary>
 public sealed partial class GameSession
 {
     public GameData Data { get; }
@@ -72,7 +73,16 @@ public sealed partial class GameSession
     public StaffLevel CellarMaster { get; private set; }
     public DateOnly Date { get; private set; }
     public GamePhase Phase { get; private set; } = GamePhase.Establishment;
-    public int Vintage => Setup.PlantingYear + 3;
+    /// <summary>The first cropping Vintage (4th leaf; spec §3.1).</summary>
+    public int FirstVintage => Setup.PlantingYear + 3;
+    /// <summary>The current Vintage: the year whose vines are growing now (after Establishment, the calendar year).</summary>
+    public int Vintage => Phase == GamePhase.Establishment ? FirstVintage : Date.Year;
+    private readonly SortedSet<int> _bottledVintages = new();
+    /// <summary>Vintages whose every Lot is in bottle, oldest first.</summary>
+    public IReadOnlyCollection<int> BottledVintages => _bottledVintages;
+    public bool IsVintageBottled(int vintage) => _bottledVintages.Contains(vintage);
+    /// <summary>Wines containing any Lot of this Vintage (a cross-Vintage blend counts for each of its Vintages).</summary>
+    public List<Wine> WinesOf(int vintage) => Wines.Where(w => w.Components.Any(c => Lots.FirstOrDefault(l => l.Id == c.LotId)?.Vintage == vintage)).ToList();
     public List<Command> Commands { get; } = new();
     /// <summary>UI progress flags (onboarding steps seen, screens visited). No effect on the simulation; saved via the command log.</summary>
     public HashSet<string> Flags { get; } = new();
@@ -95,6 +105,7 @@ public sealed partial class GameSession
         return names[(int)l];
     }
     public bool MentorRetired { get; private set; }
+    /// <summary>The day the first Vintage was fully bottled (the Mentor retires).</summary>
     public DateOnly? FinishedDate { get; private set; }
     public DailyWeather Today { get; private set; }
     private readonly HashSet<string> _gates = new();
@@ -149,7 +160,7 @@ public sealed partial class GameSession
         Ctx.AutoManage = true;
         var saved = (Ctx.Spray, Ctx.Canopy, Ctx.Floor, Ctx.Labour);
         Ctx.Spray = Tier.Medium; Ctx.Canopy = Tier.Medium; Ctx.Floor = Tier.Medium; Ctx.Labour = Tier.Medium;
-        for (int year = Setup.PlantingYear; year < Vintage; year++)
+        for (int year = Setup.PlantingYear; year < FirstVintage; year++)
         {
             double survivalBefore = Blocks.Average(b => b.VineSurvival);
             int frostNights = 0; double severe = 0;
@@ -183,10 +194,10 @@ public sealed partial class GameSession
         }
         (Ctx.Spray, Ctx.Canopy, Ctx.Floor, Ctx.Labour) = saved;
         Ctx.AutoManage = false;
-        Phase = GamePhase.Vintage;
-        Date = new DateOnly(Vintage, 1, 15);
+        Phase = GamePhase.Running;
+        Date = new DateOnly(FirstVintage, 1, 15);
         // simulate 1–14 Jan quietly so the new season has begun
-        for (var d = new DateOnly(Vintage, 1, 1); d < Date; d = d.AddDays(1)) foreach (var b in Blocks) VineyardModel.Step(b, Weather.Get(d), Ctx, Setup.Seed);
+        for (var d = new DateOnly(FirstVintage, 1, 1); d < Date; d = d.AddDays(1)) foreach (var b in Blocks) VineyardModel.Step(b, Weather.Get(d), Ctx, Setup.Seed);
         Ctx.Events.Clear();
         Today = Weather.Get(Date);
         IntroMessages();
@@ -279,7 +290,7 @@ public sealed partial class GameSession
     public int Advance(int maxDays, bool stopAtAlerts = true)
     {
         int n = 0;
-        while (n < maxDays && Phase != GamePhase.Finished)
+        while (n < maxDays)
         {
             bool stop = StepDay();
             n++;
@@ -293,10 +304,9 @@ public sealed partial class GameSession
         int before = Inbox.Count(m => m.Stop);
         var w = Weather.Get(Date);
         Today = w;
-        bool vineYear = Date.Year == Vintage;
         Ctx.LabourFactor = Ctx.Labour switch { Tier.Low => 0.85, Tier.High => 1.2, _ => 1.0 };
         Ctx.SprayPassesToday = 0; Ctx.FrostProtectionNights = 0;
-        if (vineYear) foreach (var b in Blocks) VineyardModel.Step(b, w, Ctx, Setup.Seed);
+        foreach (var b in Blocks) VineyardModel.Step(b, w, Ctx, Setup.Seed);
         if (Ctx.ForceSprayToday)
         {
             Post("vineyard", Ctx.SprayPassesToday > 0 ? "Extra spray pass done" : "Extra spray pass cancelled: raining", Ctx.SprayPassesToday > 0 ? "All Blocks were sprayed today, outside the normal schedule. The next regular pass moves back accordingly." : "Spraying in heavy rain washes the product off; the crew stayed in. Order it again for a dry day.",
@@ -309,26 +319,43 @@ public sealed partial class GameSession
         DailyCosts();
         HandleEvents();
         Advisor();
-        if (Ledger.Cash < 0 && Phase != GamePhase.Finished && Gate("overdrawn"))
+        if (Ledger.Cash < 0 && Gate("overdrawn"))
             Post("mentor", "You are overdrawn", $"Your cash is now {Ledger.Cash:N0} €. The biggest costs so far were {string.Join(", ", Ledger.ByCategory(DateOnly.MinValue, DateOnly.MaxValue).Where(kv => kv.Value < 0).OrderBy(kv => kv.Value).Take(3).Select(kv => $"{kv.Key} {-kv.Value:N0} €"))}. In this version the bank carries the debt until the wine is sold, but lower Programme tiers or cheaper staff reduce what you spend.",
                 "Game simplification: no loans or interest yet (backlog: full economics).", "high", "overdrawn", stop: true).Actions.Add(("Open Estate", "goto", "estate"));
         if (Date.DayOfWeek == DayOfWeek.Monday) CashSeries.Add((Date, Ledger.Cash));
-        if (vineYear && Date.Month >= 4 && Date.Month <= 10)
+        if (Date.Month >= 4 && Date.Month <= 10)
+        {
+            if (Date.Month == 4 && Date.Day == 1) RiskSeries.Clear();   // the risk chart shows the current Vintage only
             RiskSeries.Add((Date, Blocks.Average(b => b.Disease.DownyRiskToday), Blocks.Average(b => b.Disease.PowderyIndex), Blocks.Average(b => b.Disease.BotrytisRiskToday)));
-        UpdatePhase();
+        }
+        CheckBottledVintages();
         Date = Date.AddDays(1);
         return Inbox.Count(m => m.Stop) > before;
     }
 
-    private void UpdatePhase()
+    /// <summary>A Vintage is in bottle when its harvest is over and every one of its Lots is bottled. The first one ends the Mentor's storyline.</summary>
+    private void CheckBottledVintages()
     {
-        if (Phase == GamePhase.Vintage && Blocks.All(b => b.Harvested)) { Phase = GamePhase.Cellar; }
-        if (Phase == GamePhase.Cellar && Lots.Count > 0 && Lots.All(l => l.Phase == LotPhase.Blended))
+        foreach (int v in Lots.Select(l => l.Vintage).Distinct().OrderBy(x => x).ToList())
         {
-            Phase = GamePhase.Finished; FinishedDate = Date; MentorRetired = true;
-            var rev = Wines.Sum(x => x.Revenue);
-            Post("mentor", "The wine is in bottle — and I am retiring", $"Every Lot of the {Vintage} vintage is now bottled. {Wines.Count} Wine(s), {Wines.Sum(x => x.Bottles):N0} bottles, €{rev:N0} in sales.\n\nIt has been a pleasure. From now on the Estate is yours — hire good people, or learn it all yourself. Look at your Tasting sheets: every descriptor tells you which of your decisions caused it.",
-                "This first version of the game ends when the first Vintage is in bottle. Playing on year after year is the first planned expansion.", "high", "finished", stop: true).Actions.AddRange(new[] { ("Open the Vintage report", "goto", "report"), ("Open Wines", "goto", "wines") });
+            if (_bottledVintages.Contains(v)) continue;
+            bool harvestOver = v < Date.Year || Blocks.All(b => b.Harvested);
+            if (!harvestOver || Lots.Any(l => l.Vintage == v && l.Phase != LotPhase.Blended)) continue;
+            _bottledVintages.Add(v);
+            var wines = WinesOf(v);
+            double rev = wines.Sum(x => x.Revenue);
+            string summary = $"{wines.Count} Wine(s), {wines.Sum(x => x.Bottles):N0} bottles, €{rev:N0} in sales.";
+            if (v == FirstVintage)
+            {
+                FinishedDate = Date; MentorRetired = true;
+                Post("mentor", "The wine is in bottle — and I am retiring", $"Every Lot of the {v} Vintage is now bottled. {summary}\n\nIt has been a pleasure. From now on the Estate is yours: your Vineyard manager and Cellar master will send the advice I used to give. Read your Tasting sheets and the Vintage report, then do it again — better — next year. The vines remember what you did to them.",
+                    "The Mentor guides the first Vintage. The game then goes on Vintage after Vintage on the Timeline, and this year's decisions shape next year's vines.", "high", "finished", stop: true)
+                    .Actions.AddRange(new[] { ("Open the Vintage report", "goto", "report"), ("Open Wines", "goto", "wines") });
+            }
+            else
+                Post("cellar", $"The {v} Vintage is in bottle", $"The last Lot of the {v} Vintage is bottled. {summary} The Vintage report compares its weather and results with the normal.",
+                    "Comparing Vintages side by side is how growers learn what the weather did and what their decisions did.", "high", "vintage-bottled", stop: true)
+                    .Actions.AddRange(new[] { ("Open the Vintage report", "goto", "report"), ("Open Wines", "goto", "wines") });
         }
     }
 
@@ -425,7 +452,7 @@ public sealed partial class GameSession
             ExposureLate = b.ExposureLateDays > 0 ? b.ExposureLateSum / b.ExposureLateDays : b.Exposure, StressPost = b.StressPostDays > 0 ? b.StressPostSum / b.StressPostDays : 0,
             YieldKgHa = b.PickedKg / Math.Max(0.01, b.AreaHa), YieldHlHa = hl, WinklerBlock = b.Winkler, SeasonTemp = VineyardModel.SeasonMeanTemp(b), BudsPerVine = b.BudsPerVine,
             DensityVinesHa = b.Planting.DensityVinesHa, LeafSide = b.LeafSide.ToString(), LeafTiming = b.LeafTiming.ToString(), CanopyTier = Ctx.Canopy.ToString(), SprayTier = Ctx.Spray.ToString(),
-            BudLoad = b.BudLoad.ToString(), Sorting = b.Order?.Sorting.ToString() ?? "", Picking = b.Order?.HandPick == false ? "machine" : "hand", HarvestDate = Date,
+            BudLoad = b.BudLoad.ToString(), Sorting = b.Order?.Sorting.ToString() ?? "", Picking = b.Order?.HandPick == false ? "machine" : "hand", HarvestDate = Date, Budburst = b.Budburst,
             HarvestOe = must.Oe, HarvestTa = must.TaGL, HarvestPh = must.Ph, SeedMaturity = b.SeedMaturity, FrostLoss = b.FrostShootLoss, SunburnPct = b.SunburnFraction * 100,
             GreyRotPct = b.Disease.GreyRot * 100, NobleRotPct = b.Disease.NobleRot * 100, DownyLeafPct = b.Disease.DownyLeaf, IbmpNgL = b.Ibmp,
         };
@@ -461,7 +488,7 @@ public sealed partial class GameSession
         wine.Legal = Law.Evaluate(wine, parts, Plot, Date);
         wine.Sheet = TastingSheetGenerator.Generate(wine, parts, Date.AddMonths(3));
         wine.Sheet.Label = wine.Legal.Label; wine.Sheet.Category = wine.Legal.Category;
-        wine.PricePerBottle = Math.Round(wine.Legal.BasePrice * Law.QualityMultiplier(wine.Sheet.Quality) * (wine.Blend.Harvested.Year == Vintage && Blocks.Any(b => b.Leaf(Vintage) == 4) ? 0.95 : 1), 2);
+        wine.PricePerBottle = Math.Round(wine.Legal.BasePrice * Law.QualityMultiplier(wine.Sheet.Quality) * (wine.Blend.Harvested.Year == FirstVintage ? 0.95 : 1), 2);
         wine.BottlingCost = wine.Bottles * EconomyTables.BottleCost(wine.Closure) + 150;
         wine.Revenue = wine.Sheet.Quality == "Faulty" ? wine.Bottles * 1.0 : wine.Bottles * wine.PricePerBottle;
         Ledger.Post(Date, "Bottling", -wine.BottlingCost, $"Bottling {wine.Name}: {wine.Bottles:N0} bottles ({wine.Closure})");
@@ -486,7 +513,7 @@ public sealed partial class GameSession
     {
         double ha = Blocks.Sum(b => b.AreaHa);
         string region = Region.Id;
-        bool season = Date.Month >= 3 && Date.Month <= 10 && Date.Year == Vintage;
+        bool season = Date.Month >= 3 && Date.Month <= 10;
         if (season)
         {
             double hours = EconomyTables.LabourHoursPerHa(Plot) * ha / 245.0;
@@ -496,14 +523,14 @@ public sealed partial class GameSession
             double materials = EconomyTables.MaterialsPerHaYear(region) * ha / 245.0 * (Ctx.Floor switch { Tier.Low => 0.8, Tier.High => 1.2, _ => 1.0 });
             Ledger.Post(Date, "Materials", -materials, "Canopy and floor materials, repairs, fuel");
         }
-        if (Ctx.SprayPassesToday > 0 && Date.Year == Vintage)
+        if (Ctx.SprayPassesToday > 0)
         {
             double perPass = EconomyTables.SprayCostPerHaYear(Ctx.Spray, Plot.SlopePct >= 30) / EconomyTables.TypicalPasses(region, Ctx.Spray);
             double passFraction = (double)Ctx.SprayPassesToday / Math.Max(1, Blocks.Count);
             Ledger.Post(Date, "Sprays", -perPass * ha * passFraction, "Spray pass (materials + application)");
         }
         if (Ctx.FrostProtectionNights > 0) Ledger.Post(Date, "Frost protection", -600 * ha * Math.Min(1, (double)Ctx.FrostProtectionNights / Blocks.Count) * (Ctx.Frost == Tier.High ? 1.5 : 1), "Frost protection night (candles / wind machine)");
-        if (Ctx.IrrigationLegal && Date.Year == Vintage)
+        if (Ctx.IrrigationLegal)
         {
             double mm = Blocks.Sum(b => b.IrrigationMmSeason);
             if (Date.Month == 10 && Date.Day == 31) Ledger.Post(Date, "Irrigation", -(300 * ha + 0.8 * mm), $"Irrigation water and system ({mm / Math.Max(1, Blocks.Count):0} mm per Block)");
@@ -537,7 +564,7 @@ public sealed partial class GameSession
         var target = DateOnly.Parse(sf.Date, System.Globalization.CultureInfo.InvariantCulture);
         s._replaying = true;
         var queue = new Queue<Command>(sf.Commands.OrderBy(c => c.Day));
-        while (s.Date < target && s.Phase != GamePhase.Finished)
+        while (s.Date < target)
         {
             while (queue.Count > 0 && queue.Peek().Day <= s.Date.DayNumber) s.ApplyInternal(queue.Dequeue());
             s.StepDay();

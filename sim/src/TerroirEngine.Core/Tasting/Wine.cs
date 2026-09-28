@@ -13,6 +13,7 @@ public sealed class Provenance
     public double ExposureEarly, ExposureLate, StressPost, YieldKgHa, YieldHlHa, WinklerBlock, SeasonTemp, BudsPerVine, DensityVinesHa;
     public string LeafSide = "", LeafTiming = "", CanopyTier = "", SprayTier = "", BudLoad = "", Sorting = "", Picking = "";
     public DateOnly HarvestDate;
+    public DateOnly? Budburst;
     public double HarvestOe, HarvestTa, HarvestPh, SeedMaturity, FrostLoss, SunburnPct, GreyRotPct, NobleRotPct, DownyLeafPct, IbmpNgL;
 }
 

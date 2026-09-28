@@ -13,22 +13,27 @@ public static class Fixture
     private static GameData? _data;
     public static GameData Data => _data ??= new GameData(GameData.LocateDataRoot(AppContext.BaseDirectory));
 
-    /// <summary>Scripted player: harvest at a target, default cellar choices, bottle each Lot on its own.</summary>
-    public static GameSession Play(string plotId, int plantingYear, double targetOe, Action<GameSession>? onStart = null)
+    /// <summary>Scripted player over several Vintages: harvest at a target, default cellar choices, bottle each Lot on its own,
+    /// until the last requested Vintage is in bottle.</summary>
+    public static GameSession PlayVintages(string plotId, int plantingYear, double targetOe, int vintages, Action<GameSession>? onStart = null)
     {
         var g = new GameSession(Data, new GameSetup { PlotId = plotId, PlantingYear = plantingYear });
         onStart?.Invoke(g);
-        int guard = 0;
-        while (g.Phase != GamePhase.Finished && guard++ < 400)
+        int last = g.FirstVintage + vintages - 1, guard = 0;
+        while (!g.IsVintageBottled(last) && guard++ < 400 * vintages)
         {
             g.Advance(30);
-            foreach (var b in g.Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null))
-                if (Chemistry.MustFromBlock(b).Oe >= targetOe || b.LeafFall != null) g.Apply(new Command { Type = "harvest", A = b.Data.Id, B = "hand", C = "Table" });
+            if (g.Vintage <= last)
+                foreach (var b in g.Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null))
+                    if (Chemistry.MustFromBlock(b).Oe >= targetOe || b.LeafFall != null) g.Apply(new Command { Type = "harvest", A = b.Data.Id, B = "hand", C = "Table" });
             foreach (var lot in g.Lots.Where(l => l.Phase == LotPhase.Ready).ToList()) g.Apply(new Command { Type = "wine", A = lot.Id, E = lot.Id });
             foreach (var lot in g.Lots.Where(l => l.Phase == LotPhase.Stuck).ToList()) g.Apply(new Command { Type = "restart", A = lot.Id });
         }
         return g;
     }
+
+    /// <summary>Scripted player for the first Vintage only.</summary>
+    public static GameSession Play(string plotId, int plantingYear, double targetOe, Action<GameSession>? onStart = null) => PlayVintages(plotId, plantingYear, targetOe, 1, onStart);
 }
 
 public class UnitConversionTests
@@ -98,18 +103,19 @@ public class LawTests
         // redo one Lot chaptalised through a fresh game with the choice applied at harvest time
         var g2 = new GameSession(Fixture.Data, new GameSetup { PlotId = "mosel-blauschiefer", PlantingYear = 2015 });
         int guard = 0;
-        while (g2.Phase != GamePhase.Finished && guard++ < 400)
+        while (!g2.IsVintageBottled(g2.FirstVintage) && guard++ < 400)
         {
             g2.Advance(30);
-            foreach (var b in g2.Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null))
-                if (Chemistry.MustFromBlock(b).Oe >= 84) g2.Apply(new Command { Type = "harvest", A = b.Data.Id, B = "hand", C = "Table" });
+            if (g2.Vintage == g2.FirstVintage)
+                foreach (var b in g2.Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null))
+                    if (Chemistry.MustFromBlock(b).Oe >= 84) g2.Apply(new Command { Type = "harvest", A = b.Data.Id, B = "hand", C = "Table" });
             foreach (var lot in g2.Lots.Where(l => l.Phase == LotPhase.Received)) g2.Apply(new Command { Type = "lot", A = lot.Id, B = "Chaptalisation", C = "1" });
             foreach (var lot in g2.Lots.Where(l => l.Phase == LotPhase.Ready).ToList()) g2.Apply(new Command { Type = "wine", A = lot.Id, E = lot.Id });
         }
-        Assert.All(g.Wines, w => Assert.Contains(w.Legal!.Category, new[] { "Kabinett", "Spätlese", "Auslese" }));
+        Assert.All(g.WinesOf(g.FirstVintage), w => Assert.Contains(w.Legal!.Category, new[] { "Kabinett", "Spätlese", "Auslese" }));
         // chaptalised: never Prädikat; at 86 °Oe + 1 % vol it also breaks the zone A 11.5 % ceiling → Deutscher Wein
-        Assert.All(g2.Wines, w => Assert.DoesNotContain(w.Legal!.Category, new[] { "Kabinett", "Spätlese", "Auslese", "Beerenauslese" }));
-        Assert.Contains(g2.Wines.SelectMany(w => w.Legal!.Notes), n => n.Contains("chaptalisation is forbidden"));
+        Assert.All(g2.WinesOf(g2.FirstVintage), w => Assert.DoesNotContain(w.Legal!.Category, new[] { "Kabinett", "Spätlese", "Auslese", "Beerenauslese" }));
+        Assert.Contains(g2.WinesOf(g2.FirstVintage).SelectMany(w => w.Legal!.Notes), n => n.Contains("chaptalisation is forbidden"));
     }
 
     [Fact]
@@ -120,15 +126,16 @@ public class LawTests
             setup.Planting[b.Id] = new PlantingChoice { Variety = VarietyId.Riesling, Rootstock = RootstockId.Fercal, Training = TrainingSystem.Guyot, DensityVinesHa = 10000 };
         var g = new GameSession(Fixture.Data, setup);
         int guard = 0;
-        while (g.Phase != GamePhase.Finished && guard++ < 400)
+        while (!g.IsVintageBottled(g.FirstVintage) && guard++ < 400)
         {
             g.Advance(30);
-            foreach (var b in g.Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null && (Chemistry.MustFromBlock(b).Oe >= 82 || b.LeafFall != null)))
-                g.Apply(new Command { Type = "harvest", A = b.Data.Id, B = "hand", C = "Table" });
+            if (g.Vintage == g.FirstVintage)
+                foreach (var b in g.Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null && (Chemistry.MustFromBlock(b).Oe >= 82 || b.LeafFall != null)))
+                    g.Apply(new Command { Type = "harvest", A = b.Data.Id, B = "hand", C = "Table" });
             foreach (var lot in g.Lots.Where(l => l.Phase == LotPhase.Ready).ToList()) g.Apply(new Command { Type = "wine", A = lot.Id, E = lot.Id });
         }
-        Assert.NotEmpty(g.Wines);
-        Assert.All(g.Wines, w => Assert.Equal("Vin de France", w.Legal!.Category));
+        Assert.NotEmpty(g.WinesOf(g.FirstVintage));
+        Assert.All(g.WinesOf(g.FirstVintage), w => Assert.Equal("Vin de France", w.Legal!.Category));
     }
 }
 
@@ -146,7 +153,7 @@ public class VineyardCalibrationTests
     public void Mosel_Riesling_HarvestComposition_IsInRange()
     {
         var g = Fixture.Play("mosel-blauschiefer", 2016, 84);   // vintage 2019
-        foreach (var p in g.Provenance.Values)
+        foreach (var p in g.Provenance.Values.Where(p => p.Vintage == g.FirstVintage))
         {
             Assert.InRange(p.HarvestTa, 7.0, 11.5);
             Assert.InRange(p.HarvestPh, 2.85, 3.35);
@@ -158,12 +165,12 @@ public class VineyardCalibrationTests
     public void Napa_Cabernet_IsLowAcidHighPh_AndRipensInAutumn()
     {
         var g = Fixture.Play("napa-bench", 2016, Units.OeFromBrix(25));
-        foreach (var p in g.Provenance.Values)
+        foreach (var p in g.Provenance.Values.Where(p => p.Vintage == g.FirstVintage))
         {
             Assert.InRange(p.HarvestPh, 3.4, 3.95);
             Assert.InRange(p.HarvestTa, 4.0, 7.0);
         }
-        Assert.All(g.Blocks, b => Assert.InRange(b.Budburst!.Value.Month, 3, 4));
+        Assert.All(g.Provenance.Values.Where(p => p.Vintage == g.FirstVintage), p => Assert.InRange(p.Budburst!.Value.Month, 3, 4));
     }
 
     [Fact]
@@ -172,8 +179,8 @@ public class VineyardCalibrationTests
         // 29 °Brix ≈ 18 % potential: yeast stop short of dryness (fermentation.md: very high sugar is a stuck-fermentation cause)
         var g = Fixture.Play("napa-bench", 2018, Units.OeFromBrix(29));
         // the ordinary cultured yeast sticks; the test fixture then restarts with a tolerant culture (≈18 %)
-        Assert.All(g.Lots, l => Assert.Contains(l.Log, x => x.Contains("STUCK")));
-        Assert.All(g.Lots, l => Assert.True(l.AlcoholPct <= 18.3, $"{l.Id} reached {l.AlcoholPct:0.0} %"));
+        Assert.All(g.Lots.Where(l => l.Vintage == g.FirstVintage), l => Assert.Contains(l.Log, x => x.Contains("STUCK")));
+        Assert.All(g.Lots.Where(l => l.Vintage == g.FirstVintage), l => Assert.True(l.AlcoholPct <= 18.3, $"{l.Id} reached {l.AlcoholPct:0.0} %"));
     }
 
     [Theory]
@@ -231,10 +238,10 @@ public class GameLoopTests
     public void FullGame_ReachesBottling_WithTastingSheets(string plot, int year, double target)
     {
         var g = Fixture.Play(plot, year, target);
-        Assert.Equal(GamePhase.Finished, g.Phase);
+        Assert.True(g.IsVintageBottled(g.FirstVintage));
         Assert.True(g.MentorRetired);
-        Assert.NotEmpty(g.Wines);
-        foreach (var w in g.Wines)
+        Assert.NotEmpty(g.WinesOf(g.FirstVintage));
+        foreach (var w in g.WinesOf(g.FirstVintage))
         {
             Assert.NotNull(w.Sheet);
             Assert.NotEmpty(w.Sheet!.Aromas);

@@ -49,7 +49,7 @@ public static class Snapshot
             ["wines"] = Arr(g.Wines.Select(w => (JsonNode)WineObj(w))),
             ["finance"] = FinanceObj(g),
             ["inbox"] = Arr(g.Inbox.OrderByDescending(m => m.Id).Take(80).Select(m => (JsonNode)MsgObj(m))),
-            ["report"] = g.Phase == GamePhase.Finished ? VintageReport.Build(g) : null,
+            ["report"] = g.IsVintageBottled(g.FirstVintage) ? VintageReport.Build(g) : null,
             ["flags"] = Arr(g.Flags.OrderBy(f => f).Select(f => (JsonNode)f)),
             ["establishment"] = Arr(g.EstablishmentReports.Select(x => (JsonNode)x)),
         };
@@ -60,8 +60,7 @@ public static class Snapshot
 
     private static string StageLabel(GameSession g)
     {
-        if (g.Phase == GamePhase.Finished) return "Vintage bottled — Mentor retired";
-        if (g.Phase == GamePhase.Cellar) return "In the cellar";
+        if (g.Blocks.All(x => x.Harvested)) return g.Lots.Any(l => l.Phase != LotPhase.Blended) ? "After the harvest · wine in the cellar" : "After the harvest";
         var b = g.Blocks.OrderBy(x => (int)x.Stage).First();
         var lead = g.Blocks.OrderByDescending(x => (int)x.Stage).First();
         string s = lead.Stage switch
@@ -180,11 +179,11 @@ public static class Snapshot
     {
         var n = Normals(g);
         var clim = g.Blocks[0].Climate;
-        int year = Math.Min(g.Date.Year, g.Vintage);
+        int year = g.Date.Year;
         var weekly = new JsonArray();
         double cum = 0;
         var monthRain = new double[13];
-        var end = g.Date.Year > g.Vintage ? new DateOnly(g.Vintage, 12, 31) : g.Date.AddDays(-1);
+        var end = g.Date.AddDays(-1);
         double wkSum = 0; int wkCnt = 0;
         for (var d = new DateOnly(year, 1, 1); d <= end; d = d.AddDays(1))
         {
@@ -204,7 +203,7 @@ public static class Snapshot
         string[] mn = { "", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
         for (int m = 1; m <= 12; m++) months.Add(new JsonObject { ["month"] = mn[m], ["rain"] = R(monthRain[m], 0), ["normal"] = R(n.rain[m], 0), ["past"] = new DateOnly(year, m, 1) <= end });
         var bA = g.Blocks[0];
-        var fc = g.Phase == GamePhase.Finished ? new List<Forecaster.ForecastDay>() : g.CurrentForecast();
+        var fc = g.CurrentForecast();
         var today = clim.Adjust(g.Today);
         return new JsonObject
         {
