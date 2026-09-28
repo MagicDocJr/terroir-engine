@@ -197,6 +197,42 @@ if (cmd == "frostcheck")
     }
 }
 
+if (cmd == "ripecheck")
+{
+    // ripecheck <plotId> [variety]: per year flowering, véraison, date at 200 g/L, and the heat / water brakes after véraison
+    var plot = data.Plot(args[1]);
+    var variety = args.Length > 2 ? Enum.Parse<VarietyId>(args[2]) : VarietyId.PinotNoir;
+    var archive = new WeatherArchive(data.DataRoot, plot.Region.WeatherFile);
+    var rw = new RegionWeather(archive, 42);
+    var bd = plot.Blocks[0];
+    Console.WriteLine("year flower  verais  200g/L  doy  heatBrake waterBrake  daysTmax35");
+    var doys = new List<int>();
+    for (int vint = 1990; vint <= 2020; vint++)
+    {
+        var b = new BlockState(plot, bd, new BlockClimate(plot, bd, archive.GridElevationM))
+        { Planted = true, PlantingYear = vint - 3, Planting = new PlantingChoice { Variety = variety, Rootstock = RootstockId.SO4, Training = TrainingSystem.Guyot, DensityVinesHa = 10000 } };
+        var ctx = new VineyardContext { Spray = Tier.Medium };
+        double heatLoss = 0, waterLoss = 0; int n = 0, hot = 0; DateOnly? hit = null;
+        for (var d = new DateOnly(vint - 3, 1, 1); d <= new DateOnly(vint, 11, 15); d = d.AddDays(1))
+        {
+            ctx.AutoManage = d.Year < vint;
+            var raw = rw.Get(d);
+            VineyardModel.Step(b, raw, ctx, 42);
+            if (d.Year == vint && b.Veraison != null && hit == null)
+            {
+                var w = b.Climate.Adjust(raw);
+                heatLoss += M.Clamp((w.Tmax - 35) * 0.04, 0, 0.4); waterLoss += 0.6 * M.Clamp((-1.2 - b.PsiStem) / 0.4, 0, 1); n++;
+                if (w.Tmax >= 35) hot++;
+                if (b.SugarGL >= 200) hit = d;
+            }
+        }
+        if (hit != null) doys.Add(hit.Value.DayOfYear);
+        Console.WriteLine($"{vint} {b.Flowering:dd/MM}   {b.Veraison:dd/MM}   {hit:dd/MM}   {hit?.DayOfYear,3}   {heatLoss / Math.Max(1, n),6:0.000}   {waterLoss / Math.Max(1, n),6:0.000}   {hot,4}");
+    }
+    double mean = doys.Average(), sd = Math.Sqrt(doys.Average(x => (x - mean) * (x - mean)));
+    Console.WriteLine($"mean DOY {mean:0.0}, SD {sd:0.0} days, earliest {doys.Min()}, latest {doys.Max()}");
+}
+
 if (cmd == "climcheck")
 {
     if (Environment.GetEnvironmentVariable("TE_SW") is { } sw) BlockClimate.SiteWarmthC = double.Parse(sw, System.Globalization.CultureInfo.InvariantCulture);

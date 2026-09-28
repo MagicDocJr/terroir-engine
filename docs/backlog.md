@@ -36,7 +36,7 @@ Things deliberately left out of the MVP, to deep-dive once the core loop is lock
 Found while building or reviewing; not urgent, but not to be forgotten. Remove a line when it is fixed.
 
 ### Simulation and science (for the science review)
-- Côte d'Or ripening spread between years is too small: 2003 reaches 200 g/L on 5 Sep in the game, the real harvest began ≈ 19 Aug; GFV flowering runs about a week late (Parker F* kept as published).
+- Côte d'Or ripening spread between years is too small: 2003 reaches 200 g/L on 4 Sep in the game, the real harvest began ≈ 19 Aug. Diagnosed in `phenology.md` §9: GFV flowering responds too weakly to warm springs (observed 1991–2003 flowering spread 25 days, model 14) and the post-véraison drought brake slows the hot, dry years. Needs a yearly Côte de Beaune flowering/véraison series to refit, and 2003 Ψstem data. Tools: `sim ripecheck`, `sim frostcheck`, `sim yieldcheck`.
 - Napa year-to-year yield variation is 4–7 %; check against the Napa County crush reports.
 - Multi-vintage carry-over coefficients (fruitfulness, reserves, inoculum, 20 % leaf-loss tolerance) are `UNVERIFIED`.
 - The vintage-statement share is computed from wine litres, not grape weight: label it a game simplification or switch to grape kg.
