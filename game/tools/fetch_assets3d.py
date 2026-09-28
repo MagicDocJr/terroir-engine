@@ -31,8 +31,21 @@ TEXTURES = [
     "grey_roof_tiles_02",       # Mosel: slate roof
     "red_slate_roof_tiles_01",  # Côte d'Or: flat Burgundy tiles
     "clay_roof_tiles_02",       # Napa: barrel (mission) tiles
+    # winery look (docs/superpowers/specs/2026-09-29-cozy-winery-design.md): walls, floors and beams
+    "white_sandstone_blocks_02",   # limestone blocks (Côte d'Or)
+    "whitewashed_brick",
+    "brown_planks_07",             # redwood boards (Napa)
+    "monastery_stone_floor",       # stone flags
+    "slate_floor_03",              # slate flags (Mosel)
+    "terracotta_floor_tiles",
+    "herringbone_brick",
+    "dark_wood",                   # oak beams
 ]
-PROPS = ["hanging_industrial_lamp", "industrial_caged_sconce", "plastic_crate_01", "ladder_sectioned_01"]
+PROPS = ["hanging_industrial_lamp", "industrial_caged_sconce", "plastic_crate_01", "ladder_sectioned_01",
+         # winery look: lights, tasting corner, lounge, plants, outside and cellar details
+         "lantern_chandelier_01", "WoodenTable_02", "WoodenChair_01", "wine_bottles_01", "wine_barrel_01", "Lantern_01",
+         "Sofa_01", "ArmChair_01", "CoffeeTable_01", "potted_plant_01", "potted_plant_02", "planter_box_01",
+         "painted_wooden_bench", "wooden_lantern_01", "wooden_candlestick"]
 
 
 def get(url, path):
