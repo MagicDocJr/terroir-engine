@@ -269,6 +269,10 @@ Total = land + Planting + 3 × (0.6 × running cost) + first-vintage running cos
 - **Margin ≈ €230k.** That's why Napa land is so expensive: the land price absorbs the margin.
 - `UNVERIFIED` balance: this is the largest open balancing risk. Tune the Napa prices, yields or land prices if Napa dominates in playtests.
 
+## 11. Overdraft interest (multi-vintage)
+
+**Game simplification:** a negative cash balance is carried by the bank at 9 % a year, charged monthly on the balance on the 1st of the month (`UNVERIFIED` design value; euro-area small-business overdraft rates are typically in the high single digits). Loans stay in the backlog. The overdraft message says so in-game.
+
 ## Open questions
 1. Real Mosel and Côte d'Or labour loadings and salaries (the regional multipliers) are unsourced.
 2. Real ex-cellar price distributions per category are needed for calibration. Possible sources: DWI market reports, BIVB market data, Napa DTC surveys.

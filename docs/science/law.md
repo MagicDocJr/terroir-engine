@@ -206,3 +206,8 @@ The first category whose predicates all pass becomes the Wine's **Legal category
 - EU: mixing red and white wine to make rosé is not an authorised practice for still wine. Rosé must be made from red grapes with short skin contact. The exceptions are sparkling wines such as rosé Champagne (Regulation (EU) 2019/934, Annex I, Part A; the long-standing rule was confirmed when the Commission withdrew its 2009 plan to allow blended rosé). Wording is from memory and `UNVERIFIED` against the current consolidated text.
 - USA: blending red and white wine is legal; the label follows the TTB varietal (≥ 75 %) and AVA (≥ 85 %) rules.
 - Game simplification: the game doesn't block such a blend. It only warns, and the wine is judged as made.
+
+## Vintage statement (multi-vintage)
+- **EU (Mosel, Côte d'Or):** a label may show a harvest year only if at least 85 % of the grapes were harvested in that year (Commission Delegated Regulation (EU) 2019/33, Art. 49; https://eur-lex.europa.eu/eli/reg_del/2019/33/oj/eng).
+- **USA (Napa):** a vintage date needs at least 95 % of the wine from grapes harvested in that calendar year when the label names an American Viticultural Area, 85 % for other appellations (27 CFR 4.27; https://www.ecfr.gov/current/title-27/chapter-I/subchapter-A/part-4/subpart-C/section-4.27). Every Napa wine in the game names an AVA, so 95 % applies.
+- Below the threshold the wine is **non-vintage**: the label drops the year and a legal note explains why. No price discount is modelled (no source for its size).

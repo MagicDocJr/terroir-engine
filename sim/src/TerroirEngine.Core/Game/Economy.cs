@@ -26,6 +26,9 @@ public sealed class Ledger
 
 public static class EconomyTables
 {
+    /// <summary>Overdraft interest, a year rate charged monthly (economy.md; UNVERIFIED design value — euro-area business overdrafts run in the high single digits).</summary>
+    public const double OverdraftRate = 0.09;
+    public static double OverdraftInterest(double cash) => cash < 0 ? cash * OverdraftRate / 12 : 0;
     public static double LabourRate(string region) => region == "napa" ? 29 : 17;          // €/h seasonal hand labour
     public static double SkilledRate(string region) => region == "napa" ? 33 : region == "cote-dor" ? 22 : 23;
     /// <summary>Labour hours per ha per year for a mature vineyard, by work class (economy.md table; KTBL/UC Davis anchors).</summary>

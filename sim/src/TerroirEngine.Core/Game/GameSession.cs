@@ -352,8 +352,8 @@ public sealed partial class GameSession
         if (Phase == GamePhase.Running && Date.Month == 1 && Date.Day == 15 && Date.Year > FirstVintage && Gate($"newseason-{Date.Year}")) NewSeasonMessage();
         Advisor();
         if (Ledger.Cash < 0 && Gate("overdrawn"))
-            Post("mentor", "You are overdrawn", $"Your cash is now {Ledger.Cash:N0} €. The biggest costs so far were {string.Join(", ", Ledger.ByCategory(DateOnly.MinValue, DateOnly.MaxValue).Where(kv => kv.Value < 0).OrderBy(kv => kv.Value).Take(3).Select(kv => $"{kv.Key} {-kv.Value:N0} €"))}. In this version the bank carries the debt until the wine is sold, but lower Programme tiers or cheaper staff reduce what you spend.",
-                "Game simplification: no loans or interest yet (backlog: full economics).", "high", "overdrawn", stop: true).Actions.Add(("Open Estate", "goto", "estate"));
+            Post("mentor", "You are overdrawn", $"Your cash is now {Ledger.Cash:N0} €. The biggest costs so far were {string.Join(", ", Ledger.ByCategory(DateOnly.MinValue, DateOnly.MaxValue).Where(kv => kv.Value < 0).OrderBy(kv => kv.Value).Take(3).Select(kv => $"{kv.Key} {-kv.Value:N0} €"))}. The bank carries the debt, but charges {EconomyTables.OverdraftRate * 100:0} % a year interest every month until you are back in credit. Lower Programme tiers or cheaper staff reduce what you spend.",
+                "Game simplification: an overdraft with a fixed rate instead of loans (backlog: full economics). The rate is a design value (UNVERIFIED).", "high", "overdrawn", stop: true).Actions.Add(("Open Estate", "goto", "estate"));
         if (Date.DayOfWeek == DayOfWeek.Monday) CashSeries.Add((Date, Ledger.Cash));
         if (Date.Month >= 4 && Date.Month <= 10)
         {
@@ -518,9 +518,13 @@ public sealed partial class GameSession
         double litresTotal = parts.Sum(p => p.litres);
         wine.Bottles = (int)(litresTotal * 0.98 / 0.75);
         wine.Legal = Law.Evaluate(wine, parts, Plot, Date);
+        var (vintageYear, vintageNote) = Law.VintageStatement(parts.Select(p => (p.lot.Vintage, p.litres)), Region.Id);
+        wine.Vintage = vintageYear;
+        if (vintageNote != null) wine.Legal.Notes.Add(vintageNote);
+        wine.Legal = wine.Legal with { Label = vintageYear != null ? $"{vintageYear} {wine.Legal.Label}" : $"Non-vintage {wine.Legal.Label}" };
         wine.Sheet = TastingSheetGenerator.Generate(wine, parts, Date.AddMonths(3));
         wine.Sheet.Label = wine.Legal.Label; wine.Sheet.Category = wine.Legal.Category;
-        wine.PricePerBottle = Math.Round(wine.Legal.BasePrice * Law.QualityMultiplier(wine.Sheet.Quality) * (wine.Blend.Harvested.Year == FirstVintage ? 0.95 : 1), 2);
+        wine.PricePerBottle = Math.Round(wine.Legal.BasePrice * Law.QualityMultiplier(wine.Sheet.Quality) * (wine.Vintage == FirstVintage ? 0.95 : 1), 2);
         wine.BottlingCost = wine.Bottles * EconomyTables.BottleCost(wine.Closure) + 150;
         wine.Revenue = wine.Sheet.Quality == "Faulty" ? wine.Bottles * 1.0 : wine.Bottles * wine.PricePerBottle;
         Ledger.Post(Date, "Bottling", -wine.BottlingCost, $"Bottling {wine.Name}: {wine.Bottles:N0} bottles ({wine.Closure})");
@@ -570,6 +574,8 @@ public sealed partial class GameSession
         if (Date.Day == 1)
         {
             Ledger.Post(Date, "Staff", -(StaffCostYear("vineyard", VineyardManager) + StaffCostYear("cellar", CellarMaster)) / 12.0, $"Salaries: Vineyard manager ({VineyardManager}, {EconomyTables.StaffPost("vineyard", Plot, WineHlEstimate) * 100:0} % post), Cellar master ({CellarMaster}, {EconomyTables.StaffPost("cellar", Plot, WineHlEstimate) * 100:0} % post)");
+            double interest = EconomyTables.OverdraftInterest(Ledger.Cash);
+            if (interest < 0) Ledger.Post(Date, "Interest", interest, $"Overdraft interest ({EconomyTables.OverdraftRate * 100:0} % a year)");
             if (Date.Month == 1) Ledger.Post(Date, "Overheads", -EconomyTables.TaxAndDuesPerHaYear(Plot) * ha, "Property tax, insurance, dues");
             // monthly cellar running costs
             foreach (var lot in Lots.Where(l => l.Phase is not (LotPhase.Blended or LotPhase.Received)))

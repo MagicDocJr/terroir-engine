@@ -50,6 +50,10 @@ _Avoid_: Growing-in, waiting period
 One growing season and the wine made from it, named by harvest year.
 _Avoid_: Season, year, round
 
+**Non-vintage**:
+A Wine blended from more than one Vintage, with too little of any one year to put a year on the label (EU: under 85 %; a Napa AVA wine: under 95 %).
+_Avoid_: NV blend, multi-year wine
+
 **Timeline**:
 The continuous calendar a game runs on. It starts in the Planting year the player chooses (1990–2022) and continues year after year.
 _Avoid_: Campaign, career

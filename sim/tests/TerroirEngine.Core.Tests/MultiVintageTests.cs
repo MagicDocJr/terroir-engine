@@ -199,3 +199,70 @@ public class StaffAdviceTests
         Assert.DoesNotContain(g.Inbox, m => m.Date > g.FinishedDate && m.Role == "mentor" && m.Kind is "budburst" or "flowering" or "veraison" or "forced-harvest" or "yield");
     }
 }
+
+public class VintageLawAndMoneyTests
+{
+    [Theory]
+    [InlineData("mosel", 0.90, true)]
+    [InlineData("napa", 0.90, false)]
+    [InlineData("cote-dor", 0.80, false)]
+    [InlineData("napa", 0.96, true)]
+    [InlineData("mosel", 1.00, true)]
+    public void VintageStatement_FollowsEuAndUsThresholds(string region, double share, bool vintage)
+    {
+        var parts = share >= 1 ? new[] { (2020, 100.0) } : new[] { (2020, share * 100), (2019, (1 - share) * 100) };
+        var (year, note) = Law.VintageStatement(parts, region);
+        Assert.Equal(vintage ? 2020 : (int?)null, year);
+        Assert.Equal(vintage, note == null);
+    }
+
+    [Fact]
+    public void CrossVintageBlend_InNapa_IsNonVintage()
+    {
+        // hold the first Vintage's Lots unbottled until the second Vintage's are ready, then blend 50/50
+        var g = new GameSession(Fixture.Data, new GameSetup { PlotId = "napa-carneros", PlantingYear = 2016 });
+        int guard = 0;
+        while (!g.Lots.Any(l => l.Vintage == g.FirstVintage + 1 && l.Phase == LotPhase.Ready) && guard++ < 60)
+        {
+            g.Advance(30, stopAtAlerts: false);
+            foreach (var b in g.Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null && (Chemistry.MustFromBlock(b).Oe >= 100 || b.LeafFall != null)))
+                g.Apply(new Command { Type = "harvest", A = b.Data.Id, B = "hand", C = "Table" });
+            foreach (var lot in g.Lots.Where(l => l.Phase == LotPhase.Stuck).ToList()) g.Apply(new Command { Type = "restart", A = lot.Id });
+        }
+        var a = g.Lots.First(l => l.Vintage == g.FirstVintage && l.Phase == LotPhase.Ready);
+        var b2 = g.Lots.First(l => l.Vintage == g.FirstVintage + 1 && l.Phase == LotPhase.Ready);
+        double litres = Math.Min(a.VolumeL, b2.VolumeL);
+        g.Apply(new Command { Type = "wine", A = "Two-Vintage blend", E = FormattableString.Invariant($"{a.Id}:{litres:0.0};{b2.Id}:{litres:0.0}") });
+        var w = g.Wines.Last();
+        Assert.Null(w.Vintage);
+        Assert.StartsWith("Non-vintage", w.Legal!.Label);
+        Assert.Contains(w.Legal.Notes, n => n.Contains("non-vintage"));
+    }
+
+    [Fact]
+    public void SingleVintageWine_StatesItsYear()
+    {
+        var g = Fixture.Play("mosel-seitental", 2014, 80);
+        Assert.All(g.WinesOf(g.FirstVintage), w => { Assert.Equal(g.FirstVintage, w.Vintage); Assert.StartsWith($"{g.FirstVintage} ", w.Legal!.Label); });
+    }
+
+    [Fact]
+    public void OverdraftInterest_IsChargedMonthly_OnlyWhileOverdrawn()
+    {
+        Assert.Equal(0.0, EconomyTables.OverdraftInterest(1000));
+        Assert.Equal(-75.0, EconomyTables.OverdraftInterest(-10000), 6);   // 9 % a year on €10,000, one month
+        // the Premier Cru Plot costs more than the starting capital: overdrawn from day one
+        var g = new GameSession(Fixture.Data, new GameSetup { PlotId = "cotedor-premiercru", PlantingYear = 2015 });
+        g.Advance(100, stopAtAlerts: false);
+        double running = 0; int n = 0;
+        foreach (var e in g.Ledger.Entries)
+        {
+            if (e.Category == "Interest") { Assert.True(running < 0); Assert.Equal(running * EconomyTables.OverdraftRate / 12, e.Amount, 0); n++; }
+            running += e.Amount;
+        }
+        Assert.InRange(n, 3, 4);
+        var rich = new GameSession(Fixture.Data, new GameSetup { PlotId = "mosel-seitental", PlantingYear = 2015 });
+        rich.Advance(100, stopAtAlerts: false);
+        Assert.DoesNotContain(rich.Ledger.Entries, e => e.Category == "Interest");
+    }
+}
