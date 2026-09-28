@@ -186,6 +186,18 @@ All coefficients `UNVERIFIED`. **Calibration (measured 2026-09-28 after the revi
 
 The Mosel and Côte d'Or spreads fall in the expected 15–30 % band (`UNVERIFIED` band); irrigated Napa varies less, as expected. The low years have causes in the weather (Mosel 2017 frost, Côte d'Or 2020 heat and drought). The Côte d'Or overshoot found here (≈ 56 hL/ha) was fixed by the Pinot Noir and Chardonnay yield components (§3.3); the table shows the recalibrated values.
 
+### 3.7 Task windows (game simplification)
+
+The staff turn the explicit choices into dated **Tasks** (tasks-in-3d design). The windows follow standard practice; the exact day counts are game simplifications (`UNVERIFIED`):
+
+| Task | Opens | Due (the plan applies if the player does nothing) | Why this window |
+|---|---|---|---|
+| Winter pruning | 15 January | 1 March, or budburst if earlier | pruning is done in dormancy and must be finished before the buds burst |
+| Leaf removal | the Block's fruit set | fruit set + 25 days (≈ bunch closure) | early fruit-zone leaf removal is done between fruit set and bunch closure; "later, at véraison" is the late option |
+| Green harvest | the Block's véraison | véraison + 21 days, or harvest | thinning at véraison, when the crop can be judged and the rest still ripens |
+
+After a decision the estate's vineyard crew (two or three people: 12 / 16 / 24 hours a day at Low / Medium / High labour) works the Block for `ceil(area × hours per ha / crew hours)` days (1–10), with 80 h/ha for pruning, 40 for leaf removal and 30 for green harvest (`UNVERIFIED` design values; visual only, the effect of the choice is immediate).
+
 ## 4. Water stress
 
 Vine water status comes from the soil water balance (weather/soil doc). Measured as midday **stem water potential (Ψstem)**, it is the best field indicator (Choné et al. 2001). The classification for wine grapes (van Leeuwen et al. 2009):

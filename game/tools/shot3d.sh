@@ -5,7 +5,7 @@
 #   game/tools/shot3d.sh all --perf           # also measure fps (vsync off) → game/shots/3d_perf.json
 #   game/tools/shot3d.sh hall,cellar --perf --breakdown   # fps with features switched off one by one
 # Walk test / LOD probe: see game/src/view3d/README.md (view3d_test.tscn --walktest, --trellis).
-# Needs the 3D assets (game/tools/sync_assets3d.sh) and a built C# solution (--build-solutions, done here).
+# Needs the 3D assets (game/tools/sync_assets3d.sh) and a built C# solution (scripts/build-game.sh, done here).
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GAME="$(cd "$HERE/.." && pwd)"
@@ -13,7 +13,7 @@ GODOT="${GODOT:-/mnt/c/Users/Aleksander/Downloads/Godot_v4.7.2-stable_mono_win64
 SHOTS="${1:-all}"
 shift || true
 [[ -f "$GAME/assets3d/models/winery.json" ]] || "$HERE/sync_assets3d.sh"
-"$GODOT" --headless --path "$(wslpath -w "$GAME")" --build-solutions --quit >/dev/null 2>&1 || true
+"$GAME/../scripts/build-game.sh" >/dev/null   # WSL dotnet (Godot --build-solutions hangs here, and Windows dotnet drops the source generators)
 ARGS=(--capture3d)
 [[ "$SHOTS" != "all" ]] && ARGS+=("$SHOTS")
 "$GODOT" --path "$(wslpath -w "$GAME")" --resolution 1920x1080 res://src/view3d/view3d_test.tscn -- "${ARGS[@]}" "$@" 2>&1 \

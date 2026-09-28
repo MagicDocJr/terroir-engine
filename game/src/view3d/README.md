@@ -14,13 +14,17 @@ fermentation all come from `Sim.Snapshot()`.
 | `apply_snapshot(D: Dictionary)` | `D` = parsed `Sim.Snapshot()`. Call on entry and after every advance. Cheap, unless the Plot changed: then the landscape is rebuilt and the winery is moved and its GI re-baked (about 3–5 s). |
 | `set_view(kind: String)` | `"vineyard"`, `"cellar"` or `"hall"`: teleports the walker to that place in the one world. `"drone"`: a free-flying camera above the Estate (the walker waits where it was). |
 | `signal exit_requested` | Tab, or Esc while the mouse is not captured. |
+| `signal task_chosen(id, value, timing)` | The player did a staff task in its close-up; the shell sends `task <id> do <value> <timing>`. |
+| `focus_task(id)` | Puts the walker in front of that task's demonstration vine (or its Lot's tank). |
 | `show_hud` | Small date/Block/weather overlay plus the key hint line (default on). |
 | `sound_volume_db`, `sound_on` | Master volume of the view's sound (dB, 0 = as mixed) and on/off. M toggles it. |
 | `camera_preset(name, block)` / `set_camera(pos, target)` / `capture()` | Used by the test harness. The eye is put exactly there, and the walker waits until the next move key. |
 
 Input is read only while the node is visible. Click to capture the mouse, then walk with WASD (or the arrow
 keys). Shift runs. 1/2/3 jump to the vineyard, cellar or hall, 4 switches to the drone (and back), M turns the
-sound on or off, and Tab goes back. **Drone:** it orbits the Plot centre; drag with the mouse to orbit, WASD pans,
+sound on or off, and Tab goes back. **Tasks:** near a task's marker the HUD shows "E …"; E opens the close-up (the mouse is
+freed): click a part or an option in the side panel, Enter confirms (a short animation, then `task_chosen`), Esc goes back without
+deciding, and Tab leaves the view (no decision). Test: `scripts/tasktest.sh`. **Drone:** it orbits the Plot centre; drag with the mouse to orbit, WASD pans,
 Q/E turn, the wheel changes height/distance, Shift goes faster. 4 again resumes walking where you left off; 1/2/3
 teleport as usual.
 The world renders in its own `SubViewport` with its own `World3D`. Rendering, physics and sound stop while the
@@ -36,6 +40,7 @@ view is hidden.
 | `player.gd` | Capsule walker (`CharacterBody3D`): gravity, slopes up to ~50°, and stairs (a ramp collider under the steps). |
 | `ambience.gd` | Ambient sound per Region and place (see below). |
 | `workers.gd` | People and machines at work, staged from the snapshot (see below). One MultiMesh for all people, posed in `shaders/worker.gdshader`. |
+| `tasks3d.gd` | Staff tasks: a stake with a ribbon and label at each open task's demonstration vine (the real vine nearest the headland on the Block's middle row) or above its Lot's tank; the close-up parts (canes with the Block's bud counts, lobed leaves on the morning / afternoon side, berry bunches, cellar tools), picking (collision layer 20) and the confirm animations. |
 | `view3d_test.gd` | Test harness: screenshots, FPS, the walk test and the LOD probe. |
 
 ## The Estate layout

@@ -120,6 +120,10 @@ Thresholds are listed in `aroma-and-faults.md`.
 
 A possible slight aroma or body loss from heavy filtration is debated and modelled as tiny (**game simplification**).
 
+## Cap-management task (game simplification)
+
+When a red Lot starts fermenting, the Cellar master posts a cap-management **Task**: the player works the cap at the tank in 3D (pump-over, punch-down, délestage, gentle) or keeps the plan. It is due 2 days after fermentation start (`UNVERIFIED` window); the choice sets the Lot's existing `Cap management` option, which stays changeable during the fermentation (§1).
+
 ## Inputs and outputs
 - **Inputs:** berry phenolic potential and seed maturity from the vineyard, Lot volume, fermentation T(t) and E(t), player decisions (destemming ratio, cold soak days, cap management schedule, extended maceration days, press fraction, vessel/species/toast/fill/months, lees/bâtonnage, fining/filtration).
 - **Outputs:** anthocyanins, tannin totals by origin, polymeric pigment, colour density and hue inputs, oak compound concentrations, oxygen dose and body index for the Tasting sheet.

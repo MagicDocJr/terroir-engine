@@ -66,6 +66,10 @@ _Avoid_: Real weather, recorded data
 Daily weather generated from a seed, for Timeline years after the archive ends. It is built from recent climate plus the warming trend, and the same seed always gives the same weather.
 _Avoid_: Random weather, procedural weather
 
+**Task**:
+A dated job from your staff, such as winter pruning, leaf removal, green harvest or working the cap of a red Lot. You can do it yourself on a demonstration vine (or at the tank) in 3D, decide it on the dashboard, or let the crew do it to the staff member's plan. If nobody decides by the due date, the plan applies.
+_Avoid_: Quest, job, chore
+
 **Alert**:
 Something happening in the simulation that stops time and needs the player's attention (e.g. a frost warning, a disease-risk threshold being crossed).
 _Avoid_: Event, notification, interrupt

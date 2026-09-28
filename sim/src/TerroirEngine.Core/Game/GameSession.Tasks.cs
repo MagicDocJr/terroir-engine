@@ -1,3 +1,4 @@
+using TerroirEngine.Data;
 using TerroirEngine.Util;
 using TerroirEngine.Vineyard;
 using TerroirEngine.Winery;
@@ -80,7 +81,9 @@ public sealed partial class GameSession
     {
         if (t.Kind == TaskKind.CapManagement) return 1;
         var b = Blocks.First(x => x.Data.Id == t.BlockId);
-        return (int)M.Clamp(Math.Ceiling(b.AreaHa * TaskCatalog.CrewHoursPerHa(t.Kind) / EconomyTables.CrewHoursPerDay(Ctx.Labour)), 1, 10);
+        // the estate's vineyard crew (two or three people), not the harvest gang: 12 / 16 / 24 hours a day by labour tier (UNVERIFIED design values)
+        double crewHours = Ctx.Labour switch { Tier.Low => 12, Tier.High => 24, _ => 16 };
+        return (int)M.Clamp(Math.Ceiling(b.AreaHa * TaskCatalog.CrewHoursPerHa(t.Kind) / crewHours), 1, 10);
     }
 
     /// <summary>Applies an option through the existing setting (no new physics).</summary>

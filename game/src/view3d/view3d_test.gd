@@ -66,7 +66,7 @@ const SHOTS := [
 	{"name": "cotedor_sorting", "game": COTEDOR, "until": "picking:A:hand:Rigorous:0", "view": "vineyard", "cam": "sorting"},
 	{"name": "napa_harvest_machine", "game": NAPA, "until": "picking:B:machine:None:0", "view": "vineyard", "cam": "crew"},
 	{"name": "napa_harvest_crew", "game": NAPA, "until": "picking:C:hand:Table:0:High", "view": "vineyard", "cam": "crew"},
-	{"name": "mosel_pruning", "game": MOSEL, "until": "date:02-12", "view": "vineyard", "cam": "crew"},
+	{"name": "mosel_pruning", "game": MOSEL, "until": "date:03-02", "view": "vineyard", "cam": "crew"},   # the pruning tasks' plan applies on 1 March; the crew works for a few days
 	{"name": "cotedor_canopy", "game": COTEDOR, "until": "date:06-12", "view": "vineyard", "cam": "crew"},
 	{"name": "mosel_spray", "game": MOSEL, "until": "spray", "view": "vineyard", "cam": "crew"},
 	{"name": "cotedor_spray", "game": COTEDOR, "until": "spray", "view": "vineyard", "cam": "crew"},

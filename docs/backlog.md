@@ -6,8 +6,7 @@ Things deliberately left out of the MVP, to deep-dive once the core loop is lock
 - ~~Multi-vintage play on the Timeline~~ — done 2026-09-28 (spec `docs/superpowers/specs/2026-09-28-multi-vintage-design.md`, report `docs/playtest/2026-09-28-multi-vintage.md`). Follow-ups: selling wine over time (stock and markets), replanting and top-grafting, phylloxera on own-rooted vines, dropping bottled Lots from the snapshot, in-memory replay checkpoints if long games load slowly, mature Côte d'Or yield calibration.
 
 ## Gameplay
-- Hands-on tasks in 3D (pull a leaf, taste berries, dig a soil pit, punch down, thief a barrel sample)
-- Staff-assigned tasks done in 3D: the Vineyard manager says "go out and prune Block B" (or pull leaves, green-harvest, punch down) and the player does it in the 3D world or delegates it (owner request, 27 Sep 2026)
+- ~~Staff tasks in 3D (prune, pull leaves, green-harvest, work the cap)~~ — done 2026-09-28 (spec `docs/superpowers/specs/2026-09-28-tasks-in-3d-design.md`). Follow-ups: more task kinds (debudding / shoot thinning, tying down, bâtonnage, topping up barrels, tasting berries, digging a soil pit, a barrel sample with the thief), doing the work yourself saving wages, harvesting in 3D, skill differences between player and crew.
 - 3D time-lapse with a speed control (watching the days pass is where 1×/2×/4× belongs)
 - Famous-vintage challenges (e.g. Burgundy 2021 frost, the hot 2003) as authored replay
 - Barrel-sample tasting notes during ageing, and a Senior's occasional "clever idea" messages

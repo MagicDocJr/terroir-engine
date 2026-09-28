@@ -6,8 +6,10 @@
 #   sorting Table/Rigorous while picking → a sorting table with 2–4 people under the winery's lean-to
 #   `daysSinceSpray` ≤ 1 (a pass on the last simulated day) → the sprayer on its pass (tractor + air-blast sprayer, straddle tractor in narrow Côte d'Or
 #     rows, a person with a backpack sprayer on steep Mosel slopes and on stake-trained vines)
-#   season (Game simplification: the sim books winter pruning and canopy work as labour, not as dated tasks):
-#     Dec–Mar a few pruners in one Block, May–Jul a canopy crew in one Block
+#   staff tasks (snapshot `tasks` with `crewActive`): after a pruning, leaf-removal or green-harvest task is decided, a
+#     crew works that Block until `crewUntil` (pruners for pruning, the canopy crew for leaf removal and thinning)
+#   season (Game simplification): May–Jul a canopy crew in one Block for the Canopy Programme's routine work
+#     (shoot positioning, hedging), shown only when no task crew is out
 # All people are one MultiMesh (shaders/worker.gdshader poses them); animation runs only while the view is shown.
 extends Node3D
 
@@ -133,17 +135,26 @@ func apply(D: Dictionary) -> void:
 		tractor_out = tractor_out or not by_hand
 		parts.append("Block %s: spraying%s" % [sb["id"], " (backpack)" if by_hand else ""])
 		break
-	# seasonal crews (game simplification)
+	# task crews: the crew finishing a staff task the player decided (or left to the plan)
+	var task_crews := 0
+	for task in D.get("tasks", []):
+		if not task.get("crewActive", false) or people.size() >= MAX_PEOPLE - 3 or String(task.get("where", "")) != "vineyard":
+			continue
+		var bi := _block_index(blocks, String(task.get("block", "")))
+		if bi < 0:
+			continue
+		var kind := String(task.get("kind", ""))
+		_seasonal(blocks[bi], "prune" if kind == "Prune" else "canopy", 3)
+		task_crews += 1
+		parts.append("Block %s: %s crew until %s" % [task["block"], {"Prune": "pruning", "LeafRemoval": "leaf-removal", "GreenHarvest": "green-harvest"}.get(kind, "vineyard"), task.get("crewUntil", "")])
+	# routine canopy work (game simplification), only when no task crew is out
 	var date := String(D.get("date", "2000-06-01"))
 	var month := int(date.substr(5, 2))
 	var doy := int(vy.call("_doy", date))
-	if people.size() < 4 and not blocks.is_empty():
+	if task_crews == 0 and people.size() < 4 and not blocks.is_empty() and month >= 5 and month <= 7:
 		var bi := (doy / 9) % blocks.size()
 		var st := String(_snap_block(D, String(blocks[bi]["id"])).get("stage", ""))
-		if (month == 12 or month <= 3) and st == "Dormant":
-			_seasonal(blocks[bi], "prune", 3)
-			parts.append("Block %s: winter pruning" % blocks[bi]["id"])
-		elif month >= 5 and month <= 7 and not st in ["Harvested", "Picking"]:
+		if not st in ["Harvested", "Picking"]:
 			_seasonal(blocks[bi], "canopy", 3)
 			parts.append("Block %s: canopy work" % blocks[bi]["id"])
 	wy.call("set_parked_tractor", not tractor_out)
