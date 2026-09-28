@@ -173,3 +173,29 @@ public class CarryOverTests
         Assert.All(hard.Blocks, b => Assert.Contains(b.Seasons, s => s.Year == hard.FirstVintage && s.ReservesAfter == b.Reserves));
     }
 }
+
+public class StaffAdviceTests
+{
+    [Fact]
+    public void LaterVintages_BeginWithTheVineyardManagersMessage()
+    {
+        var g = Fixture.PlayVintages("mosel-seitental", 2014, 80, vintages: 2);
+        var ns = g.Inbox.Single(m => m.Kind == "newseason" && m.Date == new DateOnly(g.FirstVintage + 1, 1, 15));
+        Assert.Equal("vineyard", ns.Role);
+        Assert.StartsWith($"Vintage {g.FirstVintage + 1} begins", ns.Subject);
+        Assert.Contains("buds", ns.Body);
+        Assert.Contains(ns.Actions, a => a.Action == "goto" && a.Arg == "plot");
+        Assert.DoesNotContain(g.Inbox, m => m.Kind == "newseason" && m.Date.Year == g.FirstVintage);
+    }
+
+    [Fact]
+    public void AfterRetirement_SeasonalAdviceComesFromStaff_JuniorsWithoutTheWhy()
+    {
+        var g = Fixture.PlayVintages("mosel-seitental", 2014, 80, vintages: 3);
+        var later = g.Inbox.Where(m => m.Date > g.FinishedDate && m.Kind is "budburst" or "flowering" or "veraison").ToList();
+        Assert.NotEmpty(later);
+        Assert.All(later, m => Assert.Equal("vineyard", m.Role));
+        Assert.All(later, m => Assert.Equal("", m.Why));   // default staff are Junior
+        Assert.DoesNotContain(g.Inbox, m => m.Date > g.FinishedDate && m.Role == "mentor" && m.Kind is "budburst" or "flowering" or "veraison" or "forced-harvest" or "yield");
+    }
+}

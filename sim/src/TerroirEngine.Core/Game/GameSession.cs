@@ -223,6 +223,29 @@ public sealed partial class GameSession
             "Tiers bundle many real operations; the costs follow the economy study for this Region.", "normal", "programmes", stop: false).Actions.Add(("Open Programmes", "goto", "programmes"));
     }
 
+    private static string Ordinal(int n) => n + (n % 100 is 11 or 12 or 13 ? "th" : (n % 10) switch { 1 => "st", 2 => "nd", 3 => "rd", _ => "th" });
+
+    /// <summary>15 January of every later Vintage: what the vines carry into the year, then the pruning decision (multi-vintage design §3.5).</summary>
+    private void NewSeasonMessage()
+    {
+        int year = Date.Year, leaf = Blocks[0].Leaf(year);
+        double fruit = Blocks.Average(b => b.Fruitfulness), res = Blocks.Average(b => b.Reserves);
+        string fruitText = fruit >= 1.05 ? $"about {(fruit - 1) * 100:0} % more bunches per shoot than normal: last year's flowering was warm and bright"
+            : fruit <= 0.95 ? $"about {(1 - fruit) * 100:0} % fewer bunches per shoot than normal: last year's flowering was cool or the canopy shaded the buds"
+            : "a normal number of bunches per shoot";
+        string resText = res < 0.85 ? "The vines went into winter tired: last year's crop was big for the leaf area, the fruit hung late, or the leaves were lost early. Expect weaker shoots and a poorer fruit set unless you go easy on them this year."
+            : res < 0.97 ? "The vines are a little short of stored reserves after last year; shoot growth and fruit set may be slightly down."
+            : res > 1.02 ? "The vines stored plenty of reserves after a moderate crop: they should push strongly this spring."
+            : "The vines have normal stored reserves.";
+        string disease = Ctx.DownyInoculum > BaseDownyInoculum * 1.1 ? " Last year's downy mildew left more overwintering spores in the leaf litter and soil: expect earlier, stronger pressure this spring." : "";
+        string senior = VineyardManager == StaffLevel.Senior && res < 0.9 ? "\n\nMy recommendation: prune one step lower than last year (fewer buds) to let the vines recover." : "";
+        var m = Post("vineyard", $"Vintage {year} begins: the vines are in their {Ordinal(leaf)} leaf",
+            $"A new Vintage starts. Your vines are in their {Ordinal(leaf)} leaf.{(leaf == 5 ? " From this year they carry a full crop." : "")}\n\nWe cut open a sample of buds: they show {fruitText}. Fruit set in June still decides the final crop.\n\n{resText}{disease}\n\nNow choose the bud load for each Block for this year's pruning.{senior}",
+            SeasonalWhy("Next year's bunches form inside the buds around this year's flowering, so warm, bright flowering weather means more bunches next year (Buttrose 1969). Stored starch feeds the spring flush; a heavy crop, a late harvest or early leaf loss runs it down (Bennett et al. 2005). Once vines are mature, age alone does not make better wine: well-kept old and young vines in the same vineyard gave the same yield and grape composition (Grigg et al. 2018)."),
+            "high", "newseason", stop: true);
+        m.Actions.Add(("Open Plot & Blocks", "goto", "plot"));
+    }
+
     // ================================================================================== commands
     public void Apply(Command c, bool record = true)
     {
@@ -326,6 +349,7 @@ public sealed partial class GameSession
         foreach (var lot in Lots.Where(l => l.Phase != LotPhase.Blended && l.Harvested < Date)) WineryModel.Step(lot, Date, CellarMaster, Ctx.Events);
         DailyCosts();
         HandleEvents();
+        if (Phase == GamePhase.Running && Date.Month == 1 && Date.Day == 15 && Date.Year > FirstVintage && Gate($"newseason-{Date.Year}")) NewSeasonMessage();
         Advisor();
         if (Ledger.Cash < 0 && Gate("overdrawn"))
             Post("mentor", "You are overdrawn", $"Your cash is now {Ledger.Cash:N0} €. The biggest costs so far were {string.Join(", ", Ledger.ByCategory(DateOnly.MinValue, DateOnly.MaxValue).Where(kv => kv.Value < 0).OrderBy(kv => kv.Value).Take(3).Select(kv => $"{kv.Key} {-kv.Value:N0} €"))}. In this version the bank carries the debt until the wine is sold, but lower Programme tiers or cheaper staff reduce what you spend.",

@@ -47,8 +47,8 @@ public sealed partial class GameSession
             switch (e.Kind)
             {
                 case "budburst":
-                    if (Gate($"budburst-{Date.Year}")) Post("mentor", "Budburst — the season has started", $"The first buds have burst in Block {blocks}. From now until the shoots are ~15 cm long, a radiation frost below about −2 °C can kill the young shoots. {FrostAdvice()}",
-                        "Critical temperatures rise from about −2.2 °C at budburst to about −1 °C at four leaves (UMD Extension; Gardea 1987).", "high", "budburst", stop: true);
+                    if (Gate($"budburst-{Date.Year}")) Post(SeasonalRole, "Budburst — the season has started", $"The first buds have burst in Block {blocks}. From now until the shoots are ~15 cm long, a radiation frost below about −2 °C can kill the young shoots. {FrostAdvice()}",
+                        SeasonalWhy("Critical temperatures rise from about −2.2 °C at budburst to about −1 °C at four leaves (UMD Extension; Gardea 1987)."), "high", "budburst", stop: true);
                     break;
                 case "frost":
                     var worst = list.MaxBy(x => x.Value)!;
@@ -56,8 +56,8 @@ public sealed partial class GameSession
                         "Secondary buds push after frost, but they carry less fruit (≈30–50 %) and ripen later.", "high", "frost", stop: true, blockId: worst.BlockId);
                     break;
                 case "flowering":
-                    if (Gate($"flowering-{Date.Year}")) Post("mentor", "Flowering", e.Text + " Rain and cold now mean a small, uneven crop. There's nothing to spray against the weather — but it tells you what to expect at harvest.",
-                        "Fruit set is best at ≥ 15–17 °C and dry weather" + (Blocks.Any(b => b.Variety.Id == VarietyId.Chardonnay) ? "; Chardonnay is prone to millerandage." : Blocks.Any(b => b.Variety.Id == VarietyId.PinotNoir) ? "; Pinot Noir is moderately prone to coulure and millerandage." : "."), "normal", "flowering", stop: true);
+                    if (Gate($"flowering-{Date.Year}")) Post(SeasonalRole, "Flowering", e.Text + " Rain and cold now mean a small, uneven crop. There's nothing to spray against the weather — but it tells you what to expect at harvest.",
+                        SeasonalWhy("Fruit set is best at ≥ 15–17 °C and dry weather" + (Blocks.Any(b => b.Variety.Id == VarietyId.Chardonnay) ? "; Chardonnay is prone to millerandage." : Blocks.Any(b => b.Variety.Id == VarietyId.PinotNoir) ? "; Pinot Noir is moderately prone to coulure and millerandage." : ".")), "normal", "flowering", stop: true);
                     break;
                 case "fruitset":
                     // one report for all Blocks; set and crop numbers are observations, so every Staff level reports them
@@ -65,8 +65,8 @@ public sealed partial class GameSession
                         list.Any(x => x.Severity >= 2) ? "high" : "normal", "fruitset", stop: false);
                     break;
                 case "veraison":
-                    if (Gate($"veraison-{Date.Year}")) Post("mentor", "Véraison: ripening has begun", $"Véraison in {blocks}. From now on your Vineyard manager takes weekly berry samples. Watch three things: sugar (°Oe), acidity (malic acid falls fast in warm weather) and {(Blocks.Any(b => b.Variety.Red) ? "the seeds — they must turn brown before the tannins taste ripe" : "flavour")}. Grey rot risk rises as sugar rises.",
-                        "Technological ripeness (sugar, acid) and phenolic ripeness (seeds, skins, tannin) don't arrive together — the harvest date is a trade-off.", "high", "veraison", stop: true).Actions.Add(("Open Ripeness", "goto", "ripeness"));
+                    if (Gate($"veraison-{Date.Year}")) Post(SeasonalRole, "Véraison: ripening has begun", $"Véraison in {blocks}. From now on your Vineyard manager takes weekly berry samples. Watch three things: sugar (°Oe), acidity (malic acid falls fast in warm weather) and {(Blocks.Any(b => b.Variety.Red) ? "the seeds — they must turn brown before the tannins taste ripe" : "flavour")}. Grey rot risk rises as sugar rises.",
+                        SeasonalWhy("Technological ripeness (sugar, acid) and phenolic ripeness (seeds, skins, tannin) don't arrive together — the harvest date is a trade-off."), "high", "veraison", stop: true).Actions.Add(("Open Ripeness", "goto", "ripeness"));
                     break;
                 case "downy-primary":
                     if (Gate($"downy-primary-{Date.Year}"))
@@ -137,6 +137,10 @@ public sealed partial class GameSession
 
     private string LotOf(string blockId) => Blocks.FirstOrDefault(b => b.Data.Id == blockId)?.LotId ?? blockId;
     private bool Gate(string key) => _gates.Add(key);
+    /// <summary>Who sends the seasonal advice: the Mentor in the first Vintage, then your own Vineyard manager (multi-vintage design §7).</summary>
+    private string SeasonalRole => MentorRetired ? "vineyard" : "mentor";
+    /// <summary>Advice is correct at every Staff level; a Junior gives it without the explanation (spec §5.4).</summary>
+    private string SeasonalWhy(string why) => MentorRetired && VineyardManager == StaffLevel.Junior ? "" : why;
 
     /// <summary>Junior staff report briefly; Experienced add the numbers; Senior add numbers, a recommendation and their reasoning.</summary>
     private static string Detail(StaffLevel level, string brief, string full) => level switch
@@ -190,7 +194,7 @@ public sealed partial class GameSession
             double estHl = b.YieldKgHa * (b.Variety.Red ? 0.72 : 0.62) / 100.0;
             if (estHl > maxHl * 0.97 && Gate($"yield-{b.Data.Id}-{Date.Year}"))
             {
-                var m = Post(Region.Id == "cote-dor" ? "mentor" : "vineyard", $"Block {b.Data.Id}: crop estimate {estHl:0} hL/ha — over the {maxHl:0} hL/ha limit",
+                var m = Post(Region.Id == "cote-dor" ? SeasonalRole : "vineyard", $"Block {b.Data.Id}: crop estimate {estHl:0} hL/ha — over the {maxHl:0} hL/ha limit",
                     $"The bunches have been counted. Block {b.Data.Id} carries about {b.YieldKgHa / 1000:0.0} t/ha, which is roughly {estHl:0} hL/ha of wine. The {(Region.Id == "cote-dor" ? Plot.Classification : "Mosel PDO")} limit is {maxHl:0} hL/ha: above it, the wine is declassified. A green harvest now (cutting off bunches at véraison) brings the crop down and helps the rest ripen.",
                     "Green harvesting lowers yield and raises the leaf-area-to-fruit ratio; the remaining bunches ripen faster and more completely (Kliewer & Dokoozlian 2005).", "high", "yield", stop: true, blockId: b.Data.Id);
                 m.Actions.Add(("Light green harvest (−20 %)", "block", $"{b.Data.Id}:thinning:1"));
@@ -229,7 +233,7 @@ public sealed partial class GameSession
         foreach (var b in Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null && Date >= new DateOnly(Date.Year, 12, 1)))
         {
             Apply(new Command { Type = "harvest", A = b.Data.Id, B = "hand", C = "Rigorous" }, record: false);
-            Post("mentor", $"I had Block {b.Data.Id} picked", "It's December — anything left would rot or be eaten by birds. I sent the crew in with rigorous sorting.", "Game rule: unpicked fruit is harvested on 1 December.", "high", "forced-harvest", stop: true, blockId: b.Data.Id);
+            Post(SeasonalRole, $"I had Block {b.Data.Id} picked", "It's December — anything left would rot or be eaten by birds. I sent the crew in with rigorous sorting.", SeasonalWhy("Game rule: unpicked fruit is harvested on 1 December."), "high", "forced-harvest", stop: true, blockId: b.Data.Id);
         }
     }
 }
