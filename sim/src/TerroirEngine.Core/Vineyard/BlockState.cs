@@ -77,6 +77,7 @@ public sealed class BlockState
     public DateOnly? Budburst, Flowering, FruitSet, BunchClosure, Veraison, LeafFall;
     public double BudsPerVine, Shoots, LeafAreaPerVine, Lai, Exposure = 0.45, ExposureEarlySum, ExposureLateSum; public int ExposureEarlyDays, ExposureLateDays;
     public double FrostShootLoss, FrostDamageToday;
+    public double PrecipYesterday;   // wet shoots lose their supercooling on a frost night (phenology.md §6)
     public DateOnly? LastFrostEvent;
     public double FlowerTempSum, FlowerRainDays, FlowerDays, SetFraction = -1, MillerandageShare;
     public double BerriesPerVine, BerryWeight, BerryWeightPeak, BerryWeightVeraison, SugarPerBerry, MalicPerBerry, TartaricPerBerry;

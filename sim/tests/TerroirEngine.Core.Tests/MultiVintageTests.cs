@@ -411,9 +411,10 @@ public class CoteDorYieldCalibrationTests
     public void CoteDor_MatureVines_AverageNearTheBaseYield()
     {
         // Village reds have a 40 hL/ha base yield; ≈ 0.5–0.65 kg of fruit per vine at 10,000 vines/ha (canopy-and-yield.md §7).
-        // Mature (5th leaf on), the Mentor's Low bud load, Medium tiers: the 2012–2020 mean should sit near the base yield.
+        // Mature (5th leaf on), the Mentor's Low bud load, Medium tiers, frost-free Vintages: the yield components alone should give
+        // about the base yield. Frost years are tested on their own (Burgundy 2016, 2021).
         var g = Fixture.PlayVintages("cotedor-village", 2008, 95, vintages: 10);
-        var mature = g.Provenance.Values.Where(p => p.Leaf >= 5 && p.Vintage < g.FirstVintage + 10).ToList();
+        var mature = g.Provenance.Values.Where(p => p.Leaf >= 5 && p.Vintage < g.FirstVintage + 10 && p.FrostLoss <= 0.10).ToList();
         Assert.NotEmpty(mature);
         Assert.InRange(mature.Average(p => p.YieldHlHa), 38, 50);
     }

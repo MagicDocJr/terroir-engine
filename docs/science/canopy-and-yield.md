@@ -179,8 +179,8 @@ All coefficients `UNVERIFIED`. **Calibration (measured 2026-09-28 after the revi
 |---|---|---|
 | Mosel Seitental | 75 | 20 % |
 | Mosel Blauschiefer | 70 | 15 % |
-| Côte d'Or Village | 42 | 20 % |
-| Côte d'Or Premier Cru | 42 | 18 % |
+| Côte d'Or Village | 37 | 23 % |
+| Côte d'Or Premier Cru | 38 | 22 % |
 | Napa Rutherford Bench | 84 | 4 % |
 | Napa Carneros (Pinot Noir, Chardonnay) | 51 | 7 % |
 
@@ -248,7 +248,7 @@ Staff level scales efficiency (Junior −10 %, Senior +10 %, `UNVERIFIED`).
 |---|---|---|
 | Leaf-area-to-fruit ratio for full ripening, single canopy | 0.8–1.2 m²/kg | Kliewer & Dokoozlian 2005 (verified) |
 | Mosel Riesling, balanced bud load, 4th leaf+ | ≈ 60–110 hl/ha (steep slopes lower than flat riverbank) | `UNVERIFIED`; the law doc sets the legal maximum |
-| Côte d'Or Village / Premier Cru Pinot Noir, mature vines | ≈ 38–50 hl/ha mean (base yield for village reds 40 hl/ha; 0.5–0.65 kg per vine at 10,000 vines/ha) | base yield: BIVB appellation sheets; per-vine figures: Robert Parker Wine Journal. Test `CoteDor_MatureVines_AverageNearTheBaseYield`; measured 2012–2020 mean 42 hl/ha |
+| Côte d'Or Village / Premier Cru Pinot Noir, mature vines | ≈ 38–50 hl/ha mean (base yield for village reds 40 hl/ha; 0.5–0.65 kg per vine at 10,000 vines/ha) | base yield: BIVB appellation sheets; per-vine figures: Robert Parker Wine Journal. Test `CoteDor_MatureVines_AverageNearTheBaseYield` (frost-free mature Vintages, ≈ 41 hl/ha); all 2012–2020 Vintages including frost years ≈ 37 hl/ha |
 | Napa valley-floor Cabernet | ≈ 3–5 short tons/acre (≈ 7–11 t/ha) | `UNVERIFIED` |
 | Sunburn onset (shade-grown berries, > 60 min) | ≈ 46–47 °C berry surface | verified, Frontiers 2023 |
 | Coulure year (cold, wet flowering) | yield −20 to −50 % in prone Varieties | `UNVERIFIED` |

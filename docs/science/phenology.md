@@ -115,6 +115,8 @@ damage_fraction = clamp((T_crit(stage) + 1.0 − T_min_block) / 2.0, 0, 1)     #
 - T_min_block is the Block's night minimum, including frost-pocket cooling on clear, calm nights (see `weather-and-climate.md`).
 - Killed primary shoots are partly replaced by secondary buds, with lower fruitfulness: the game assumes 30–50% of normal crop on damaged shoots (`UNVERIFIED`). Replacement shoots are ~10 days behind (`UNVERIFIED`).
 - Frost protection Programme tiers raise the effective T_min: wind machines work under inversions only (UMD Extension); **magnitudes are `UNVERIFIED`**.
+- **Wet young buds** (≥ 1 mm of rain the day before) freeze 1 °C warmer during the first 14 days after budburst: `T_crit += 1.0`. Young buds survive light frosts by supercooling (dry shoots at budburst resisted frosts above about −3 °C, and −3 to −3.5 °C killed about 60 %: Fuller & Telli 1999); ice forming on surface water ends that supercooling (standard frost physics, FAO *Frost protection* manual, Snyder & de Melo-Abreu 2005, cited from memory). Older, water-rich shoots have little supercooling left to lose, so the rule stops after 14 days. Size `UNVERIFIED`.
+- **Validation, 27 April 2016:** rain on the 26th froze on the young shoots at about −4 °C in places; the Côte d'Or lost about half its crop, including well-exposed mid-slope sites (BBR 2016 Burgundy vintage report; Jasper Morris, *Inside Burgundy* 2016 overview). ERA5 gives only −0.5 °C at grid level, and without the wet-bud rule the model left the mid-slope untouched; with it the mid-slope Village Plot loses ≈ 54 % of its shoots (test `Burgundy2016_AprilFrost_AfterRain_HitsTheMidSlopeToo`). 2017 (frost four weeks after an early budburst, largely fought off with fires in the Côte d'Or) stays a generous Vintage.
 - The Côte d'Or April 2021 frost Vintage is the calibration case: widespread damage after an early, warm March–April budburst (`UNVERIFIED` description, to be checked by the regions/vintage-notes work).
 
 ## 7. "Any grape anywhere": how the wrong Variety fails
@@ -212,6 +214,10 @@ Acceptance checks:
 
 ## Sources
 
+- Fuller MP, Telli G (1999). *An investigation of the frost hardiness of grapevine (*Vitis vinifera*) during bud break.* Annals of Applied Biology 135:589–595.
+- Snyder RL, de Melo-Abreu JP (2005). *Frost protection: fundamentals, practice and economics.* FAO Environment and Natural Resources Series 10. Cited from memory.
+- Berry Bros & Rudd, *Burgundy 2016: vintage report.* https://www.bbr.com/articles/wine/burgundy-2016-vintage-report
+- Jasper Morris, *Inside Burgundy: 2016 vintage overview.* https://insideburgundy.com/overview/2016-vintage-overview/
 - Coombe, B.G. (1995). Adoption of a system for identifying grapevine growth stages. *Australian Journal of Grape and Wine Research* 1, 104–110.
 - García de Cortázar-Atauri, I., Brisson, N., Gaudillère, J.-P. (2009). Performance of several models for predicting budburst date of grapevine (*Vitis vinifera* L.). *International Journal of Biometeorology* 53, 317–326. [Springer](https://link.springer.com/article/10.1007/s00484-009-0217-4)
 - Costafreda-Aumedes, S., Leolini, L., Menz, C., Yang, C., Argenti, G., Dibari, C., Bindi, M., Fraga, H., Santos, J., Molitor, D., Torres-Matallana, J.A., Simeunović, M., Moriondo, M. (2025). Uncertainties in predicting the medium-term future occurrence of grapevine budburst in Europe: the role of phenological models and climate scenarios. *OENO One* 59(2). [doi:10.20870/oeno-one.2025.59.2.8056](https://oeno-one.eu/article/view/8056)

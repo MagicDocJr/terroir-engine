@@ -179,6 +179,24 @@ if (cmd == "yieldcheck")
     }
 }
 
+if (cmd == "frostcheck")
+{
+    // frostcheck <plotId> <plantingYear> <yyyy-mm-dd> [days]: vine-level minima, stage and frost loss per Block around a date
+    var g = new TerroirEngine.Game.GameSession(data, new TerroirEngine.Game.GameSetup { PlotId = args[1], PlantingYear = int.Parse(args[2]) });
+    var from = DateOnly.Parse(args[3], System.Globalization.CultureInfo.InvariantCulture);
+    int span = args.Length > 4 ? int.Parse(args[4]) : 6;
+    while (g.Date < from.AddDays(-span)) g.Advance(1, false);
+    while (g.Date <= from.AddDays(span))
+    {
+        var raw = g.Weather.Get(g.Date);
+        g.Advance(1, false);
+        var d = g.Date.AddDays(-1);
+        Console.Write($"{d:yyyy-MM-dd} grid Tmin {raw.Tmin,5:0.0} wind {raw.WindKmh,4:0} rain {raw.Precip,4:0} |");
+        foreach (var b in g.Blocks) { var w = b.Climate.Adjust(raw); Console.Write($" {b.Data.Id}:{w.Tmin,5:0.0} bb {(b.Budburst == null ? "--" : b.Budburst.Value.ToString("dd/MM"))} loss {b.FrostShootLoss * 100,3:0}%"); }
+        Console.WriteLine();
+    }
+}
+
 if (cmd == "climcheck")
 {
     if (Environment.GetEnvironmentVariable("TE_SW") is { } sw) BlockClimate.SiteWarmthC = double.Parse(sw, System.Globalization.CultureInfo.InvariantCulture);

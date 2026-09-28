@@ -203,6 +203,9 @@ public static class VineyardModel
         {
             int dsb = date.DayNumber - b.Budburst.Value.DayNumber;
             double tCrit = dsb <= 4 ? -2.2 : dsb <= 14 ? -1.7 : -1.1;
+            // wet buds: ice forming on surface water ends the supercooling that protects young buds (Fuller & Telli 1999); older, water-rich
+            // shoots have little supercooling left to lose, so the effect is limited to the first two weeks (UNVERIFIED size)
+            if (b.PrecipYesterday >= 1 && dsb <= 14) tCrit += 1.0;
             double tMin = w.Tmin;
             bool radiationNight = clear > 0.6 && w.WindKmh < 11;
             if (tMin < tCrit + 2 && radiationNight && ctx.Frost != Tier.Low)
@@ -419,6 +422,7 @@ public static class VineyardModel
         // --- diseases (disease.md)
         Disease(b, w, ctx, seed);
         b.LeafAreaPeak = Math.Max(b.LeafAreaPeak, b.LeafAreaPerVine);
+        b.PrecipYesterday = w.Precip;
         b.DownyLeafPeak = Math.Max(b.DownyLeafPeak, b.Disease.DownyLeaf);
         b.PowderyLeafPeak = Math.Max(b.PowderyLeafPeak, b.Disease.PowderyLeaf);
         if (!b.Harvested && b.LeafFall == null) b.EarlyDefoliationPeak = Math.Max(b.EarlyDefoliationPeak, b.Disease.DownyLeaf / 100 + 0.4 * b.Disease.PowderyLeaf / 100);

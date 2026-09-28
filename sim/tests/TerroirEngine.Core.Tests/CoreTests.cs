@@ -150,6 +150,16 @@ public class VineyardCalibrationTests
     }
 
     [Fact]
+    public void Burgundy2016_AprilFrost_AfterRain_HitsTheMidSlopeToo()
+    {
+        // 27 April 2016: rain the day before froze on the young shoots; the Côte d'Or lost about half its crop, including
+        // well-exposed mid-slope sites (BBR, Jasper Morris vintage reports; phenology.md §6)
+        var g = new GameSession(Fixture.Data, new GameSetup { PlotId = "cotedor-village", PlantingYear = 2013 });
+        while (g.Date < new DateOnly(2016, 5, 1)) g.Advance(10, stopAtAlerts: false);
+        Assert.InRange(g.Blocks.Average(b => b.FrostShootLoss), 0.30, 0.80);
+    }
+
+    [Fact]
     public void Mosel_Riesling_HarvestComposition_IsInRange()
     {
         var g = Fixture.Play("mosel-blauschiefer", 2016, 84);   // vintage 2019
