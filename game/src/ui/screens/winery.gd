@@ -4,6 +4,7 @@ extends RefCounted
 const UI := preload("res://src/ui/ui.gd")
 const Metrics := preload("res://src/ui/metrics.gd")
 const Charts := preload("res://src/ui/charts.gd")
+const TasksPanel := preload("res://src/ui/tasks_panel.gd")
 
 static func build(D: Dictionary, shell) -> Control:
 	var lots: Array = []
@@ -14,6 +15,8 @@ static func build(D: Dictionary, shell) -> Control:
 	var b3 := UI.button("See the hall in 3D"); b3.pressed.connect(func(): shell.toggle_3d("hall"))
 	var b4 := UI.button("Barrel cellar in 3D"); b4.pressed.connect(func(): shell.toggle_3d("cellar"))
 	v.add_child(UI.page_header("Winery", "Each Block's grapes become one Lot. Choices before fermentation lock when it starts; others can change until bottling.", [b3, b4]))
+	var task_strip = TasksPanel.build(D, shell, "hall")
+	if task_strip: v.add_child(task_strip)
 	if lots.is_empty():
 		var p: Array = UI.panel("No Lots yet", "")
 		p[1].add_child(UI.label("Harvest a Block and its grapes arrive here the next day. You can prepare the cellar choices as soon as the Lot is received, before fermentation starts.", 16, UI.INK2, null, true))

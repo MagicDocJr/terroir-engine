@@ -139,9 +139,9 @@ class LineChart extends Control:
 		# crosshair + tooltip
 		var hi := demo_hover
 		var m := get_local_mouse_position()
-		if Rect2(Vector2.ZERO, size).has_point(m) and r.grow(8).has_point(m):
+		if labels.size() > 0 and Rect2(Vector2.ZERO, size).has_point(m) and r.grow(8).has_point(m):
 			hi = clampi(roundi((m.x - r.position.x) / r.size.x * (labels.size() - 1)), 0, labels.size() - 1)
-		if hi >= 0:
+		if hi >= 0 and hi < labels.size():   # an empty chart (no data yet) has nothing to point at
 			var x := _x(r, hi)
 			draw_line(Vector2(x, r.position.y), Vector2(x, r.end.y), Color(UI.INK, 0.45), 1.0)
 			var lines := [[String(labels[hi]), null, true]]

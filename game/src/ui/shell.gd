@@ -179,6 +179,11 @@ func run_action(action: String, arg: String) -> void:
 			var p := arg.split(":"); command("programme", p[0], p[1]); notify("%s set to %s. Your Vineyard manager applies it from today." % [p[0].capitalize(), p[1]], true)
 		"block":
 			var q := arg.split(":"); command("block", q[0], q[1], q[2]); notify("Block %s: %s updated." % [q[0], q[1]], true)
+		"task3d":
+			if view3d == null or not view3d.visible: toggle_3d("")
+			if view3d and view3d.has_method("focus_task"): view3d.focus_task(int(arg))
+		"taskcrew":
+			command("task", "kind:" + arg, "delegate"); notify("The crew takes it over and works to the plan.", true)
 
 func start_game(setup_json: Dictionary) -> void:
 	notify("Planting… the Mentor is looking after three years of Establishment.")

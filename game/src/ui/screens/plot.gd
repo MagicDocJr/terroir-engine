@@ -4,6 +4,7 @@ extends RefCounted
 const UI := preload("res://src/ui/ui.gd")
 const Metrics := preload("res://src/ui/metrics.gd")
 const Charts := preload("res://src/ui/charts.gd")
+const TasksPanel := preload("res://src/ui/tasks_panel.gd")
 
 static func build(D: Dictionary, shell) -> Control:
 	var blocks: Array = D["blocks"]
@@ -16,6 +17,8 @@ static func build(D: Dictionary, shell) -> Control:
 	var v := UI.vbox(16)
 	var b3 := UI.button("Walk the vineyard in 3D"); b3.pressed.connect(func(): shell.toggle_3d("vineyard"))
 	v.add_child(UI.page_header("Plot & Blocks", "%s · %.1f ha · %s · %d %% slope facing %s · %d m" % [P["name"], float(P["ha"]), P["classification"], int(P["slope"]), P["aspect"], int(P["elevation"])], [b3]))
+	var task_strip = TasksPanel.build(D, shell, "vineyard")
+	if task_strip: v.add_child(task_strip)
 	# overview: the Plot model with what's planted where, and the Planting per Block
 	v.add_child(_overview(D, shell))
 	# table
@@ -94,7 +97,9 @@ static func build(D: Dictionary, shell) -> Control:
 		"%.0f buds per vine now. Fewer buds → fewer, better-ripened bunches; more buds → bigger crop, slower ripening. Only matters before budburst." % float(B["budsPerVine"]), done)
 	if not ("pruning_ok" in D.get("flags", [])) and String(B["stage"]) == "Dormant":
 		var keep := UI.button("Keep the Mentor's pruning for all Blocks", true, 14)
-		keep.pressed.connect(func(): shell.apply("flag", "pruning_ok", "", "", "Pruning settled: the crew prunes every Block as the Mentor planned."))
+		keep.pressed.connect(func():
+			Sim.Command("task", "kind:Prune", "delegate", "", "", "")
+			shell.apply("flag", "pruning_ok", "", "", "Pruning settled: the crew prunes every Block as the Mentor planned."))
 		cp[1].add_child(keep)
 	_choice(cp[1], "Leaf removal side", ["None", "Morning", "Afternoon", "Both"], B["leafSide"], func(x): shell.apply("block", bid2, "leafside", x, "Block %s: leaf removal on the %s side." % [bid2, x.to_lower()]),
 		"Opening the morning side dries bunches (less rot) with little sunburn risk; the afternoon side is hotter — more colour and TDN, more sunburn.", done)

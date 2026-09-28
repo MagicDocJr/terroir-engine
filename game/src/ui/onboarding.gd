@@ -50,7 +50,11 @@ static func is_done(D: Dictionary, id: String) -> bool:
 				if int(m["id"]) == 1: return bool(m["read"])
 			return true
 		"blocks": return f.has("visited_plot")
-		"pruning": return f.has("pruning_ok") or _any_block(D, "budburst")
+		"pruning":
+			if f.has("pruning_ok") or _any_block(D, "budburst"): return true
+			for t in D.get("tasks", []):
+				if String(t.get("kind", "")) == "Prune" and String(t.get("status", "")) == "Open": return false
+			return true
 		"programmes": return f.has("visited_programmes")
 		"season": return _any_block(D, "budburst")
 		"weather": return f.has("visited_weather")

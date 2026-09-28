@@ -137,7 +137,9 @@ public sealed partial class GameSession
     private void PostTaskMessage(TaskKind kind, List<FieldTask> opened)
     {
         var first = opened[0];
-        string blocks = string.Join(", ", opened.Select(t => kind == TaskKind.CapManagement ? $"Lot {t.LotId}" : $"Block {t.BlockId}"));
+        string blocks = kind == TaskKind.CapManagement
+            ? (opened.Count == 1 ? $"Lot {opened[0].LotId}" : "Lots " + string.Join(", ", opened.Select(t => t.LotId)))
+            : (opened.Count == 1 ? $"Block {opened[0].BlockId}" : "Blocks " + string.Join(", ", opened.Select(t => t.BlockId)));
         string due = Dates.Short(first.Due);
         string plan = string.Join(", ", opened.Select(t => $"{(kind == TaskKind.CapManagement ? t.LotId : t.BlockId)}: {TaskCatalog.Label(kind, TaskPlan(t))}"));
         string role = kind == TaskKind.CapManagement ? "cellar" : kind == TaskKind.Prune && !MentorRetired ? "mentor" : "vineyard";
