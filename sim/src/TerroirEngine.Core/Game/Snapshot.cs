@@ -25,6 +25,13 @@ public static class Snapshot
             ["date"] = Dates.Iso(g.Date),
             ["dateLabel"] = Dates.Long(g.Date),
             ["vintage"] = g.Vintage,
+            ["firstVintage"] = g.FirstVintage,
+            ["seasonLabel"] = $"Vintage {g.Vintage} · {Ordinal(g.Vintage - g.Setup.PlantingYear + 1)} leaf",
+            ["season"] = SeasonState(g),
+            ["quiet"] = Quiet(g),
+            ["bottledVintages"] = Arr(g.BottledVintages.Select(v => (JsonNode)v)),
+            ["history"] = Arr(Enumerable.Range(g.FirstVintage, Math.Max(0, g.Vintage - g.FirstVintage + 1)).Reverse().Select(v => (JsonNode)VintageReport.HistoryRow(g, v))),
+            ["years"] = YearsObj(g),
             ["plantingYear"] = g.Setup.PlantingYear,
             ["estate"] = g.Setup.EstateName,
             ["cash"] = R(g.Ledger.Cash, 0),
@@ -55,6 +62,30 @@ public static class Snapshot
             ["establishment"] = Arr(g.EstablishmentReports.Select(x => (JsonNode)x)),
         };
         return o;
+    }
+
+    private static string SeasonState(GameSession g) =>
+        g.Blocks.Any(b => b.Picking) ? "Harvest" : g.Blocks.All(b => b.Budburst == null) ? "Dormant" : g.Blocks.All(b => b.Harvested) ? "PostHarvest" : "Growing";
+
+    /// <summary>Nothing growing, being picked or fermenting: the UI may take bigger steps.</summary>
+    private static bool Quiet(GameSession g) =>
+        g.Blocks.All(b => b.Budburst == null || b.Harvested) && !g.Blocks.Any(b => b.Picking)
+        && !g.Lots.Any(l => l.Phase is LotPhase.Received or LotPhase.ColdSoak or LotPhase.Fermenting or LotPhase.Stuck or LotPhase.PostMaceration or LotPhase.Malolactic);
+
+    /// <summary>Money by calendar year: costs (without interest), wine sales, overdraft interest and cash at the year's end.</summary>
+    private static JsonArray YearsObj(GameSession g)
+    {
+        var arr = new JsonArray(); double cash = 0;
+        foreach (var grp in g.Ledger.Entries.GroupBy(e => e.Date.Year).OrderBy(x => x.Key))
+        {
+            cash += grp.Sum(e => e.Amount);
+            arr.Add(new JsonObject
+            {
+                ["year"] = grp.Key, ["costs"] = R(grp.Where(e => e.Amount < 0 && e.Category != "Interest").Sum(e => -e.Amount), 0),
+                ["sales"] = R(grp.Where(e => e.Category == "Sales").Sum(e => e.Amount), 0), ["interest"] = R(grp.Where(e => e.Category == "Interest").Sum(e => -e.Amount), 0), ["cashEnd"] = R(cash, 0),
+            });
+        }
+        return arr;
     }
 
     private static JsonArray Arr(IEnumerable<JsonNode?> items) { var a = new JsonArray(); foreach (var i in items) a.Add(i); return a; }
@@ -277,7 +308,7 @@ public static class Snapshot
         double sp = l.Red ? l.Choices["Red temperature"] switch { 1 => 22, 2 => 30, 3 => -1, _ => 26 } : l.Choices["Temperature"] switch { 1 => 14, 2 => 18, 3 => -1, _ => 16 };
         return new JsonObject
         {
-            ["id"] = l.Id, ["block"] = l.BlockId, ["variety"] = l.VarietyName, ["red"] = l.Red, ["volume"] = R(l.VolumeL, 0), ["kg"] = R(l.GrapeKg, 0), ["picked"] = Dates.Short(l.Harvested),
+            ["id"] = l.Id, ["vintage"] = l.Vintage, ["block"] = l.BlockId, ["variety"] = l.VarietyName, ["red"] = l.Red, ["volume"] = R(l.VolumeL, 0), ["kg"] = R(l.GrapeKg, 0), ["picked"] = Dates.Short(l.Harvested),
             ["phase"] = l.Phase.ToString(), ["status"] = l.Status, ["started"] = started, ["tempC"] = R(l.TempC), ["setC"] = sp < 0 ? null : sp,
             ["sugar"] = R(l.Rs, 1), ["oe"] = R(l.Oe, 0), ["alcohol"] = R(l.AlcoholPct, 1), ["ta"] = R(l.Ta, 1), ["ph"] = R(l.Ph, 2), ["malic"] = R(l.Malic, 1), ["yan"] = R(l.YanMgL, 0),
             ["freeSo2"] = R(l.FreeSo2, 0), ["molSo2"] = R(l.MolecularSo2, 2), ["va"] = R(l.Acetic, 2), ["tannin"] = R(l.TotalTannin, 0), ["anth"] = R(l.Anthocyanin, 0),
@@ -294,7 +325,7 @@ public static class Snapshot
         var s = w.Sheet!;
         return new JsonObject
         {
-            ["id"] = w.Id, ["name"] = w.Name, ["bottled"] = D(w.Bottled), ["bottles"] = w.Bottles, ["closure"] = w.Closure.ToString(), ["filtration"] = w.Filtration.ToString(), ["fining"] = w.Fining.ToString(),
+            ["id"] = w.Id, ["vintage"] = w.Vintage, ["name"] = w.Name, ["bottled"] = D(w.Bottled), ["bottles"] = w.Bottles, ["closure"] = w.Closure.ToString(), ["filtration"] = w.Filtration.ToString(), ["fining"] = w.Fining.ToString(),
             ["components"] = Arr(w.Components.Select(c => (JsonNode)new JsonObject { ["lot"] = c.LotId, ["litres"] = R(c.Litres, 0) })),
             ["category"] = w.Legal?.Category, ["label"] = w.Legal?.Label, ["sweetnessTerm"] = w.Legal?.SweetnessTerm, ["legalNotes"] = Arr(w.Legal!.Notes.Select(n => (JsonNode)n)),
             ["price"] = w.PricePerBottle, ["revenue"] = R(w.Revenue, 0), ["bottlingCost"] = R(w.BottlingCost, 0),

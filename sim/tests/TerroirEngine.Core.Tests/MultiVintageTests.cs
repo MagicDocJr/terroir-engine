@@ -266,3 +266,41 @@ public class VintageLawAndMoneyTests
         Assert.DoesNotContain(rich.Ledger.Entries, e => e.Category == "Interest");
     }
 }
+
+public class MultiVintageSnapshotTests
+{
+    [Fact]
+    public void Snapshot_HasHistoryYearsAndVintagedLots()
+    {
+        var g = Fixture.PlayVintages("mosel-seitental", 2014, 80, vintages: 2);
+        var s = Snapshot.Build(g);
+        Assert.Equal("Running", s["phase"]!.GetValue<string>());
+        Assert.Equal(g.FirstVintage, s["firstVintage"]!.GetValue<int>());
+        Assert.StartsWith($"Vintage {g.Vintage} · ", s["seasonLabel"]!.GetValue<string>());
+        var hist = s["history"]!.AsArray();
+        Assert.Equal(g.Vintage - g.FirstVintage + 1, hist.Count);
+        Assert.Equal(g.Vintage, hist[0]!["vintage"]!.GetValue<int>());
+        Assert.Contains(hist, h => h!["vintage"]!.GetValue<int>() == g.FirstVintage && h["status"]!.GetValue<string>() == "In bottle" && h["wines"]!.AsArray().Count > 0);
+        Assert.Equal(new[] { g.FirstVintage, g.FirstVintage + 1 }, s["bottledVintages"]!.AsArray().Select(x => x!.GetValue<int>()));
+        Assert.All(s["lots"]!.AsArray(), l => Assert.InRange(l!["vintage"]!.GetValue<int>(), g.FirstVintage, g.Vintage));
+        Assert.All(s["wines"]!.AsArray(), w => Assert.NotNull(w!["vintage"]));
+        var years = s["years"]!.AsArray();
+        Assert.Equal(g.Setup.PlantingYear, years[0]!["year"]!.GetValue<int>());
+        Assert.Equal(Math.Round(g.Ledger.Cash), years[^1]!["cashEnd"]!.GetValue<double>(), 0);
+    }
+
+    [Fact]
+    public void FiveVintageSave_LoadsWithinBudget_AndSnapshotStaysSmall()
+    {
+        var g = Fixture.PlayVintages("mosel-seitental", 2014, 80, vintages: 5);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var g2 = GameSession.Load(Fixture.Data, g.Save());
+        long loadMs = sw.ElapsedMilliseconds;
+        Assert.True(loadMs < 30_000, $"five-Vintage load took {loadMs} ms (budget 10 s on the owner's PC, 30 s CI headroom)");
+        sw.Restart();
+        string json = Snapshot.Json(g2);
+        long snapMs = sw.ElapsedMilliseconds;
+        Assert.True(json.Length < 400_000, $"snapshot is {json.Length / 1024} KB");
+        Assert.True(snapMs < 500, $"snapshot took {snapMs} ms");
+    }
+}

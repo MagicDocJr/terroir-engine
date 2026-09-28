@@ -167,5 +167,26 @@ public static class VintageReport
         };
     }
 
+    /// <summary>One row of the Vintage history table (Estate screen): weather against normal, dates, yield, wines and sales.</summary>
+    public static JsonObject HistoryRow(GameSession g, int vintage)
+    {
+        var recs = Records(g, vintage);
+        var y = Stats(g, vintage, recs.Select(r => r.Budburst).Where(d => d != null).Min());
+        var n = Normal(g);
+        var wines = g.WinesOf(vintage);
+        var lots = g.Lots.Where(l => l.Vintage == vintage).ToList();
+        double ha = Math.Max(0.01, g.Blocks.Sum(b => b.AreaHa));
+        double hl = lots.Sum(l => l.GrapeKg * (l.Red ? 0.72 : 0.62) / 100.0) / ha;
+        string status = g.IsVintageBottled(vintage) ? "In bottle" : lots.Count > 0 ? "In the cellar" : "Growing";
+        return new JsonObject
+        {
+            ["vintage"] = vintage, ["winkler"] = Math.Round(y.Wi), ["winklerNormal"] = Math.Round(n.wi), ["rain"] = Math.Round(y.RainSeason), ["rainNormal"] = Math.Round(n.rainSeason),
+            ["budburst"] = D(recs.Select(r => r.Budburst).Where(d => d != null).Min()), ["harvest"] = D(recs.Select(r => r.HarvestDate).Where(d => d != null).Max()),
+            ["yieldHl"] = lots.Count > 0 ? Math.Round(hl) : null, ["status"] = status,
+            ["wines"] = new JsonArray(wines.Select(w => (JsonNode)new JsonObject { ["name"] = w.Name, ["quality"] = w.Sheet?.Quality, ["bottles"] = w.Bottles, ["revenue"] = Math.Round(w.Revenue) }).ToArray()),
+            ["sales"] = Math.Round(wines.Sum(w => w.Revenue)),
+        };
+    }
+
     private static string? D(DateOnly? d) => d == null ? null : Dates.Short(d.Value);
 }
