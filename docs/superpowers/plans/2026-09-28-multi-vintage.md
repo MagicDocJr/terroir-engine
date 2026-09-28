@@ -1670,7 +1670,9 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 
 ---
 
-### Task 8: Standalone build and playtest report
+### Task 8: Playtest report
+
+The Windows export is skipped during development (owner decision 2026-09-28): play with `play.bat` / `scripts/play.sh`; run `scripts/export-windows.sh` only when sharing a build.
 
 **Files:**
 - Create: `docs/playtest/2026-09-28-multi-vintage.md`
@@ -1681,13 +1683,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>"
 Run: `cd /mnt/c/Users/Aleksander/src/repos/winegamesimulator/sim && ~/.dotnet/dotnet test -v q 2>&1 | tail -2` — expected `Failed: 0`.
 Run the CLI across Regions: `for p in "mosel-blauschiefer 2012" "cotedor-premiercru 2012" "napa-bench 2012"; do TE_VINTAGES=4 ~/.dotnet/dotnet run --project src/TerroirEngine.Cli -- play $p 2>&1 | grep -E "Vintage\(s\) bottled|Save/replay|== "; done` and keep the output for the report.
 
-- [ ] **Step 2: Rebuild the Windows build**
-
-Run: `cd /mnt/c/Users/Aleksander/src/repos/winegamesimulator && ./scripts/export-windows.sh 2>&1 | tail -3`
-Then smoke-test the exe: `cd build/TerroirEngine && timeout 120 ./TerroirEngine.exe --log-file "$(wslpath -w $CLAUDE_JOB_DIR/tmp)\\exe.log" -- --perf >/dev/null 2>&1; tr -d '\r' < $CLAUDE_JOB_DIR/tmp/exe.log | grep -E "PERF tab|ERROR"`
-Expected: a `PERF tab switch` line and no `ERROR`.
-
-- [ ] **Step 3: Write the playtest report and update the backlog**
+- [ ] **Step 2: Write the playtest report and update the backlog**
 
 Create `docs/playtest/2026-09-28-multi-vintage.md` with: what changed for the player (continuous play, January message, Vintage history, report selector, non-vintage blends, overdraft interest); the ten-Vintage calibration numbers from Task 3 Step 6 (mean yield and CV per Region); the replay time and snapshot size from Task 6; screenshots referenced by path; known limits (carry-over coefficients `UNVERIFIED`, wine still sold at bottling, no loans, soil refills every winter); and three things for the owner to try (e.g. over-crop one Block with High bud load and watch the next January message; blend two Vintages in Napa; play past 2025 into Synthetic weather).
 
@@ -1695,7 +1691,7 @@ In `docs/backlog.md`, replace the "First expansion" bullet with: "- ~~Multi-vint
 
 In `README.md`, in the first paragraph, change "and farm a Vintage on the weather that really happened" to "and farm Vintage after Vintage on the weather that really happened".
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 cd /mnt/c/Users/Aleksander/src/repos/winegamesimulator
