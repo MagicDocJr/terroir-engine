@@ -57,6 +57,7 @@ public static class Snapshot
             ["finance"] = FinanceObj(g),
             ["inbox"] = Arr(g.Inbox.OrderByDescending(m => m.Id).Take(80).Select(m => (JsonNode)MsgObj(m))),
             ["reports"] = Arr(g.BottledVintages.OrderByDescending(v => v).Select(v => (JsonNode)VintageReport.Build(g, v))),
+            ["tasks"] = TasksObj(g),
             ["flags"] = Arr(g.Flags.OrderBy(f => f).Select(f => (JsonNode)f)),
             ["establishment"] = Arr(g.EstablishmentReports.Select(x => (JsonNode)x)),
         };
@@ -86,6 +87,23 @@ public static class Snapshot
         }
         return arr;
     }
+
+    private static JsonArray TasksObj(GameSession g) => Arr(g.Tasks
+        .Where(t => t.Status == TaskState.Open || t.CrewActive(g.Date))
+        .OrderBy(t => t.Due).ThenBy(t => t.Id)
+        .Select(t =>
+        {
+            string plan = g.TaskPlan(t);
+            return (JsonNode)new JsonObject
+            {
+                ["id"] = t.Id, ["kind"] = t.Kind.ToString(), ["title"] = TaskCatalog.Title(t.Kind), ["verb"] = TaskCatalog.Verb(t.Kind),
+                ["block"] = t.BlockId, ["lot"] = t.LotId, ["variety"] = g.Blocks.FirstOrDefault(b => b.Data.Id == t.BlockId)?.Variety.Name,
+                ["status"] = t.Status.ToString(), ["opened"] = D(t.Opened), ["due"] = D(t.Due), ["daysLeft"] = t.Due.DayNumber - g.Date.DayNumber,
+                ["plan"] = plan, ["planLabel"] = TaskCatalog.Label(t.Kind, plan), ["choice"] = t.Choice, ["timing"] = t.Timing, ["decidedBy"] = t.DecidedBy,
+                ["options"] = Arr(TaskCatalog.Options(t.Kind).Select(o => (JsonNode)new JsonObject { ["value"] = o.Value, ["label"] = o.Label, ["why"] = o.Why })),
+                ["crewActive"] = t.CrewActive(g.Date), ["crewUntil"] = t.CrewUntil == null ? null : D(t.CrewUntil.Value), ["where"] = TaskCatalog.Where(t.Kind),
+            };
+        }));
 
     private static JsonArray Arr(IEnumerable<JsonNode?> items) { var a = new JsonArray(); foreach (var i in items) a.Add(i); return a; }
 

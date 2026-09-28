@@ -140,4 +140,22 @@ public class TaskTests
         Assert.Equal(g.Tasks.Count, g2.Tasks.Count);
         Assert.True(g.Tasks.Count(t => t.Kind == TaskKind.Prune) >= 2 * g.Blocks.Count);
     }
+    [Fact]
+    public void Snapshot_ListsOpenTasks_WithOptionsAndPlan()
+    {
+        var g = New();
+        var s = Snapshot.Build(g);
+        var tasks = s["tasks"]!.AsArray();
+        Assert.Equal(g.Blocks.Count, tasks.Count);
+        var t = tasks[0]!;
+        Assert.Equal("Prune", t["kind"]!.GetValue<string>());
+        Assert.Equal("vineyard", t["where"]!.GetValue<string>());
+        Assert.Equal(3, t["options"]!.AsArray().Count);
+        Assert.False(string.IsNullOrEmpty(t["options"]![0]!["why"]!.GetValue<string>()));
+        Assert.Equal(g.Blocks[0].BudLoad.ToString(), t["plan"]!.GetValue<string>());
+        g.Apply(new Command { Type = "task", A = t["id"]!.GetValue<int>().ToString(), B = "do", C = "Low" });
+        var after = Snapshot.Build(g)["tasks"]!.AsArray().First(x => x!["id"]!.GetValue<int>() == t["id"]!.GetValue<int>())!;
+        Assert.Equal("Done", after["status"]!.GetValue<string>());
+        Assert.True(after["crewActive"]!.GetValue<bool>());
+    }
 }
