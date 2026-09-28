@@ -532,6 +532,14 @@ func notify(text: String, ok := false) -> void:
 	tw.tween_callback(func(): toast.visible = false)
 
 # ------------------------------------------------------------------ capture (plays a real game; also the UI smoke test)
+## The current screen scrolled to its end (panels below the fold, e.g. the Winery look).
+func _shot_scrolled_to_end(name: String) -> void:
+	var sc: ScrollContainer = host.find_children("*", "ScrollContainer", true, false).front() if not host.find_children("*", "ScrollContainer", true, false).is_empty() else null
+	if sc:
+		for f in 3: await get_tree().process_frame
+		sc.scroll_vertical = int(sc.get_v_scroll_bar().max_value)
+	await _shot(name)
+
 func _shot(name: String) -> void:
 	for f in 10: await get_tree().process_frame
 	var dir := ProjectSettings.globalize_path("res://shots")
@@ -601,6 +609,7 @@ func _run_capture() -> void:
 		if all_in: break
 	_build_chrome()
 	show_screen("winery"); await _shot("%s_10_winery_ferment" % prefix)
+	await _shot_scrolled_to_end("%s_10a_winery_look" % prefix)
 	await _shot3d("%s_10b_3d_hall" % prefix, "hall")
 	Sim.Advance(20, false); D = JSON.parse_string(Sim.Snapshot()); _build_chrome()
 	show_screen("winery"); await _shot("%s_11_winery_later" % prefix)

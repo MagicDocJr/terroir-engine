@@ -5,6 +5,7 @@ const UI := preload("res://src/ui/ui.gd")
 const Metrics := preload("res://src/ui/metrics.gd")
 const Charts := preload("res://src/ui/charts.gd")
 const TasksPanel := preload("res://src/ui/tasks_panel.gd")
+const LookPanel := preload("res://src/ui/winery_look_panel.gd")
 
 static func build(D: Dictionary, shell) -> Control:
 	var lots: Array = []
@@ -21,7 +22,8 @@ static func build(D: Dictionary, shell) -> Control:
 		var p: Array = UI.panel("No Lots yet", "")
 		p[1].add_child(UI.label("Harvest a Block and its grapes arrive here the next day. You can prepare the cellar choices as soon as the Lot is received, before fermentation starts.", 16, UI.INK2, null, true))
 		v.add_child(p[0])
-		return v
+		v.add_child(LookPanel.build(D, shell))
+		return UI.scroll(v)
 	var sel_id: String = shell.state.get("lot_sel", lots[0]["id"])
 	var L: Dictionary = lots[0]
 	for l in lots:
@@ -160,4 +162,5 @@ static func build(D: Dictionary, shell) -> Control:
 	cp[1].add_child(more_btn)
 	cp[1].add_child(UI.label("Hover a choice for what it does. Changes apply straight away; there's nothing to confirm.", 13, UI.MUTED, null, true))
 	row.add_child(cp[0])
+	v.add_child(LookPanel.build(D, shell))
 	return UI.scroll(v)
