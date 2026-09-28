@@ -91,6 +91,8 @@ public sealed partial class GameSession
     public List<Command> Commands { get; } = new();
     /// <summary>UI progress flags (onboarding steps seen, screens visited). No effect on the simulation; saved via the command log.</summary>
     public HashSet<string> Flags { get; } = new();
+    /// <summary>Cosmetic Winery look (`decor key value`): stored and replayed, never read by the simulation.</summary>
+    public Dictionary<string, string> Decor { get; } = new();
     public List<(DateOnly Date, double Cash)> CashSeries { get; } = new();
     public List<string> EstablishmentReports { get; } = new();
     public List<(DateOnly Date, double Downy, double Powdery, double Botrytis)> RiskSeries { get; } = new();
@@ -296,6 +298,7 @@ public sealed partial class GameSession
                 break;
             case "flag": if (!string.IsNullOrWhiteSpace(c.A)) Flags.Add(c.A); break;
             case "unflag": Flags.Remove(c.A); break;
+            case "decor": if (!string.IsNullOrWhiteSpace(c.A)) Decor[c.A] = c.B ?? ""; break;
             case "spraynow": if (Blocks.Any(b => b.Budburst != null && !b.Harvested)) Ctx.ForceSprayToday = true; break;
             case "acceptstuck":
                 var al = Lots.FirstOrDefault(x => x.Id == c.A);

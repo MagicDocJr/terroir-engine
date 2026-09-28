@@ -59,6 +59,7 @@ public static class Snapshot
             ["reports"] = Arr(g.BottledVintages.OrderByDescending(v => v).Select(v => (JsonNode)VintageReport.Build(g, v))),
             ["tasks"] = TasksObj(g),
             ["flags"] = Arr(g.Flags.OrderBy(f => f).Select(f => (JsonNode)f)),
+            ["decor"] = DecorObj(g),
             ["establishment"] = Arr(g.EstablishmentReports.Select(x => (JsonNode)x)),
         };
         return o;
@@ -86,6 +87,13 @@ public static class Snapshot
             });
         }
         return arr;
+    }
+
+    private static JsonObject DecorObj(GameSession g)
+    {
+        var o = new JsonObject();
+        foreach (var kv in g.Decor.OrderBy(kv => kv.Key, StringComparer.Ordinal)) o[kv.Key] = kv.Value;
+        return o;
     }
 
     private static JsonArray TasksObj(GameSession g) => Arr(g.Tasks
