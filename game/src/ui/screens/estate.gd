@@ -122,14 +122,14 @@ static func _nice(x: float) -> float:
 
 static func _history(D: Dictionary, shell) -> Control:
 	var p: Array = UI.panel("Vintage history", "every Vintage on this Estate, newest first")
-	var g := GridContainer.new(); g.columns = 9; g.add_theme_constant_override("h_separation", 22); g.add_theme_constant_override("v_separation", 8)
-	for h in ["Vintage", "Heat (Winkler)", "Rain Apr–Oct", "Budburst", "Harvest", "hL/ha", "Wines", "Sales", ""]:
+	var g := GridContainer.new(); g.columns = 10; g.add_theme_constant_override("h_separation", 22); g.add_theme_constant_override("v_separation", 8)
+	for h in ["Vintage", "Heat (Winkler)", "Rain Apr–Oct", "Budburst", "Harvest", "hL/ha", "Wines", "Bottles", "Sales", ""]:
 		g.add_child(UI.label(h, 13, UI.MUTED, UI.f_body_b))
 	for r in D.get("history", []):
 		var vin := int(r["vintage"])
 		g.add_child(UI.num(str(vin), 16))
-		g.add_child(UI.num("%d (normal %d)" % [int(r["winkler"]), int(r["winklerNormal"])], 14, UI.INK2))
-		g.add_child(UI.num("%d mm (normal %d)" % [int(r["rain"]), int(r["rainNormal"])], 14, UI.INK2))
+		g.add_child(UI.num("%d (normal %d)" % [int(r["winkler"]), int(r["winklerNormal"])] if r["winkler"] != null else "— (from 1 April)", 14, UI.INK2))
+		g.add_child(UI.num("%d mm (normal %d)" % [int(r["rain"]), int(r["rainNormal"])] if r["rain"] != null else "—", 14, UI.INK2))
 		g.add_child(UI.num(String(r["budburst"]) if r["budburst"] != null else "—", 14, UI.INK2))
 		g.add_child(UI.num(String(r["harvest"]) if r["harvest"] != null else "—", 14, UI.INK2))
 		g.add_child(UI.num(str(int(r["yieldHl"])) if r["yieldHl"] != null else "—", 14))
@@ -137,6 +137,7 @@ static func _history(D: Dictionary, shell) -> Control:
 		for w in r["wines"]: wl.append("%s · %s" % [w["name"], w["quality"]])
 		var wlab := UI.label(", ".join(wl) if wl.size() > 0 else "—", 13, UI.INK2, null, true); wlab.custom_minimum_size = Vector2(300, 0)
 		g.add_child(wlab)
+		g.add_child(UI.num(UI.thousands(int(r["bottles"])) if int(r.get("bottles", 0)) > 0 else "—", 14))
 		g.add_child(UI.num(UI.euro(int(r["sales"])) if int(r["sales"]) > 0 else "—", 14))
 		if String(r["status"]) == "In bottle":
 			var rb := UI.button("Report", false, 13)

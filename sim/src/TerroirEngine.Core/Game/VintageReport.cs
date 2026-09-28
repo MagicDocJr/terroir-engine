@@ -10,8 +10,8 @@ namespace TerroirEngine.Game;
 /// Thresholds for the wording (hot/cool, wet/dry) are game presentation choices, not science claims.</summary>
 public static class VintageReport
 {
-    private static readonly Dictionary<string, (double wi, double gst, double rainSeason, double rainAutumn, double heatDays, double frostNights)> NormalCache = new();
-    private static readonly Dictionary<string, double[]> WeeklyNormalCache = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (double wi, double gst, double rainSeason, double rainAutumn, double heatDays, double frostNights)> NormalCache = new();   // shared by parallel callers (tests)
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, double[]> WeeklyNormalCache = new();   // shared by parallel callers (tests)
 
     private record YearStats(double Wi, double Gst, double RainSeason, double RainAutumn, int HeatDays, int FrostNights);
 
@@ -186,10 +186,12 @@ public static class VintageReport
         var lots = g.Lots.Where(l => l.Vintage == vintage).ToList();
         double ha = Math.Max(0.01, g.Blocks.Sum(b => b.AreaHa));
         double hl = lots.Sum(l => l.GrapeKg * (l.Red ? 0.72 : 0.62) / 100.0) / ha;
-        string status = g.IsVintageBottled(vintage) ? "In bottle" : lots.Count > 0 ? "In the cellar" : "Growing";
+        string status = g.IsVintageBottled(vintage) ? "In bottle" : lots.Count > 0 ? "In the cellar" : vintage == g.Vintage ? "Growing" : "No harvest";
+        bool seasonStarted = new DateOnly(vintage, 4, 1) < g.Date;   // heat and rain count from 1 April
         return new JsonObject
         {
-            ["vintage"] = vintage, ["winkler"] = Math.Round(y.Wi), ["winklerNormal"] = Math.Round(n.wi), ["rain"] = Math.Round(y.RainSeason), ["rainNormal"] = Math.Round(n.rainSeason),
+            ["vintage"] = vintage, ["winkler"] = seasonStarted ? Math.Round(y.Wi) : null, ["winklerNormal"] = Math.Round(n.wi),
+            ["rain"] = seasonStarted ? Math.Round(y.RainSeason) : null, ["rainNormal"] = Math.Round(n.rainSeason), ["bottles"] = wines.Sum(w => w.Bottles),
             ["budburst"] = D(recs.Select(r => r.Budburst).Where(d => d != null).Min()), ["harvest"] = D(recs.Select(r => r.HarvestDate).Where(d => d != null).Max()),
             ["yieldHl"] = lots.Count > 0 ? Math.Round(hl) : null, ["status"] = status,
             ["wines"] = new JsonArray(wines.Select(w => (JsonNode)new JsonObject { ["name"] = w.Name, ["quality"] = w.Sheet?.Quality, ["bottles"] = w.Bottles, ["revenue"] = Math.Round(w.Revenue) }).ToArray()),

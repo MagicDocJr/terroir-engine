@@ -14,7 +14,9 @@ static func build(_D: Dictionary, shell) -> Control:
 				if String(f).begins_with("intro_"): Sim.Command("unflag", String(f), "", "", "", "")
 			shell.refresh()
 		shell.notify("Done.", true))
-	v.add_child(UI.page_header("Glossary", "The words the game uses, and what they mean here.", [pb]))
+	# the plan and the screen intros belong to the first Vintage only (onboarding.gd), so the button goes once the Mentor retires
+	var retired := bool(_D.get("mentor", {}).get("retired", false))
+	v.add_child(UI.page_header("Glossary", "The words the game uses, and what they mean here.", [] if retired else [pb]))
 	var terms := _terms()
 	var g := GridContainer.new(); g.columns = 2; g.add_theme_constant_override("h_separation", 16); g.add_theme_constant_override("v_separation", 16)
 	for section in terms:

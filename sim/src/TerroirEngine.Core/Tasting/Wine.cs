@@ -193,12 +193,14 @@ public static class Law
 
     /// <summary>May the label state a vintage year? EU: ≥ 85 % of the grapes harvested that year (Reg. (EU) 2019/33, Art. 49).
     /// USA: ≥ 95 % when the label names an AVA, else 85 % (27 CFR 4.27); every Napa label here names an AVA.</summary>
+    public static double VintageShareRequired(string regionId) => regionId == "napa" ? 0.95 : 0.85;
+
     public static (int? Year, string? Note) VintageStatement(IEnumerable<(int Vintage, double Litres)> parts, string regionId)
     {
         var list = parts.ToList();
         double total = Math.Max(1e-9, list.Sum(p => p.Litres));
         var top = list.GroupBy(p => p.Vintage).Select(g => (year: g.Key, share: g.Sum(x => x.Litres) / total)).OrderByDescending(x => x.share).First();
-        double need = regionId == "napa" ? 0.95 : 0.85;
+        double need = VintageShareRequired(regionId);
         if (top.share >= need - 1e-9) return (top.year, null);
         return (null, $"Only {top.share * 100:0} % of this wine is from {top.year}: a vintage year on the label needs ≥ {need * 100:0} % from that year ({(regionId == "napa" ? "US rules for a wine naming an AVA" : "EU rules")}). It is sold as non-vintage.");
     }

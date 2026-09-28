@@ -108,7 +108,7 @@ static func build(D: Dictionary, shell) -> Control:
 			var vt := []
 			for yv in vins: vt.append("%d %% %d" % [roundi(100.0 * float(vins[yv]) / total), yv])
 			bp[1].add_child(UI.kv("Vintages", ", ".join(vt)))
-			notes.append("A year on the label needs ≥ %d %% of the wine from that Vintage; otherwise it is sold as non-vintage." % (95 if String(D["region"]["id"]) == "napa" else 85))
+			notes.append("A year on the label needs ≥ %d %% of the wine from that Vintage; otherwise it is sold as non-vintage." % roundi(100.0 * float(D["region"].get("vintageShare", 0.85))))
 		for n in notes: bp[1].add_child(UI.label("ⓘ " + n, 13, UI.INK2, null, true))
 	bp[1].add_child(UI.kv("Volume", "%s L · about %s bottles" % [UI.thousands(int(total)), UI.thousands(int(total / 0.75))] if total > 0 else "choose at least one Lot"))
 	var go := UI.button("Bottle this Wine", true, 17); go.custom_minimum_size = Vector2(0, 48); go.disabled = total <= 0

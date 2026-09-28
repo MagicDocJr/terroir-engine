@@ -98,7 +98,7 @@ public class VintageReportTests
         Assert.All(g.Blocks, b => Assert.Contains(b.Seasons, s => s.Year == g.FirstVintage && s.HarvestDate != null && s.YieldKgHa > 0));
         var snap = Snapshot.Build(g);
         Assert.Equal(2, snap["reports"]!.AsArray().Count);
-        Assert.Equal(g.FirstVintage + 1, snap["report"]!["vintage"]!.GetValue<int>());
+        Assert.Equal(g.FirstVintage + 1, snap["reports"]![0]!["vintage"]!.GetValue<int>());   // newest first
     }
 }
 
@@ -417,5 +417,49 @@ public class CoteDorYieldCalibrationTests
         var mature = g.Provenance.Values.Where(p => p.Leaf >= 5 && p.Vintage < g.FirstVintage + 10 && p.FrostLoss <= 0.10).ToList();
         Assert.NotEmpty(mature);
         Assert.InRange(mature.Average(p => p.YieldHlHa), 38, 50);
+    }
+}
+
+public class FollowUpTests
+{
+    [Fact]
+    public void Snapshot_OmitsBottledLots_AndTheDuplicateReport()
+    {
+        var g = Fixture.PlayVintages("mosel-seitental", 2014, 80, vintages: 3);
+        var s = Snapshot.Build(g);
+        Assert.DoesNotContain(s["lots"]!.AsArray(), l => l!["phase"]!.GetValue<string>() == "Blended");
+        Assert.False(s.ContainsKey("report"));
+        Assert.Equal(3, s["reports"]!.AsArray().Count);
+    }
+
+    [Fact]
+    public void HistoryRow_ShowsNothingYet_BeforeTheSeason_AndCountsBottles()
+    {
+        var g = Fixture.PlayVintages("mosel-seitental", 2014, 80, vintages: 2);
+        while (g.Date.Month >= 4 || g.Date.Month < 1) g.Advance(20, stopAtAlerts: false);   // next January–March
+        var now = VintageReport.HistoryRow(g, g.Vintage);
+        Assert.Null(now["winkler"]);
+        Assert.Null(now["rain"]);
+        var first = VintageReport.HistoryRow(g, g.FirstVintage);
+        Assert.Equal(g.WinesOf(g.FirstVintage).Sum(w => w.Bottles), first["bottles"]!.GetValue<int>());
+    }
+
+    [Fact]
+    public void HistoryRow_PastVintageWithoutLots_IsNoHarvest_NotGrowing()
+    {
+        var g = new GameSession(Fixture.Data, new GameSetup { PlotId = "mosel-seitental", PlantingYear = 2014 });
+        g.Advance(400, stopAtAlerts: false);   // into the next year; the December rule picked the first Vintage
+        Assert.Equal("No harvest", VintageReport.HistoryRow(g, g.FirstVintage - 1)["status"]!.GetValue<string>());
+    }
+
+    [Theory]
+    [InlineData("mosel-seitental", 0.85)]
+    [InlineData("cotedor-village", 0.85)]
+    [InlineData("napa-bench", 0.95)]
+    public void Snapshot_CarriesTheVintageShareRule(string plot, double share)
+    {
+        var g = new GameSession(Fixture.Data, new GameSetup { PlotId = plot, PlantingYear = 2014 });
+        Assert.Equal(share, Snapshot.Build(g)["region"]!["vintageShare"]!.GetValue<double>(), 6);
+        Assert.Equal(share, Law.VintageShareRequired(g.Region.Id), 6);
     }
 }

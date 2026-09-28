@@ -39,24 +39,19 @@ Found while building or reviewing; not urgent, but not to be forgotten. Remove a
 - Côte d'Or ripening spread between years is too small: 2003 reaches 200 g/L on 4 Sep in the game, the real harvest began ≈ 19 Aug. Diagnosed in `phenology.md` §9: GFV flowering responds too weakly to warm springs (observed 1991–2003 flowering spread 25 days, model 14) and the post-véraison drought brake slows the hot, dry years. Needs a yearly Côte de Beaune flowering/véraison series to refit, and 2003 Ψstem data. Tools: `sim ripecheck`, `sim frostcheck`, `sim yieldcheck`.
 - Napa year-to-year yield variation is 4–7 %; check against the Napa County crush reports.
 - Multi-vintage carry-over coefficients (fruitfulness, reserves, inoculum, 20 % leaf-loss tolerance) are `UNVERIFIED`.
-- The vintage-statement share is computed from wine litres, not grape weight: label it a game simplification or switch to grape kg.
 - Reserves ignore frost at leaf fall (spec §4.2 lists it).
 - A harvest still running on 31 December is wiped on 1 January (the December rule finishes picks on 2 December, so this is rare).
-- The weekly grey-rot alert is the most frequent message in hands-off play; check whether it is too noisy.
 
 ### Engine and performance
-- Static caches (`VintageReport` normals, `Snapshot` normals) are plain `Dictionary`s used by parallel tests; switch to `ConcurrentDictionary`.
-- The snapshot grows ≈ 30 KB per Vintage (330 KB after 10): drop bottled Lots, drop the duplicate `report` (the UI reads `reports`), consider trimming old wines' full Tasting sheets.
+- The snapshot still grows with every Wine (full Tasting sheets); bottled Lots and the duplicate report are already dropped. Consider sending old Vintages' Tasting sheets on demand.
 - Replay checkpoints if long games load slowly (10 Vintages load in 0.6 s today).
 
 ### Screens
-- Vintage history: the current Vintage shows "0 (normal …)" before April; a past Vintage with no Lots would stay "Growing".
-- Vintage history has no bottles column (spec §8).
-- Glossary "show the Mentor's plan again" does nothing once the Mentor has retired: hide or relabel it.
-- `blending.gd` hard-codes the 85 / 95 % vintage thresholds; send them in the snapshot instead.
-- Lots grouped by Vintage were not seen in a screenshot (Mosel Lots never overlap); add a capture with overlapping Vintages (e.g. Napa Cabernet, 18 months in oak).
 
 ### Build and review
+- The Napa screenshot run logs Godot "RID allocations leaked at exit" (text-shaping buffers) when it quits; harmless at exit, but check it is not a leak during play.
+- The screenshot run's first-Vintage bottling loop does not harvest, so in Napa (18-month ageing) the second Vintage is picked by the December rule; give the scripted player the harvest step there too.
+- Two Vintages' Lots side by side in the Winery were not yet seen in a screenshot (the Lot tabs now wrap, so eight or more Lots fit).
 - The Windows build is unsigned: SmartScreen warns on first start, and a PC with Application Control may block it.
 - Windows `dotnet` cannot build the game (Application Control blocks Godot's source generators); build through WSL (`scripts/build-game.sh`).
 - The tasting review page for the WSET L3 reviewer is still empty: https://claude.ai/artifact/PqqJ2CGJXf6qUj3Wvtm9HD

@@ -23,7 +23,8 @@ static func build(D: Dictionary, shell) -> Control:
 	var L: Dictionary = lots[0]
 	for l in lots:
 		if l["id"] == sel_id: L = l
-	var tabs := UI.hbox(8)
+	# wraps: two Vintages in the cellar (long oak ageing) can mean eight or more Lots
+	var tabs := HFlowContainer.new(); tabs.add_theme_constant_override("h_separation", 8); tabs.add_theme_constant_override("v_separation", 8)
 	var last_v := -1
 	for l in lots:
 		if int(l["vintage"]) != last_v:

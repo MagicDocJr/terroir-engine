@@ -40,7 +40,7 @@ public static class Snapshot
             ["weatherMode"] = g.Weather.IsHistorical(g.Date) ? $"Historical weather: {g.Region.Name} {g.Date.Year}" : $"Synthetic weather (resampled {g.Weather.SyntheticSourceYear(g.Date.Year)} + warming trend)",
             ["unreadAlerts"] = g.Inbox.Count(m => !m.Read && m.Priority == "high"),
             ["mentor"] = new JsonObject { ["name"] = g.MentorName, ["retired"] = g.MentorRetired },
-            ["region"] = new JsonObject { ["id"] = g.Region.Id, ["name"] = g.Region.Name, ["country"] = g.Region.Country, ["units"] = g.Region.Id == "napa" ? "brix" : "oe" },
+            ["region"] = new JsonObject { ["id"] = g.Region.Id, ["name"] = g.Region.Name, ["country"] = g.Region.Country, ["units"] = g.Region.Id == "napa" ? "brix" : "oe", ["vintageShare"] = Law.VintageShareRequired(g.Region.Id) },
             ["plot"] = PlotObj(g),
             ["staff"] = new JsonObject
             {
@@ -51,12 +51,11 @@ public static class Snapshot
             ["blocks"] = Arr(g.Blocks.Select(b => (JsonNode)BlockObj(g, b))),
             ["weather"] = WeatherObj(g),
             ["programmes"] = ProgrammesObj(g),
-            ["lots"] = Arr(g.Lots.Select(l => (JsonNode)LotObj(g, l))),
+            ["lots"] = Arr(g.Lots.Where(l => l.Phase != LotPhase.Blended).Select(l => (JsonNode)LotObj(g, l))),   // bottled Lots live on in their Wines
             ["cellarOptions"] = Arr(CellarOptions.All.Select(c => (JsonNode)new JsonObject { ["key"] = c.Key, ["options"] = Arr(c.Options.Select(x => (JsonNode)x)), ["why"] = c.Why, ["whiteOnly"] = c.WhiteOnly, ["redOnly"] = c.RedOnly, ["locked"] = c.LockedAfterFermentStart })),
             ["wines"] = Arr(g.Wines.Select(w => (JsonNode)WineObj(w))),
             ["finance"] = FinanceObj(g),
             ["inbox"] = Arr(g.Inbox.OrderByDescending(m => m.Id).Take(80).Select(m => (JsonNode)MsgObj(m))),
-            ["report"] = g.BottledVintages.Count > 0 ? VintageReport.Build(g, g.BottledVintages.Max()) : null,
             ["reports"] = Arr(g.BottledVintages.OrderByDescending(v => v).Select(v => (JsonNode)VintageReport.Build(g, v))),
             ["flags"] = Arr(g.Flags.OrderBy(f => f).Select(f => (JsonNode)f)),
             ["establishment"] = Arr(g.EstablishmentReports.Select(x => (JsonNode)x)),
@@ -177,7 +176,7 @@ public static class Snapshot
     private static string? D(DateOnly? d) => d == null ? null : Dates.Short(d.Value);
 
     // ------------------------------------------------------------------------------ weather with normals
-    private static readonly Dictionary<string, (double[] tmean, double[] gdd, double[] rain)> NormalsCache = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (double[] tmean, double[] gdd, double[] rain)> NormalsCache = new();   // shared by parallel callers (tests)
     private static (double[] tmean, double[] gdd, double[] rain) Normals(GameSession g)
     {
         string key = g.Plot.Id;
