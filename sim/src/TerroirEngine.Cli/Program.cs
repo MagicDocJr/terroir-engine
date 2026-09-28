@@ -157,6 +157,28 @@ if (cmd == "play")
     var json = TerroirEngine.Game.Snapshot.Json(g); Console.WriteLine($"Snapshot JSON {json.Length / 1024} KB");
 }
 
+if (cmd == "yieldcheck")
+{
+    // yieldcheck <plotId> <plantingYear> [vintages]: yield components per Block at harvest (hand-picked at the harvest-window sugar + 15 g/L)
+    var g = new TerroirEngine.Game.GameSession(data, new TerroirEngine.Game.GameSetup { PlotId = args[1], PlantingYear = int.Parse(args[2]) });
+    int last = g.FirstVintage + (args.Length > 3 ? int.Parse(args[3]) : 10) - 1;
+    Console.WriteLine("vint blk variety      leaf shoots fruitf reserv setRat berries/v berryG kg/vine rot% hL/ha");
+    var seen = new HashSet<string>();
+    while (g.Date.Year <= last)
+    {
+        g.Advance(1, false);
+        foreach (var b in g.Blocks)
+        {
+            if (!b.Harvested && !b.Picking && b.Veraison != null && (b.SugarGL >= g.HarvestWindowSugar(b) + 15 || b.LeafFall != null))
+            {
+                double hl = b.CropKg * (b.Variety.Red ? 0.72 : 0.62) / 100.0 / b.AreaHa;
+                Console.WriteLine($"{g.Date.Year} {b.Data.Id,-3} {b.Variety.Name,-12} {b.Leaf(g.Date.Year),4} {b.Shoots,6:0.0} {b.Fruitfulness,6:0.00} {b.Reserves,6:0.00} {b.SetFraction / b.Variety.BaseSet,6:0.00} {b.BerriesPerVine,9:0} {b.BerryWeight,6:0.00} {b.CropKgPerVine,7:0.00} {b.Disease.GreyRot * 100,4:0} {hl,5:0}");
+                g.Apply(new TerroirEngine.Game.Command { Type = "harvest", A = b.Data.Id, B = "hand", C = "Table" });
+            }
+        }
+    }
+}
+
 if (cmd == "climcheck")
 {
     if (Environment.GetEnvironmentVariable("TE_SW") is { } sw) BlockClimate.SiteWarmthC = double.Parse(sw, System.Globalization.CultureInfo.InvariantCulture);

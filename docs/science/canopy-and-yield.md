@@ -116,7 +116,9 @@ Inflorescence primordia form in the latent buds **during the previous season**, 
 | Pinot Noir | 1.5–2.0 | 70–110 | 1.0–1.4 | 80–130 | compact | `UNVERIFIED` |
 | Cabernet Sauvignon | 1.3–1.8 | 90–130 | 0.9–1.2 | 100–150 | loose | `UNVERIFIED` |
 
-These are standard-reference orders of magnitude, cited from memory (Robinson, Harding & Vouillamoz, *Wine Grapes*; Keller, *The Science of Grapevines*). The qualitative points are standard WSET knowledge: Cabernet has small, thick-skinned berries; Pinot Noir has thin skins and compact bunches.
+These are standard-reference orders of magnitude, cited from memory (Robinson, Harding & Vouillamoz, *Wine Grapes*; Keller, *The Science of Grapevines*).
+
+**Model values (calibrated 2026-09-28):** Pinot Noir 1.5 bunches per shoot × 75 berries (≈ 90 g bunches at 1.2 g berries), Chardonnay 1.55 × 85 (≈ 120 g). Burgundy anchors: a typical Côte d'Or Pinot Noir bunch weighs about 100 g, ≈ 130 g in a generous year such as 2023 (Robert Parker Wine Advocate, Côte d'Or 2022–23 report); at 10,000 vines/ha three 100 g bunches per vine make ≈ 22 hL/ha, and a 35 hL/ha grand cru is ≈ 0.5 kg of fruit per vine (Robert Parker Wine Journal, *What is a yield*). The per-shoot figures sit at the low end of the ranges above because Burgundy growers thin out surplus shoots (ébourgeonnage) on high-density vines. Riesling and Cabernet Sauvignon are unchanged. The qualitative points are standard WSET knowledge: Cabernet has small, thick-skinned berries; Pinot Noir has thin skins and compact bunches.
 
 ### 3.4 Fruit set, coulure and millerandage
 
@@ -177,12 +179,12 @@ All coefficients `UNVERIFIED`. **Calibration (measured 2026-09-28 after the revi
 |---|---|---|
 | Mosel Seitental | 75 | 20 % |
 | Mosel Blauschiefer | 70 | 15 % |
-| Côte d'Or Village | 56 | 19 % |
-| Côte d'Or Premier Cru | 56 | 18 % |
+| Côte d'Or Village | 42 | 20 % |
+| Côte d'Or Premier Cru | 42 | 18 % |
 | Napa Rutherford Bench | 84 | 4 % |
-| Napa Carneros | 69 | 7 % |
+| Napa Carneros (Pinot Noir, Chardonnay) | 51 | 7 % |
 
-The Mosel and Côte d'Or spreads fall in the expected 15–30 % band (`UNVERIFIED` band); irrigated Napa varies less, as expected. The low years have causes in the weather (Mosel 2017 frost, Côte d'Or 2020 heat and drought). Open point: mature Côte d'Or vines (5th leaf on) average ≈ 56 hL/ha, above the §7 expectation of 35–50; the 4th-leaf factor hid this in the single-Vintage game. It is not caused by the carry-over.
+The Mosel and Côte d'Or spreads fall in the expected 15–30 % band (`UNVERIFIED` band); irrigated Napa varies less, as expected. The low years have causes in the weather (Mosel 2017 frost, Côte d'Or 2020 heat and drought). The Côte d'Or overshoot found here (≈ 56 hL/ha) was fixed by the Pinot Noir and Chardonnay yield components (§3.3); the table shows the recalibrated values.
 
 ## 4. Water stress
 
@@ -246,7 +248,7 @@ Staff level scales efficiency (Junior −10 %, Senior +10 %, `UNVERIFIED`).
 |---|---|---|
 | Leaf-area-to-fruit ratio for full ripening, single canopy | 0.8–1.2 m²/kg | Kliewer & Dokoozlian 2005 (verified) |
 | Mosel Riesling, balanced bud load, 4th leaf+ | ≈ 60–110 hl/ha (steep slopes lower than flat riverbank) | `UNVERIFIED`; the law doc sets the legal maximum |
-| Côte d'Or Premier Cru Pinot Noir | ≈ 35–50 hl/ha | `UNVERIFIED` (AOC yield rules in the law doc) |
+| Côte d'Or Village / Premier Cru Pinot Noir, mature vines | ≈ 38–50 hl/ha mean (base yield for village reds 40 hl/ha; 0.5–0.65 kg per vine at 10,000 vines/ha) | base yield: BIVB appellation sheets; per-vine figures: Robert Parker Wine Journal. Test `CoteDor_MatureVines_AverageNearTheBaseYield`; measured 2012–2020 mean 42 hl/ha |
 | Napa valley-floor Cabernet | ≈ 3–5 short tons/acre (≈ 7–11 t/ha) | `UNVERIFIED` |
 | Sunburn onset (shade-grown berries, > 60 min) | ≈ 46–47 °C berry surface | verified, Frontiers 2023 |
 | Coulure year (cold, wet flowering) | yield −20 to −50 % in prone Varieties | `UNVERIFIED` |
@@ -260,6 +262,9 @@ Staff level scales efficiency (Junior −10 %, Senior +10 %, `UNVERIFIED`).
 
 ## Sources
 
+- Robert Parker Wine Journal, *What is a yield?* https://winejournal.robertparker.com/what-is-a-yield (bunches per vine and hl/ha at Burgundy densities)
+- Robert Parker Wine Advocate, *Burgundy: the Côte d'Or's 2023 and 2022 vintages.* https://www.robertparker.com/articles/2cydkNouFEz7YC24D/burgundy-the-cte-dors-2023-and-2022-vintages (≈ 100 g typical bunch, ≈ 130 g in 2023)
+- Bourgogne wines (BIVB), appellation sheets: base yield 40 hl/ha for village reds (e.g. Beaune). https://www.bourgogne-wines.com
 - Buttrose MS (1969). *Fruitfulness in grapevines: effects of light intensity and temperature.* Botanical Gazette 130(3):166–173. https://www.journals.uchicago.edu/doi/10.1086/336486
 - Bennett J, Jarvis P, Creasy GL, Trought MCT (2005). *Influence of defoliation on overwintering carbohydrate reserves, return bloom, and yield of mature Chardonnay grapevines.* American Journal of Enology and Viticulture 56(4):386–393. https://www.ajevonline.org/content/56/4/386
 - Holzapfel BP, Smith JP, Field SK, Hardie WJ (2010). *Dynamics of carbohydrate reserves in cultivated grapevines.* Horticultural Reviews 37:143–211. https://onlinelibrary.wiley.com/doi/10.1002/9780470543672.ch3

@@ -36,7 +36,6 @@ Things deliberately left out of the MVP, to deep-dive once the core loop is lock
 Found while building or reviewing; not urgent, but not to be forgotten. Remove a line when it is fixed.
 
 ### Simulation and science (for the science review)
-- Mature Côte d'Or vines crop ≈ 56 hL/ha (5th leaf on), above the 35–50 expected in `canopy-and-yield.md` §7; in generous years a player who skips the green harvest gets Vin de France (multi-vintage playtest, 2026-09-28).
 - The 27 April 2016 Burgundy frost is not reproduced on the mid-slope Côte d'Or Plots (only the 2021 frost pocket is tested).
 - Côte d'Or ripening spread between years is too small: 2003 reaches 200 g/L on 5 Sep in the game, the real harvest began ≈ 19 Aug; GFV flowering runs about a week late (Parker F* kept as published).
 - Napa year-to-year yield variation is 4–7 %; check against the Napa County crush reports.

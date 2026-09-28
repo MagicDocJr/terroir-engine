@@ -25,9 +25,9 @@ public sealed record Variety(
     public static readonly Variety Riesling = new(VarietyId.Riesling, "Riesling", false, 190, 1249, 2590, 2900,
         1.7, 90, 1.35, 0.50, 0.2, 0.2, 8.0, 0.7, 0, 0, 1.0, 0.12, 1.3, 0.2, "thin skins, compact bunches, high natural acidity");
     public static readonly Variety Chardonnay = new(VarietyId.Chardonnay, "Chardonnay", false, 150, 1217, 2547, 2615,
-        1.7, 100, 1.4, 0.45, 0.8, 0.4, 7.2, 0.85, 0, 0, 0.15, 0.025, 1.2, 0.2, "neutral, winemaker-shaped; early budburst");
+        1.55, 85, 1.4, 0.45, 0.8, 0.4, 7.2, 0.85, 0, 0, 0.15, 0.025, 1.2, 0.2, "neutral, winemaker-shaped; early budburst");
     public static readonly Variety PinotNoir = new(VarietyId.PinotNoir, "Pinot Noir", true, 158, 1219, 2511, 2645,
-        1.7, 90, 1.2, 0.45, 0.5, 0.5, 7.2, 0.85, 0.65, 0, 0.1, 0.02, 1.4, 0.5, "thin skins, low colour (no acylated anthocyanins), rot-prone");
+        1.5, 75, 1.2, 0.45, 0.5, 0.5, 7.2, 0.85, 0.65, 0, 0.1, 0.02, 1.4, 0.5, "thin skins, low colour (no acylated anthocyanins), rot-prone");
     public static readonly Variety CabernetSauvignon = new(VarietyId.CabernetSauvignon, "Cabernet Sauvignon", true, 200, 1299, 2689, 3100,
         1.5, 110, 1.05, 0.50, 0.2, 0.2, 6.8, 1.0, 1.4, 30, 0.1, 0.02, 0.8, 1.0, "small thick-skinned berries, loose bunches, late, pyrazine-prone");
 
