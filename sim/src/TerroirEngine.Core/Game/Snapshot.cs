@@ -99,8 +99,10 @@ public static class Snapshot
                 ["id"] = t.Id, ["kind"] = t.Kind.ToString(), ["title"] = TaskCatalog.Title(t.Kind), ["verb"] = TaskCatalog.Verb(t.Kind),
                 ["block"] = t.BlockId, ["lot"] = t.LotId, ["variety"] = g.Blocks.FirstOrDefault(b => b.Data.Id == t.BlockId)?.Variety.Name,
                 ["status"] = t.Status.ToString(), ["opened"] = D(t.Opened), ["due"] = D(t.Due), ["daysLeft"] = t.Due.DayNumber - g.Date.DayNumber,
-                ["plan"] = plan, ["planLabel"] = TaskCatalog.Label(t.Kind, plan), ["choice"] = t.Choice, ["timing"] = t.Timing, ["decidedBy"] = t.DecidedBy,
-                ["options"] = Arr(TaskCatalog.Options(t.Kind).Select(o =>
+                ["plan"] = plan, ["planLabel"] = TaskCatalog.Label(t.Kind, plan, g.TaskTraining(t)), ["choice"] = t.Choice, ["timing"] = t.Timing, ["decidedBy"] = t.DecidedBy,
+                ["planTiming"] = t.Kind == TaskKind.LeafRemoval ? g.Blocks.FirstOrDefault(b => b.Data.Id == t.BlockId)?.LeafTiming.ToString() : null,
+                ["training"] = g.TaskTraining(t)?.ToString(), ["red"] = t.Kind == TaskKind.CapManagement || (g.Blocks.FirstOrDefault(b => b.Data.Id == t.BlockId)?.Variety.Red ?? false),
+                ["options"] = Arr(TaskCatalog.Options(t.Kind, g.TaskTraining(t)).Select(o =>
                 {
                     var jo = new JsonObject { ["value"] = o.Value, ["label"] = o.Label, ["why"] = o.Why };
                     var blk = g.Blocks.FirstOrDefault(b => b.Data.Id == t.BlockId);

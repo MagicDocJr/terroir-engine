@@ -23,8 +23,11 @@ fermentation all come from `Sim.Snapshot()`.
 Input is read only while the node is visible. Click to capture the mouse, then walk with WASD (or the arrow
 keys). Shift runs. 1/2/3 jump to the vineyard, cellar or hall, 4 switches to the drone (and back), M turns the
 sound on or off, and Tab goes back. **Tasks:** near a task's marker the HUD shows "E …"; E opens the close-up (the mouse is
-freed): click a part or an option in the side panel, Enter confirms (a short animation, then `task_chosen`), Esc goes back without
-deciding, and Tab leaves the view (no decision). Test: `scripts/tasktest.sh`. **Drone:** it orbits the Plot centre; drag with the mouse to orbit, WASD pans,
+freed and WASD no longer walks): click a part or an option in the side panel, Enter confirms (a short animation, then `task_chosen`),
+Esc goes back without deciding, and Tab leaves the view (no decision). Once confirmed the choice stands: Esc is ignored during the
+animation, and Tab or closing the view sends it at once. Test: `scripts/tasktest.sh` (real key and mouse events: E, WASD, a click on
+every cane, Enter → Esc → Tab, drone + E; plus Cordon and Einzelpfahl pruning screenshots); the shell path runs in `scripts/fuzz.sh`
+("FUZZ task3d", "FUZZ taskcrew"). **Drone:** it orbits the Plot centre; drag with the mouse to orbit, WASD pans,
 Q/E turn, the wheel changes height/distance, Shift goes faster. 4 again resumes walking where you left off; 1/2/3
 teleport as usual.
 The world renders in its own `SubViewport` with its own `World3D`. Rendering, physics and sound stop while the
@@ -40,7 +43,7 @@ view is hidden.
 | `player.gd` | Capsule walker (`CharacterBody3D`): gravity, slopes up to ~50°, and stairs (a ramp collider under the steps). |
 | `ambience.gd` | Ambient sound per Region and place (see below). |
 | `workers.gd` | People and machines at work, staged from the snapshot (see below). One MultiMesh for all people, posed in `shaders/worker.gdshader`. |
-| `tasks3d.gd` | Staff tasks: a stake with a ribbon and label at each open task's demonstration vine (the real vine nearest the headland on the Block's middle row) or above its Lot's tank; the close-up parts (canes with the Block's bud counts, lobed leaves on the morning / afternoon side, berry bunches, cellar tools), picking (collision layer 20) and the confirm animations. |
+| `tasks3d.gd` | Staff tasks: a stake with a ribbon and label at each open task's demonstration vine (the real vine nearest the headland on the Block's middle row) or above its Lot's tank; the close-up parts (Guyot canes, Cordon arms with two-bud spurs or Einzelpfahl bows, with the Block's bud counts; lobed leaves on the morning / afternoon side, berry bunches, cellar tools), picking (collision layer 20; pruning picks the cane whose axis passes nearest the mouse ray, since the fanned canes' boxes overlap) and the confirm animations. |
 | `view3d_test.gd` | Test harness: screenshots, FPS, the walk test and the LOD probe. |
 
 ## The Estate layout

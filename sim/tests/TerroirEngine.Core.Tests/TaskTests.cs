@@ -160,4 +160,84 @@ public class TaskTests
         Assert.Equal("Done", after["status"]!.GetValue<string>());
         Assert.True(after["crewActive"]!.GetValue<bool>());
     }
+
+    [Fact]
+    public void CoteDor_FirstPruningMessage_StatesTheMentorsLowPlan()
+    {
+        var g = New("cotedor-village", 2013);
+        var m = g.Inbox.Single(x => x.Kind == "task-prune");
+        Assert.Contains("Short cane", m.Body);
+        Assert.DoesNotContain("Medium cane", m.Body);
+    }
+
+    [Fact]
+    public void GreenHarvest_CannotThinABlockBeingPicked()
+    {
+        var g = New();
+        Until(g, () => g.Tasks.Any(t => t.Kind == TaskKind.GreenHarvest));
+        var t = g.Tasks.First(x => x.Kind == TaskKind.GreenHarvest);
+        var b = g.Blocks.First(x => x.Data.Id == t.BlockId);
+        g.Apply(new Command { Type = "harvest", A = t.BlockId, B = "hand", C = "Table" });
+        double berries = b.BerriesPerVine;
+        Assert.Equal(TaskState.Planned, t.Status);                       // the harvest order closes it at once
+        g.Apply(new Command { Type = "task", A = t.Id.ToString(), B = "do", C = "2" });
+        g.Apply(new Command { Type = "block", A = t.BlockId, B = "thinning", C = "2" });
+        Assert.Equal(berries, b.BerriesPerVine);
+    }
+
+    [Fact]
+    public void LeafTiming_OnTheDashboard_CompletesTheTask_AndSnapshotCarriesThePlanTiming()
+    {
+        var g = New();
+        Until(g, () => g.Tasks.Any(t => t.Kind == TaskKind.LeafRemoval));
+        var t = g.Tasks.First(x => x.Kind == TaskKind.LeafRemoval);
+        string PlanTiming() => Snapshot.Build(g)["tasks"]!.AsArray().First(x => x!["id"]!.GetValue<int>() == t.Id)!["planTiming"]!.GetValue<string>();
+        Assert.Equal(g.Blocks.First(b => b.Data.Id == t.BlockId).LeafTiming.ToString(), PlanTiming());
+        g.Apply(new Command { Type = "block", A = t.BlockId, B = "leaftiming", C = "Late" });
+        Assert.Equal(TaskState.Done, t.Status);
+        Assert.Equal("Late", t.Timing);
+        Assert.Equal("Late", PlanTiming());   // crew-active tasks stay in the list and show the timing now set
+    }
+
+    [Theory]
+    [InlineData("napa-bench", "spur")]          // Cordon: spur pruning
+    [InlineData("mosel-terrassen", "bow")]      // Einzelpfahl: arched bows
+    [InlineData("mosel-seitental", "cane")]     // Guyot: cane pruning
+    public void PruningOptions_UseTheTrainingSystemsWords(string plot, string word)
+    {
+        var g = New(plot, 2014);
+        var opts = Snapshot.Build(g)["tasks"]!.AsArray()[0]!["options"]!.AsArray();
+        Assert.All(opts, o => Assert.Contains(word, o!["label"]!.GetValue<string>(), StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void LaterOpeningsOfTheSameKind_DoNotStopTimeAgain()
+    {
+        var g = New("napa-carneros", 2016);
+        Until(g, () => g.Blocks.All(b => b.Veraison != null) && g.Date.Year == g.FirstVintage && g.Blocks.All(b => b.Veraison!.Value.AddDays(3) < g.Date));
+        foreach (var kind in new[] { "task-leaves", "task-thinning" })
+            Assert.True(g.Inbox.Count(m => m.Kind == kind && m.Stop) <= 1, $"{kind} stopped time {g.Inbox.Count(m => m.Kind == kind && m.Stop)} times");
+    }
+
+    [Fact]
+    public void CrewButton_DelegatesOnlyThatMessagesTasks()
+    {
+        var g = New();
+        var m = g.Inbox.Single(x => x.Kind == "task-prune");
+        var arg = m.Actions.First(a => a.Action == "taskcrew").Arg;
+        Assert.StartsWith("ids:", arg);
+        var ids = arg[4..].Split(',').Select(int.Parse).ToList();
+        g.Apply(new Command { Type = "task", A = arg, B = "delegate" });
+        Assert.All(g.Tasks.Where(t => ids.Contains(t.Id)), t => Assert.Equal(TaskState.Delegated, t.Status));
+    }
+
+    [Fact]
+    public void Tasks_FullListReplaysExactly()
+    {
+        var g = Fixture.PlayVintages("mosel-terrassen", 2016, 86, vintages: 2);
+        var g2 = GameSession.Load(Fixture.Data, g.Save());
+        string Dump(GameSession s) => string.Join("\n", s.Tasks.Select(t => $"{t.Id} {t.Kind} {t.BlockId} {t.LotId} {t.Opened} {t.Due} {t.Status} {t.Choice} {t.Timing} {t.DecidedBy} {t.Decided} {t.CrewUntil}"));
+        Assert.Equal(Dump(g), Dump(g2));
+    }
 }
+

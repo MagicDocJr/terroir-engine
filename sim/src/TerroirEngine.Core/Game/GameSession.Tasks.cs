@@ -98,8 +98,9 @@ public sealed partial class GameSession
                 b.LeafTiming = timing == "Late" ? LeafRemovalTiming.Late : LeafRemovalTiming.Early;
                 break;
             case TaskKind.GreenHarvest:
-                b!.CropThinning = Math.Clamp(int.Parse(value), 0, 2);
-                if (b.Veraison != null && !b.Harvested) VineyardModel.ApplyCropThinning(b);
+                if (b!.Picking || b.Harvested) break;               // the fruit is already being picked: nothing to thin
+                b.CropThinning = Math.Clamp(int.Parse(value), 0, 2);
+                if (b.Veraison != null) VineyardModel.ApplyCropThinning(b);
                 break;
             case TaskKind.CapManagement:
                 var lot = Lots.First(l => l.Id == t.LotId);
@@ -118,13 +119,16 @@ public sealed partial class GameSession
     /// <summary>Command `task`: A = task id or "kind:Prune"; B = "do" | "delegate"; C = option value; D = timing ("Late"); E = "dashboard" when sent from the dashboard panel.</summary>
     private void TaskCommand(Command c)
     {
-        var targets = c.A.StartsWith("kind:")
-            ? Tasks.Where(t => t.Status == TaskState.Open && t.Kind.ToString() == c.A[5..]).ToList()
+        var ids = c.A.StartsWith("ids:") ? c.A[4..].Split(',', StringSplitOptions.RemoveEmptyEntries).ToHashSet() : null;
+        var targets = c.A.StartsWith("kind:") ? Tasks.Where(t => t.Status == TaskState.Open && t.Kind.ToString() == c.A[5..]).ToList()
+            : ids != null ? Tasks.Where(t => t.Status == TaskState.Open && ids.Contains(t.Id.ToString())).ToList()
             : Tasks.Where(t => t.Status == TaskState.Open && t.Id.ToString() == c.A).ToList();
         foreach (var t in targets)
         {
             if (c.B == "delegate") Decide(t, TaskState.Delegated, TaskPlan(t), t.Kind == TaskKind.LeafRemoval ? Blocks.First(b => b.Data.Id == t.BlockId).LeafTiming.ToString() : "", "crew");
-            else if (c.B == "do" && TaskCatalog.Options(t.Kind).Any(o => o.Value == c.C)) Decide(t, TaskState.Done, c.C, c.D, c.E == "dashboard" ? "dashboard" : "3d");
+            else if (c.B == "do" && TaskCatalog.Options(t.Kind).Any(o => o.Value == c.C)
+                     && !(t.Kind == TaskKind.GreenHarvest && Blocks.First(b => b.Data.Id == t.BlockId) is { } gb && (gb.Picking || gb.Harvested)))
+                Decide(t, TaskState.Done, c.C, c.D, c.E == "dashboard" ? "dashboard" : "3d");
         }
     }
 
@@ -137,6 +141,16 @@ public sealed partial class GameSession
         t.CrewUntil = Date.AddDays(CrewDays(t) - 1);
     }
 
+    /// <summary>Ordering the harvest closes the Block's open green-harvest task: there is nothing left to thin.</summary>
+    private void CloseGreenHarvestAtPicking(string blockId)
+    {
+        foreach (var t in Tasks.Where(t => t.Status == TaskState.Open && t.Kind == TaskKind.GreenHarvest && t.BlockId == blockId))
+        { t.Status = TaskState.Planned; t.Choice = TaskPlan(t); t.DecidedBy = "crew"; t.Decided = Date; }
+    }
+
+    /// <summary>The training system of a task's Block (pruning words differ: canes, spurs, bows).</summary>
+    public TrainingSystem? TaskTraining(FieldTask t) => Blocks.FirstOrDefault(b => b.Data.Id == t.BlockId)?.Planting.Training;
+
     private void PostTaskMessage(TaskKind kind, List<FieldTask> opened)
     {
         var first = opened[0];
@@ -144,16 +158,18 @@ public sealed partial class GameSession
             ? (opened.Count == 1 ? $"Lot {opened[0].LotId}" : "Lots " + string.Join(", ", opened.Select(t => t.LotId)))
             : (opened.Count == 1 ? $"Block {opened[0].BlockId}" : "Blocks " + string.Join(", ", opened.Select(t => t.BlockId)));
         string due = Dates.Short(first.Due);
-        string plan = string.Join(", ", opened.Select(t => $"{(kind == TaskKind.CapManagement ? t.LotId : t.BlockId)}: {TaskCatalog.Label(kind, TaskPlan(t))}"));
+        string plan = string.Join(", ", opened.Select(t => $"{(kind == TaskKind.CapManagement ? t.LotId : t.BlockId)}: {TaskCatalog.Label(kind, TaskPlan(t), TaskTraining(t))}"));
+        // only the Vintage's first message of a kind stops time; later openings (other Blocks, other Lots) arrive quietly
+        bool stop = Gate($"taskmsg-{kind}-{Date.Year}");
         string role = kind == TaskKind.CapManagement ? "cellar" : kind == TaskKind.Prune && !MentorRetired ? "mentor" : "vineyard";
         (string subject, string body, string why, string msgKind) = kind switch
         {
             TaskKind.Prune => ($"Winter pruning: {blocks} (due {due})",
-                $"January is pruning time. The number of buds left per vine sets this year's crop, and how well it ripens.\n\n• Short cane (Low, ≈ 6 buds per m²): fewer, riper grapes.\n• Medium cane (Balanced, ≈ 8): the usual compromise.\n• Long cane (High, ≈ 11): a big crop that ripens slowly and can taste diluted.\n\n{(Region.Id == "cote-dor" ? "Remember: Village and Premier Cru rules allow at most 8 buds per vine." : Region.Id == "mosel" ? "Steep Einzelpfahl vines carry two bows; the buds are shared between them." : "On the valley floor vigour is high: too few buds and the canopy runs wild.")}\n\nWalk to a Block and prune its marked vine yourself; the crew then prunes the rest the same way. Or let the crew prune to the plan ({plan}).",
+                $"January is pruning time. The number of buds left per vine sets this year's crop, and how well it ripens.\n\n• Low (≈ 6 buds per m²): fewer, riper grapes.\n• Balanced (≈ 8): the usual compromise.\n• High (≈ 11): a big crop that ripens slowly and can taste diluted.\n\nGuyot vines are cane-pruned (one or two long canes laid on the wire), Cordon vines spur-pruned (short spurs along a permanent arm), and Einzelpfahl vines keep one or two arched bows round the stake.\n\n{(Region.Id == "cote-dor" ? "Remember: Village and Premier Cru rules allow at most 8 buds per vine." : Region.Id == "mosel" ? "Steep Einzelpfahl vines carry two bows; the buds are shared between them." : "On the valley floor vigour is high: too few buds and the canopy runs wild.")}\n\nWalk to a Block and prune its marked vine yourself; the crew then prunes the rest the same way. Or let the crew prune to the plan ({plan}).",
                 "Bud load balances yield against ripening capacity: over ~1 kg of fruit per m² of leaf area ripens poorly (Kliewer & Dokoozlian 2005).", "task-prune"),
             TaskKind.LeafRemoval => ($"Leaf removal: {blocks} (due {due})",
                 $"The fruit has set. Pulling the leaves around the bunches now opens the fruit zone.\n\n• Morning side: bunches dry fast after dew and rain, without the afternoon heat.\n• Afternoon side: more warmth, but a sunburn risk in hot weather.\n• Both sides, or none.\nYou can also leave it until véraison (late leaf removal).\n\nDo the marked vine yourself, or let the crew keep the plan ({plan}).",
-                "Leaf removal between fruit set and bunch closure lets the berries acclimatise to the sun; late removal is gentler on colour but riskier for sunburn.", "task-leaves"),
+                "Early leaf removal lets the berries acclimatise to the sun and, in Riesling, raises the TDN precursors more than late removal (Kwasniewski et al. 2010); removing leaves late, on berries grown in shade, is the classic cause of sunburn (Gambetta et al. 2021).", "task-leaves"),
             TaskKind.GreenHarvest => ($"Green harvest: {blocks} (due {due})",
                 $"Véraison has begun. This is the moment to decide how much crop the vines should ripen: cutting bunches now helps the rest ripen more completely.\n\nThin the marked vine yourself (the crew follows), or keep every bunch ({plan}).",
                 "Green harvesting lowers yield and raises the leaf-area-to-fruit ratio; the remaining bunches ripen faster and more completely (Kliewer & Dokoozlian 2005).", "task-thinning"),
@@ -161,9 +177,9 @@ public sealed partial class GameSession
                 $"The red fermentation has started and the skins have risen into a cap on top of the juice. How we work the cap decides how much colour and tannin we extract.\n\nWork the cap on the tank yourself, or keep my plan ({plan}).",
                 "Pump-overs are gentle; punch-downs extract more (traditional for Pinot Noir); délestage extracts strongly and removes some seeds.", "task-cap"),
         };
-        var m = Post(role, subject, body, why, "high", msgKind, stop: true, blockId: kind == TaskKind.CapManagement ? "" : first.BlockId);
+        var m = Post(role, subject, body, why, stop ? "high" : "normal", msgKind, stop: stop, blockId: kind == TaskKind.CapManagement ? "" : first.BlockId);
         m.Actions.Add(("Do it in 3D", "task3d", first.Id.ToString()));
-        m.Actions.Add(("Let the crew do it", "taskcrew", kind.ToString()));
+        m.Actions.Add(("Let the crew do it", "taskcrew", "ids:" + string.Join(",", opened.Select(t => t.Id))));
         m.Actions.Add((kind == TaskKind.CapManagement ? "Open Winery" : "Open Plot & Blocks", "goto", kind == TaskKind.CapManagement ? "winery" : "plot"));
     }
 }

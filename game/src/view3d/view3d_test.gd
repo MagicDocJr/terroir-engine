@@ -702,6 +702,24 @@ func _save_shot(name: String) -> void:
 	print("  saved ", out)
 
 
+## A real key press and release through Input (reaches view3d._input like a keyboard would).
+func _key(code: Key, hold := 2) -> void:
+	var e := InputEventKey.new(); e.physical_keycode = code; e.keycode = code; e.pressed = true
+	Input.parse_input_event(e)
+	await _frames(hold)
+	var u := InputEventKey.new(); u.physical_keycode = code; u.keycode = code; u.pressed = false
+	Input.parse_input_event(u)
+	await _frames(2)
+
+
+## A left click at a screen position.
+func _click(pos: Vector2) -> void:
+	for down in [true, false]:
+		var e := InputEventMouseButton.new(); e.button_index = MOUSE_BUTTON_LEFT; e.pressed = down; e.position = pos; e.global_position = pos
+		Input.parse_input_event(e)
+		await _frames(2)
+
+
 func _open_task(kind: String) -> Dictionary:
 	for t in snap.get("tasks", []):
 		if String(t["kind"]) == kind and String(t["status"]) == "Open":
@@ -734,10 +752,13 @@ func _do_task(kind: String, value: String, timing: String, check: Callable) -> b
 	await _save_shot("task_%s_chosen" % kind.to_lower())
 	_chosen.clear()
 	view.call("_confirm")
+	await get_tree().create_timer(0.75).timeout     # mid-animation (the confirm timer is 1 s)
+	if _chosen.is_empty():
+		await _save_shot("task_%s_confirmed" % kind.to_lower())
 	var guard := 0
 	while _chosen.is_empty() and guard < 240:
 		await get_tree().process_frame; guard += 1
-	if _chosen.is_empty() or int(_chosen[0][0]) != id or String(_chosen[0][1]) != value:
+	if _chosen.is_empty() or int(_chosen[0][0]) != id or String(_chosen[0][1]) != value or String(_chosen[0][2]) != timing:
 		print("TASKTEST FAIL %s: no task_chosen signal (%s)" % [kind, str(_chosen)]); return false
 	Sim.Command("task", str(id), "do", value, timing, "")
 	snap = _snap()
@@ -745,6 +766,87 @@ func _do_task(kind: String, value: String, timing: String, check: Callable) -> b
 	var ok: bool = check.call(snap)
 	print("TASKTEST %s %s" % [kind, "ok" if ok else "FAIL: setting not applied"])
 	return ok
+
+
+## The close-up through real input: E opens it, WASD doesn't move the camera, a click on a part picks that option, Esc
+## during the confirm animation is ignored and Tab then sends the choice; Esc and hiding the view before a confirm
+## decide nothing; E in the drone view opens nothing.
+func _input_checks() -> bool:
+	var ok := true
+	var exits := [0]
+	var count_exit := func(): exits[0] += 1
+	view.exit_requested.connect(count_exit)
+	var pl: Node3D = view.get("player")
+	view.set_view("drone")
+	await _frames(20)
+	await _key(KEY_E)
+	var drone_ok: bool = int(view.get("closeup_id")) == -1
+	print("TASKTEST drone_e_no_closeup %s" % ("ok" if drone_ok else "FAIL"))
+	var t := _open_task("Prune")
+	var id := int(t["id"])
+	view.set_view("vineyard")
+	view.focus_task(id)
+	await _frames(20)
+	await _key(KEY_E)
+	var e_ok: bool = int(view.get("closeup_id")) == id
+	print("TASKTEST key_e_opens %s" % ("ok" if e_ok else "FAIL"))
+	await _frames(30)
+	var cam0: Vector3 = pl.cam.global_position
+	await _key(KEY_W, 45)
+	await _key(KEY_D, 30)
+	var wasd_ok: bool = e_ok and pl.cam.global_position.distance_to(cam0) < 0.01 and int(view.get("closeup_id")) == id
+	print("TASKTEST wasd_stays_in_closeup %s (moved %.3f m)" % ["ok" if wasd_ok else "FAIL", pl.cam.global_position.distance_to(cam0)])
+	# a click on a part, at its projected screen position (outside the side panel)
+	var t3: Node3D = view.get("tasks3d")
+	var panel: Control = view.get("task_panel")
+	var cont: Control = view.get("container")
+	var vp: SubViewport = view.get("viewport")
+	var want := ""
+	var clicked := []
+	var click_ok := true
+	for p in t3.get("pickables"):
+		var wp: Vector3 = (p["body"] as Node3D).global_position
+		var r := cont.get_global_rect()
+		var sp: Vector2 = pl.cam.unproject_position(wp) * r.size / Vector2(vp.size) + r.position
+		if pl.cam.is_position_behind(wp) or not r.has_point(sp) or panel.get_global_rect().has_point(sp):
+			click_ok = false; clicked.append("%s off-screen" % p["value"]); continue
+		await _click(sp)
+		want = String(view.get("closeup_value"))
+		clicked.append("%s→%s" % [p["value"], want])
+		click_ok = click_ok and want == String(p["value"])
+	click_ok = click_ok and not clicked.is_empty()
+	print("TASKTEST click_picks_each_part %s (%s)" % ["ok" if click_ok else "FAIL", ", ".join(clicked)])
+	# confirm, Esc (ignored while the animation runs), then Tab: the choice is sent, the view asked to close
+	_chosen.clear()
+	exits[0] = 0
+	await _key(KEY_ENTER)
+	await _key(KEY_ESCAPE)
+	var esc_ignored: bool = int(view.get("closeup_id")) == id and _chosen.is_empty()
+	await _key(KEY_TAB)
+	var tab_ok: bool = esc_ignored and _chosen.size() == 1 and int(_chosen[0][0]) == id and String(_chosen[0][1]) == want and int(view.get("closeup_id")) == -1 and exits[0] == 1
+	print("TASKTEST confirm_then_tab_sends %s (esc ignored=%s, chosen=%s, exits=%d)" % ["ok" if tab_ok else "FAIL", esc_ignored, str(_chosen), exits[0]])
+	await _frames(90)                  # the confirm timer must not send it a second time
+	var once_ok: bool = _chosen.size() == 1
+	print("TASKTEST sent_once %s" % ("ok" if once_ok else "FAIL"))
+	# Esc before confirming: back to the walker, nothing decided; WASD walks again
+	view.focus_task(id)
+	await _frames(20)
+	await _key(KEY_E)
+	view.call("_choose", "High")
+	_chosen.clear()
+	await _key(KEY_ESCAPE)
+	var esc_ok: bool = int(view.get("closeup_id")) == -1 and _chosen.is_empty() and bool(pl.get("enabled"))
+	print("TASKTEST esc_leaves_undecided %s" % ("ok" if esc_ok else "FAIL"))
+	# hiding the 3D view during an undecided close-up decides nothing
+	await _key(KEY_E)
+	await _frames(10)
+	view.visible = false
+	await _frames(10)
+	var hide_ok: bool = int(view.get("closeup_id")) == -1 and _chosen.is_empty() and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED
+	view.visible = true
+	print("TASKTEST hide_leaves_closeup %s" % ("ok" if hide_ok else "FAIL"))
+	view.exit_requested.disconnect(count_exit)
+	return ok and drone_ok and e_ok and wasd_ok and click_ok and tab_ok and once_ok and esc_ok and hide_ok
 
 
 func _task_test() -> void:
@@ -764,24 +866,16 @@ func _task_test() -> void:
 	var none_ok: bool = not view.call("_interact") and int(view.get("closeup_id")) == -1
 	print("TASKTEST no_task_no_closeup %s" % ("ok" if none_ok else "FAIL"))
 	ok = ok and none_ok
-	var second := _open_task("Prune")
-	view.set_view("vineyard")
-	view.focus_task(int(second["id"]))
-	await _frames(20)
-	view.call("_interact")
-	await _frames(10)
-	_chosen.clear()
-	view.visible = false
-	await _frames(10)
-	var tab_ok: bool = int(view.get("closeup_id")) == -1 and _chosen.is_empty() and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED
-	view.visible = true
-	print("TASKTEST tab_leaves_closeup %s" % ("ok" if tab_ok else "FAIL"))
-	ok = ok and tab_ok
+	ok = await _input_checks() and ok
+	# Late leaf removal set on the Plot screen before fruit set: the close-up's "later" box starts ticked
+	for b in snap["blocks"]:
+		Sim.Command("block", String(b["id"]), "leaftiming", "Late", "", "")
+	snap = _snap()
 	var guard := 0
 	while _open_task("LeafRemoval").is_empty() and guard < 300:
 		Sim.Advance(3, false); snap = _snap(); guard += 1
 	var lt := _open_task("LeafRemoval")
-	ok = await _do_task("LeafRemoval", "Morning", "", func(s): return String(_block(s, String(lt["block"])).get("leafSide", "")) == "Morning") and ok
+	ok = await _do_task("LeafRemoval", "Morning", "Late", func(s): return String(_block(s, String(lt["block"])).get("leafSide", "")) == "Morning") and ok
 	guard = 0
 	while _open_task("GreenHarvest").is_empty() and guard < 300:
 		Sim.Advance(3, false); snap = _snap(); guard += 1
@@ -812,6 +906,22 @@ func _task_test() -> void:
 		for l in s.get("lots", []):
 			if String(l["id"]) == String(ct["lot"]): return int(l["choices"].get("Cap management", -1)) == 1
 		return false) and ok
+	# pruning close-ups on the other training systems (Cordon spurs, Einzelpfahl bows): screenshots for review
+	for plot in ["napa-bench", "mosel-terrassen"]:
+		Sim.NewGame(JSON.stringify({"plotId": plot, "plantingYear": 2014, "seed": 5, "estateName": "Task Test"}))
+		snap = _snap()
+		view.apply_snapshot(snap)
+		view.set_view("vineyard")
+		await _frames(40)
+		var pt := _open_task("Prune")
+		view.focus_task(int(pt["id"]))
+		await _frames(20)
+		var opened: bool = view.call("_interact")
+		await _frames(60)
+		await _save_shot("task_prune_%s" % plot)
+		view.call("_leave_closeup")
+		print("TASKTEST prune_closeup_%s %s" % [plot, "ok" if opened else "FAIL"])
+		ok = ok and opened
 	print("TASKTEST %s" % ("ok" if ok else "FAIL"))
 	get_tree().quit()
 

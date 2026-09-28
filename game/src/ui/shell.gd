@@ -183,7 +183,8 @@ func run_action(action: String, arg: String) -> void:
 			if view3d == null or not view3d.visible: toggle_3d("")
 			if view3d and view3d.has_method("focus_task"): view3d.focus_task(int(arg))
 		"taskcrew":
-			command("task", "kind:" + arg, "delegate"); notify("The crew takes it over and works to the plan.", true)
+			# "ids:3,4" = the tasks of that message; a bare kind comes from messages saved before ids were carried
+			command("task", arg if arg.begins_with("ids:") else "kind:" + arg, "delegate"); notify("The crew takes it over and works to the plan.", true)
 
 func start_game(setup_json: Dictionary) -> void:
 	notify("Planting… the Mentor is looking after three years of Establishment.")
@@ -692,6 +693,7 @@ func _run_fuzz() -> void:
 	await start_game(load("res://src/ui/screens/pregame.gd").setup_json(self))
 	for stop_at in [0, 200, 60, 200, 150]:
 		if stop_at > 0: Sim.Advance(stop_at, false); D = JSON.parse_string(Sim.Snapshot()); _build_chrome()
+		if stop_at == 0: await _fuzz_task3d()     # before the buttons decide the first pruning tasks
 		for id in NAV: await _fuzz_screen(id)
 		print("FUZZ round done at ", D["date"])
 	# time controls and keys
@@ -707,6 +709,39 @@ func _run_fuzz() -> void:
 	if playing: toggle_play()
 	print("FUZZ DONE date=", D["date"], " phase=", D["phase"])
 	get_tree().quit()
+
+## The whole shell path of a task done in 3D: the Inbox action opens the view at the vine, the close-up's confirm reaches
+## _on_task_chosen and the sim marks the task done by "3d"; then the message's crew button delegates only its own tasks.
+func _fuzz_task3d() -> void:
+	var first := {}
+	for t in D.get("tasks", []):
+		if String(t["status"]) == "Open" and String(t["kind"]) == "Prune": first = t; break
+	if first.is_empty() or not ResourceLoader.exists("res://src/view3d/view3d.tscn"):
+		print("FUZZ task3d skipped (no open pruning task or no 3D view)"); return
+	var id := int(first["id"])
+	run_action("task3d", str(id))
+	for f in 30: await get_tree().process_frame
+	var opened: bool = view3d.call("_interact")
+	view3d.call("_choose", String(first["plan"]))
+	view3d.call("_confirm")
+	await get_tree().create_timer(1.6).timeout
+	var st := ""
+	for t in D.get("tasks", []):
+		if int(t["id"]) == id: st = "%s/%s" % [t["status"], t.get("decidedBy", "")]
+	print("FUZZ task3d %s (opened=%s, task %d → %s)" % ["ok" if opened and st == "Done/3d" else "FAIL", opened, id, st])
+	if view3d.visible: toggle_3d("")
+	var arg := ""
+	for m in D.get("inbox", []):
+		for a in m.get("actions", []):
+			if String(a["action"]) == "taskcrew": arg = String(a["arg"])
+	if arg == "":
+		print("FUZZ taskcrew skipped (no message with a crew action)"); return
+	var ids := arg.trim_prefix("ids:").split(",")
+	run_action("taskcrew", arg)
+	var left := 0
+	for t in D.get("tasks", []):
+		if str(int(t["id"])) in ids and String(t["status"]) == "Open": left += 1
+	print("FUZZ taskcrew %s (%d of the message's tasks still open)" % ["ok" if left == 0 else "FAIL", left])
 
 # ------------------------------------------------------------------ avatar contact sheet (visual check)
 func _avatar_sheet() -> void:

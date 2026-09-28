@@ -1,3 +1,5 @@
+using TerroirEngine.Data;
+
 namespace TerroirEngine.Game;
 
 public enum TaskKind { Prune, LeafRemoval, GreenHarvest, CapManagement }
@@ -32,6 +34,17 @@ public static class TaskCatalog
     public static string Where(TaskKind k) => k == TaskKind.CapManagement ? "hall" : "vineyard";
     /// <summary>Hours per hectare for the crew to finish the Block after the decision (visual only; UNVERIFIED design values).</summary>
     public static double CrewHoursPerHa(TaskKind k) => k switch { TaskKind.Prune => 80, TaskKind.LeafRemoval => 40, TaskKind.GreenHarvest => 30, _ => 0 };
+
+    /// <summary>Options with the pruning words of the Block's training system: Guyot canes, Cordon spurs, Einzelpfahl bows.</summary>
+    public static IReadOnlyList<Option> Options(TaskKind k, TrainingSystem? training)
+    {
+        var o = Options(k);
+        if (k != TaskKind.Prune || training == null || training == TrainingSystem.Guyot) return o;
+        string[] words = training == TrainingSystem.Cordon ? new[] { "Fewer spurs", "Standard spurs", "More spurs" } : new[] { "Short bows", "Medium bows", "Long bows" };
+        return o.Select((x, i) => x with { Label = $"{words[i]} · {x.Label.Split(" · ")[1]}" }).ToList();
+    }
+
+    public static string Label(TaskKind k, string value, TrainingSystem? training) => Options(k, training).FirstOrDefault(o => o.Value == value)?.Label ?? value;
 
     public static IReadOnlyList<Option> Options(TaskKind k) => k switch
     {

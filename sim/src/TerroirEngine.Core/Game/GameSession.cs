@@ -147,9 +147,6 @@ public sealed partial class GameSession
         double planting = Blocks.Sum(b => EconomyTables.PlantingCostPerHa(Plot, b.Planting.Training) * b.AreaHa);
         Ledger.Post(Date, "Planting", -planting, "Planting: vines, rootstocks, stakes/trellis, labour");
         RunEstablishment();
-        // The Mentor's pruning for the first Vintage: Côte d'Or growers prune short to stay inside the AOC bud and yield limits
-        // (canopy-and-yield.md §7 calibration: Côte d'Or ≈ 35–50 hL/ha).
-        if (Region.Id == "cote-dor") foreach (var b in Blocks) b.BudLoad = BudLoad.Low;
     }
 
     public static PlantingChoice DefaultPlanting(PlotData p, BlockData b)
@@ -207,6 +204,9 @@ public sealed partial class GameSession
         for (var d = new DateOnly(FirstVintage, 1, 1); d < Date; d = d.AddDays(1)) foreach (var b in Blocks) VineyardModel.Step(b, Weather.Get(d), Ctx, Setup.Seed);
         Ctx.Events.Clear();
         Today = Weather.Get(Date);
+        // The Mentor's pruning for the first Vintage: Côte d'Or growers prune short to stay inside the AOC bud and yield limits
+        // (canopy-and-yield.md §7 calibration). Set before the pruning task opens, so its plan says so.
+        if (Region.Id == "cote-dor") foreach (var b in Blocks) b.BudLoad = BudLoad.Low;
         IntroMessages();
     }
 
@@ -271,8 +271,8 @@ public sealed partial class GameSession
                 var b = Blocks.First(x => x.Data.Id == c.A);
                 if (c.B == "budload") { b.BudLoad = Enum.Parse<BudLoad>(c.C); CompleteFromDashboard(TaskKind.Prune, c.A, "", c.C, ""); }
                 else if (c.B == "leafside") { b.LeafSide = Enum.Parse<LeafRemovalSide>(c.C); CompleteFromDashboard(TaskKind.LeafRemoval, c.A, "", c.C, b.LeafTiming.ToString()); }
-                else if (c.B == "leaftiming") b.LeafTiming = Enum.Parse<LeafRemovalTiming>(c.C);
-                else if (c.B == "thinning") { b.CropThinning = Math.Clamp(int.Parse(c.C), 0, 2); if (b.Veraison != null && !b.Harvested) VineyardModel.ApplyCropThinning(b); CompleteFromDashboard(TaskKind.GreenHarvest, c.A, "", c.C, ""); }
+                else if (c.B == "leaftiming") { b.LeafTiming = Enum.Parse<LeafRemovalTiming>(c.C); CompleteFromDashboard(TaskKind.LeafRemoval, c.A, "", b.LeafSide.ToString(), c.C); }
+                else if (c.B == "thinning" && !b.Picking && !b.Harvested) { b.CropThinning = Math.Clamp(int.Parse(c.C), 0, 2); if (b.Veraison != null) VineyardModel.ApplyCropThinning(b); CompleteFromDashboard(TaskKind.GreenHarvest, c.A, "", c.C, ""); }
                 break;
             case "harvest":
                 var hb = Blocks.First(x => x.Data.Id == c.A);
@@ -280,6 +280,7 @@ public sealed partial class GameSession
                 hb.Order = new HarvestOrder { HandPick = c.B != "machine", Sorting = Enum.Parse<SortingLevel>(string.IsNullOrEmpty(c.C) ? "Table" : c.C) };
                 if (!hb.Order.HandPick && (Plot.SlopePct >= 30 || hb.Planting.Training == TrainingSystem.Einzelpfahl)) hb.Order.HandPick = true;
                 hb.Picking = true; hb.PickedKg = 0; hb.PickTargetKg = hb.CropKg;
+                CloseGreenHarvestAtPicking(hb.Data.Id);
                 break;
             case "lot":
                 var lot = Lots.First(x => x.Id == c.A);

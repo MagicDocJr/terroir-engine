@@ -193,8 +193,12 @@ The staff turn the explicit choices into dated **Tasks** (tasks-in-3d design). T
 | Task | Opens | Due (the plan applies if the player does nothing) | Why this window |
 |---|---|---|---|
 | Winter pruning | 15 January | 1 March, or budburst if earlier | pruning is done in dormancy and must be finished before the buds burst |
-| Leaf removal | the Block's fruit set | fruit set + 25 days (≈ bunch closure) | early fruit-zone leaf removal is done between fruit set and bunch closure; "later, at véraison" is the late option |
+| Leaf removal | the Block's fruit set | fruit set + 25 days (≈ bunch closure) | the early window of §2.4 runs from pre-bloom to fruit set; commercial fruit-zone leaf removal usually continues to bunch closure (Keller 2020, cited from memory). The game opens the task at fruit set and closes it at about bunch closure, all before véraison, so it counts as the early option; "later, at véraison" is the late option. **Game simplification:** no pre-bloom task. |
 | Green harvest | the Block's véraison | véraison + 21 days, or harvest | thinning at véraison, when the crop can be judged and the rest still ripens |
+
+The pruning options use the words of the Block's training system (§3.1 bud table): Guyot canes, Cordon spurs (the buds per vine shown as two-bud spurs, buds ÷ 2), Einzelpfahl bows. The 3D close-up draws the three options as one cane, one arm with spurs or one arched bow each, fanned from the demonstration vine's head (**game simplification**: a bilateral cordon's spurs are drawn on one arm; two canes or bows are drawn as one).
+
+Only the Vintage's first message of each task kind stops time; later openings of the same kind (other Blocks, other Lots) arrive as normal messages. Ordering a Block's harvest closes its open green-harvest task: once picking has started there is nothing left to thin.
 
 After a decision the estate's vineyard crew (two or three people: 12 / 16 / 24 hours a day at Low / Medium / High labour) works the Block for `ceil(area × hours per ha / crew hours)` days (1–10), with 80 h/ha for pruning, 40 for leaf removal and 30 for green harvest (`UNVERIFIED` design values; visual only, the effect of the choice is immediate).
 

@@ -59,6 +59,7 @@ var dragging := false
 const TASK_REACH := 2.5
 var tasks3d: Node3D
 var closeup_id := -1
+var closeup_pending: Array = []       # [id, value, timing] of a confirmed choice waiting for its animation
 var closeup_task := {}
 var closeup_value := ""
 var closeup_busy := false
@@ -338,7 +339,10 @@ func _on_visibility_changed() -> void:
 			ambience.call("snap")
 		_update_zone(true)
 	if not on and closeup_id >= 0:
-		_leave_closeup()             # leaving the 3D view ends a close-up without deciding
+		if closeup_busy:
+			_finish_confirm()        # a confirmed choice is sent even if the view closes during its animation
+		else:
+			_leave_closeup()         # leaving the 3D view ends an undecided close-up without deciding
 	if not on and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
@@ -410,7 +414,8 @@ func _process(delta: float) -> void:
 	prompt_label.visible = not near_task.is_empty()
 	if not near_task.is_empty():
 		var place := ("Lot %s" % near_task["lot"]) if String(near_task["kind"]) == "CapManagement" else ("Block %s" % near_task["block"])
-		prompt_label.text = "E  %s   ·   %s, %s" % [String(near_task["verb"]).capitalize(), near_task["title"], place]
+		var verb := String(near_task["verb"])
+		prompt_label.text = "E  %s   ·   %s, %s" % [verb.substr(0, 1).to_upper() + verb.substr(1), near_task["title"], place]
 
 
 # ------------------------------------------------------------------ drone
@@ -599,6 +604,7 @@ func _interact() -> bool:
 	closeup_task = task
 	closeup_value = ""
 	closeup_busy = false
+	player.set("enabled", false)       # the keys belong to the close-up now (WASD must not walk the camera away)
 	player.call("place_camera", cam[0], cam[1])
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var place := ("Lot %s" % task["lot"]) if String(task["kind"]) == "CapManagement" else ("Block %s · %s" % [task["block"], task.get("variety", "")])
@@ -607,7 +613,7 @@ func _interact() -> bool:
 	tp_plan.text = "Plan if you let the crew do it: %s" % task.get("planLabel", "")
 	tp_why.text = "What you choose here, the crew then does on the whole %s." % ("Lot" if String(task["kind"]) == "CapManagement" else "Block")
 	tp_late.visible = String(task["kind"]) == "LeafRemoval"
-	tp_late.button_pressed = false
+	tp_late.button_pressed = str(task.get("planTiming", "")) == "Late"
 	for c in tp_options.get_children():
 		c.queue_free()
 	for o in task.get("options", []):
@@ -665,13 +671,22 @@ func _confirm() -> void:
 	var id := closeup_id
 	var value := closeup_value
 	var timing := "Late" if tp_late.visible and tp_late.button_pressed else ""
+	closeup_pending = [id, value, timing]
 	tasks3d.call("play_confirm", value, timing)
 	tp_confirm.disabled = true
 	await get_tree().create_timer(1.0).timeout
-	if closeup_id != id:
-		return                     # left in the meantime (Tab): nothing decided
+	if closeup_id == id and closeup_busy:
+		_finish_confirm()
+
+
+## Sends a confirmed choice: after the confirm animation, or at once when the player leaves the 3D view (Tab) during it.
+func _finish_confirm() -> void:
+	if closeup_pending.is_empty():
+		return
+	var p: Array = closeup_pending
+	closeup_pending = []
 	_leave_closeup()
-	task_chosen.emit(id, value, timing)
+	task_chosen.emit(int(p[0]), String(p[1]), String(p[2]))
 
 
 func _leave_closeup() -> void:
@@ -683,7 +698,9 @@ func _leave_closeup() -> void:
 	closeup_task = {}
 	closeup_value = ""
 	closeup_busy = false
+	closeup_pending = []
 	task_panel.visible = false
+	player.set("enabled", is_visible_in_tree() and not missing and not drone)
 	if not sp.is_empty():
 		player.call("teleport", sp[0], sp[1])
 	_update_hint()
@@ -693,9 +710,14 @@ func _closeup_input(e: InputEvent) -> void:
 	if e is InputEventKey and e.pressed and not e.echo:
 		match e.physical_keycode:
 			KEY_ESCAPE:
-				_leave_closeup(); get_viewport().set_input_as_handled()
+				if not closeup_busy:           # a confirmed choice can't be taken back; it lands in a moment
+					_leave_closeup()
+				get_viewport().set_input_as_handled()
 			KEY_TAB:
-				_leave_closeup()
+				if closeup_busy:
+					_finish_confirm()            # confirmed: send it rather than drop it
+				else:
+					_leave_closeup()
 				Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 				exit_requested.emit()
 				get_viewport().set_input_as_handled()
@@ -717,6 +739,7 @@ func _closeup_input(e: InputEvent) -> void:
 
 func _pick_at(screen_pos: Vector2) -> String:
 	var cam: Camera3D = player.cam
-	var p := screen_pos * Vector2(viewport.size) / size if size.x > 0 else screen_pos
+	var r := container.get_global_rect()
+	var p := (screen_pos - r.position) * Vector2(viewport.size) / r.size if r.size.x > 0 else screen_pos
 	return String(tasks3d.call("pick", cam.project_ray_origin(p), cam.project_ray_normal(p)))
 

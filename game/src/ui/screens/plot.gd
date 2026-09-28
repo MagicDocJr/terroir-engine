@@ -104,7 +104,7 @@ static func build(D: Dictionary, shell) -> Control:
 	_choice(cp[1], "Leaf removal side", ["None", "Morning", "Afternoon", "Both"], B["leafSide"], func(x): shell.apply("block", bid2, "leafside", x, "Block %s: leaf removal on the %s side." % [bid2, x.to_lower()]),
 		"Opening the morning side dries bunches (less rot) with little sunburn risk; the afternoon side is hotter — more colour and TDN, more sunburn.", done)
 	_choice(cp[1], "Leaf removal timing", ["Early", "Late"], B["leafTiming"], func(x): shell.apply("block", bid2, "leaftiming", x, "Block %s: leaf removal timing set to %s." % [bid2, x.to_lower()]),
-		"Early (at fruit set) lets berries harden to the sun; late (at véraison) exposes soft berries to sunburn.", done)
+		"Early (fruit set to bunch closure) lets the berries acclimatise to the sun; late (around véraison) bares berries grown in shade, the classic sunburn case.", done)
 	var thin := {"0": "None", "1": "Drop ~20 %", "2": "Drop ~40 %"}
 	var inv := {"None": "0", "Drop ~20 %": "1", "Drop ~40 %": "2"}
 	var cur_thin: String = thin.get(str(int(B.get("thinning", 0))), "None")

@@ -40,6 +40,7 @@ Found while building or reviewing; not urgent, but not to be forgotten. Remove a
 - Multi-vintage carry-over coefficients (fruitfulness, reserves, inoculum, 20 % leaf-loss tolerance) are `UNVERIFIED`.
 - Reserves ignore frost at leaf fall (spec §4.2 lists it).
 - At 5,000 vines/ha a Guyot Block's High bud load (11 buds/m² = 22 buds per vine) hits the Guyot cap of 16 buds per vine, so High gives the same crop as Balanced; decide whether the cap should allow a double Guyot (≈ 2 × 10 buds) or the options should say so.
+- Napa Bench Cordon Blocks get 8–12 two-bud spurs per vine (16–24 buds), while the §3.1 bud table says 6–10 spurs × 2 buds; check whether the table means per arm (bilateral cordon) and align the table or the bud-load conversion.
 - A harvest still running on 31 December is wiped on 1 January (the December rule finishes picks on 2 December, so this is rare).
 
 ### Engine and performance
@@ -52,6 +53,8 @@ Found while building or reviewing; not urgent, but not to be forgotten. Remove a
 - The Napa screenshot run logs Godot "RID allocations leaked at exit" (text-shaping buffers) when it quits; harmless at exit, but check it is not a leak during play.
 - The screenshot run's first-Vintage bottling loop does not harvest, so in Napa (18-month ageing) the second Vintage is picked by the December rule; give the scripted player the harvest step there too.
 - Two Vintages' Lots side by side in the Winery were not yet seen in a screenshot (the Lot tabs now wrap, so eight or more Lots fit).
+- Saves made before the tasks-in-3D change: the new task messages shift the Inbox message ids, so an old save can show a few messages as unread again (read marks are stored by id). Harmless; no migration written.
+- The Tasks strip's "at véraison" box takes effect with the next option click (it sends nothing by itself); consider sending the plan with the new timing when it is toggled.
 - The Windows build is unsigned: SmartScreen warns on first start, and a PC with Application Control may block it.
 - Windows `dotnet` cannot build the game (Application Control blocks Godot's source generators); build through WSL (`scripts/build-game.sh`).
 - The tasting review page for the WSET L3 reviewer is still empty: https://claude.ai/artifact/PqqJ2CGJXf6qUj3Wvtm9HD
@@ -63,4 +66,6 @@ Found while building or reviewing; not urgent, but not to be forgotten. Remove a
 - Report: overlay two Vintages' ripening curves to compare years.
 - Green-harvest alert mentions that thinning also protects next year's reserves.
 - Plot screen shows each Block's carry-over (fruitfulness, reserves) with a tooltip.
+- 3D pruning close-up for a bilateral Cordon: show both arms of the real vine with the spurs split between them, and Einzelpfahl's two bows as a heart.
+- Leaf-removal close-up: after a "later, at véraison" choice, the tagged leaves could come off in the world when the crew does it at véraison.
 - A WSET-style vintage chart (one rating per Vintage) once several Vintages have been played.

@@ -46,7 +46,8 @@ static func _row(t: Dictionary, shell) -> Control:
 		by_label[String(o["label"])] = o
 	var late := CheckBox.new()
 	late.text = "at véraison"
-	late.tooltip_text = "Late leaf removal: done around véraison instead of now (gentler on the fruit's acclimation, riskier for sunburn)."
+	late.button_pressed = str(t.get("planTiming", "")) == "Late"
+	late.tooltip_text = "Remove the leaves around véraison instead of now; applies to the option you choose. Berries that grew in shade and are bared late sunburn more easily; early removal lets them acclimatise (Gambetta et al. 2021)."
 	var plan_label := String(t.get("planLabel", ""))
 	var seg := UI.segmented(labels, plan_label, func(x):
 		var o: Dictionary = by_label[x]
