@@ -3,7 +3,7 @@
 Things deliberately left out of the MVP, to deep-dive once the core loop is locked.
 
 ## First expansion (top priority after MVP)
-- **Multi-vintage play on the Timeline.** Vine carryover (reserves, vine age, bud fruitfulness), cash and wine stock carried between years, and overlapping Vintages (the previous Wine still ageing when the next harvest comes in). The MVP data model must already support this.
+- ~~Multi-vintage play on the Timeline~~ — done 2026-09-28 (spec `docs/superpowers/specs/2026-09-28-multi-vintage-design.md`, report `docs/playtest/2026-09-28-multi-vintage.md`). Follow-ups: selling wine over time (stock and markets), replanting and top-grafting, phylloxera on own-rooted vines, dropping bottled Lots from the snapshot, in-memory replay checkpoints if long games load slowly, mature Côte d'Or yield calibration.
 
 ## Gameplay
 - Hands-on tasks in 3D (pull a leaf, taste berries, dig a soil pit, punch down, thief a barrel sample)
