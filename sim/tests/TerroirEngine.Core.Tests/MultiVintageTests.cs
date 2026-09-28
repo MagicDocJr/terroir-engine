@@ -304,3 +304,45 @@ public class MultiVintageSnapshotTests
         Assert.True(snapMs < 500, $"snapshot took {snapMs} ms");
     }
 }
+
+public class BottlingCompletesVintageTests
+{
+    [Fact]
+    public void BottlingTheLastLot_MarksTheVintageBottledTheSameDay()
+    {
+        var g = new GameSession(Fixture.Data, new GameSetup { PlotId = "mosel-seitental", PlantingYear = 2014 });
+        int guard = 0;
+        while (!g.Lots.Any() || g.Lots.Any(l => l.Vintage == g.FirstVintage && l.Phase != LotPhase.Ready && l.Phase != LotPhase.Blended) || g.Blocks.Any(b => !b.Harvested) && g.Date.Year == g.FirstVintage)
+        {
+            if (guard++ > 400) break;
+            g.Advance(15, stopAtAlerts: false);
+            foreach (var b in g.Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null && (Chemistry.MustFromBlock(b).Oe >= 80 || b.LeafFall != null)))
+                g.Apply(new Command { Type = "harvest", A = b.Data.Id, B = "hand", C = "Table" });
+            foreach (var lot in g.Lots.Where(l => l.Phase == LotPhase.Stuck).ToList()) g.Apply(new Command { Type = "restart", A = lot.Id });
+        }
+        var ready = g.Lots.Where(l => l.Vintage == g.FirstVintage && l.Phase == LotPhase.Ready).ToList();
+        foreach (var lot in ready) g.Apply(new Command { Type = "wine", A = lot.Id, E = lot.Id });
+        Assert.True(g.IsVintageBottled(g.FirstVintage));   // no day step needed
+        Assert.Equal(g.Date, g.FinishedDate);
+    }
+}
+
+public class VintageNormalTests
+{
+    [Fact]
+    public void WeatherNormal_DoesNotDependOnTheGameDate()
+    {
+        // a game dated January 2017 must still use complete 1991–2020 years for the normal (mosel-uferflur: no other report test uses it)
+        var g = new GameSession(Fixture.Data, new GameSetup { PlotId = "mosel-uferflur", PlantingYear = 2014 });
+        double normal = VintageReport.HistoryRow(g, g.FirstVintage)["winklerNormal"]!.GetValue<double>();
+        var clim = g.Blocks[0].Climate; var arch = g.Weather.Archive;
+        var totals = new List<double>();
+        for (int y = 1991; y <= 2020; y++)
+        {
+            double wi = 0;
+            for (var d = new DateOnly(y, 4, 1); d <= new DateOnly(y, 10, 31); d = d.AddDays(1)) wi += Math.Max(0, clim.Adjust(arch.Get(d)).Tmean - 10);
+            totals.Add(wi);
+        }
+        Assert.Equal(Math.Round(totals.Average()), normal, 0);
+    }
+}

@@ -537,6 +537,7 @@ public sealed partial class GameSession
         Wines.Add(wine);
         Post("cellar", $"{wine.Name} is bottled: {wine.Legal.Label}", $"{wine.Bottles:N0} bottles. Legal category: {wine.Legal.Category}. Quality: {wine.Sheet.Quality}. Price €{wine.PricePerBottle:0.00} per bottle.\n{string.Join("\n", wine.Legal.Notes)}",
             "Open the Tasting sheet: every descriptor links back to the decision or condition that caused it.", "high", "bottled", stop: false).Actions.Add(("Open Wines", "goto", "wines"));
+        CheckBottledVintages();   // bottling the last Lot completes its Vintage at once (the report opens straight away)
     }
 
     // ================================================================================== costs

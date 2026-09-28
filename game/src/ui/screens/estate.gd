@@ -1,4 +1,4 @@
-# Estate: cash, P&L by category, ledger, staff, Establishment history, and the end-of-game summary.
+# Estate: cash, P&L by category, ledger, staff, Establishment history, and the Vintage history across the years.
 extends RefCounted
 
 const UI := preload("res://src/ui/ui.gd")
@@ -8,7 +8,7 @@ static func build(D: Dictionary, shell) -> Control:
 	var F: Dictionary = D.get("finance", {})
 	var v := UI.vbox(16)
 	v.add_child(UI.page_header("Estate", "%s · %s, %s" % [D["estate"], D["plot"]["name"], D["plot"]["region"]]))
-	if String(D.get("phase", "")) == "Finished": v.add_child(_finished(D, shell))
+	if D.get("history", []).size() > 0 and D.get("bottledVintages", []).size() > 0: v.add_child(_history(D, shell))
 	var vin: Dictionary = F.get("vintageByCategory", {})
 	var spent := 0.0
 	for k in vin:
@@ -120,20 +120,34 @@ static func _nice(x: float) -> float:
 		if x <= m * p: return m * p
 	return 10.0 * p
 
-static func _finished(D: Dictionary, shell) -> Control:
-	var p: Array = UI.panel("The Vintage is bottled", "")
-	p[0].add_theme_stylebox_override("panel", UI.sb(Color("2a2616"), 6, UI.GOLD, 2, 20))
-	var m: Dictionary = D.get("mentor", {})
-	p[1].add_child(UI.label("%s has retired. \"You made %d wine%s from your first Vintage. Open each Tasting sheet and trace every descriptor back to what you did in the vineyard and the cellar — that is how you get better.\"" %
-		[m.get("name", "The Mentor"), D.get("wines", []).size(), "" if D.get("wines", []).size() == 1 else "s"], 17, UI.INK, null, true))
-	var h := UI.hbox(14)
-	for w in D.get("wines", []):
-		h.add_child(UI.tile(String(w["name"]), String(w["sheet"]["quality"]), "%s · %d bottles · €%.2f" % [w["category"], int(w["bottles"]), float(w["price"])]))
-	p[1].add_child(h)
-	var bh := UI.hbox(10)
-	var rb := UI.button("Open the Vintage report", true, 16); rb.pressed.connect(func(): shell.show_screen("report"))
-	var b := UI.button("Open the Tasting sheets", false, 16); b.pressed.connect(func(): shell.show_screen("wines"))
-	bh.add_child(rb); bh.add_child(b)
-	p[1].add_child(bh)
-	p[1].add_child(UI.label("This MVP ends after one Vintage. Later Vintages, more Plots and a continuing Timeline are on the backlog.", 14, UI.MUTED))
+static func _history(D: Dictionary, shell) -> Control:
+	var p: Array = UI.panel("Vintage history", "every Vintage on this Estate, newest first")
+	var g := GridContainer.new(); g.columns = 9; g.add_theme_constant_override("h_separation", 22); g.add_theme_constant_override("v_separation", 8)
+	for h in ["Vintage", "Heat (Winkler)", "Rain Apr–Oct", "Budburst", "Harvest", "hL/ha", "Wines", "Sales", ""]:
+		g.add_child(UI.label(h, 13, UI.MUTED, UI.f_body_b))
+	for r in D.get("history", []):
+		var vin := int(r["vintage"])
+		g.add_child(UI.num(str(vin), 16))
+		g.add_child(UI.num("%d (normal %d)" % [int(r["winkler"]), int(r["winklerNormal"])], 14, UI.INK2))
+		g.add_child(UI.num("%d mm (normal %d)" % [int(r["rain"]), int(r["rainNormal"])], 14, UI.INK2))
+		g.add_child(UI.num(String(r["budburst"]) if r["budburst"] != null else "—", 14, UI.INK2))
+		g.add_child(UI.num(String(r["harvest"]) if r["harvest"] != null else "—", 14, UI.INK2))
+		g.add_child(UI.num(str(int(r["yieldHl"])) if r["yieldHl"] != null else "—", 14))
+		var wl := []
+		for w in r["wines"]: wl.append("%s · %s" % [w["name"], w["quality"]])
+		var wlab := UI.label(", ".join(wl) if wl.size() > 0 else "—", 13, UI.INK2, null, true); wlab.custom_minimum_size = Vector2(300, 0)
+		g.add_child(wlab)
+		g.add_child(UI.num(UI.euro(int(r["sales"])) if int(r["sales"]) > 0 else "—", 14))
+		if String(r["status"]) == "In bottle":
+			var rb := UI.button("Report", false, 13)
+			rb.pressed.connect(func(): shell.state["report_vintage"] = vin; shell.show_screen("report"))
+			g.add_child(rb)
+		else:
+			g.add_child(UI.label(String(r["status"]), 13, UI.MUTED))
+	p[1].add_child(g)
+	p[1].add_child(UI.divider())
+	p[1].add_child(UI.label("Money by calendar year", 14, UI.INK, UI.f_body_b))
+	for y in D.get("years", []):
+		var extra := (" · interest %s" % UI.euro(int(y["interest"]))) if float(y["interest"]) > 0 else ""
+		p[1].add_child(UI.kv(str(int(y["year"])), "costs %s · sales %s%s · cash at year end %s" % [UI.euro(int(y["costs"])), UI.euro(int(y["sales"])), extra, UI.euro(int(y["cashEnd"]))]))
 	return p[0]

@@ -7,6 +7,7 @@ static func build(D: Dictionary, shell) -> Control:
 	var ready: Array = []
 	for l in D.get("lots", []):
 		if l["ready"]: ready.append(l)
+	ready.sort_custom(func(a, b): return int(a["vintage"]) > int(b["vintage"]) or (int(a["vintage"]) == int(b["vintage"]) and String(a["id"]) < String(b["id"])))
 	var v := UI.vbox(16)
 	v.add_child(UI.page_header("Blending & bottling", "Lots become ready when their ageing is done. Pick what goes into each Wine — a single Lot or a blend."))
 	var B: Dictionary = shell.state.get("blend", {})
@@ -33,7 +34,11 @@ static func build(D: Dictionary, shell) -> Control:
 		for w in waiting: lp[1].add_child(UI.label("·  " + w, 14, UI.MUTED, null, true))
 	var total := 0.0
 	var names := []
+	var last_v := -1
 	for l in ready:
+		if int(l["vintage"]) != last_v:
+			last_v = int(l["vintage"])
+			lp[1].add_child(UI.label(str(last_v), 14, UI.GOLD, UI.f_body_b))
 		var lid: String = l["id"]
 		var share := int(B["parts"].get(lid, 0))
 		var h := UI.hbox(12)
@@ -95,6 +100,15 @@ static func build(D: Dictionary, shell) -> Control:
 				"cote-dor": notes.append("Burgundy AOCs allow Pinot Noir and Chardonnay; other Varieties make it Vin de France.")
 				_: notes.append("A varietal label (e.g. \"Cabernet Sauvignon\") needs ≥ 75 % of that Variety." if top < 0.75 else "One Variety is ≥ 75 %, so the varietal label is kept.")
 		if reds > 0 and whites > 0: notes.append("Mixing red and white wine to make rosé isn't allowed for these still wines in the EU; in Napa it's legal but unusual.")
+		var vins := {}
+		for l in ready:
+			var shv := int(B["parts"].get(l["id"], 0))
+			if shv > 0: vins[int(l["vintage"])] = float(vins.get(int(l["vintage"]), 0.0)) + float(l["volume"]) * shv / 100.0
+		if vins.size() > 1:
+			var vt := []
+			for yv in vins: vt.append("%d %% %d" % [roundi(100.0 * float(vins[yv]) / total), yv])
+			bp[1].add_child(UI.kv("Vintages", ", ".join(vt)))
+			notes.append("A year on the label needs ≥ %d %% of the wine from that Vintage; otherwise it is sold as non-vintage." % (95 if String(D["region"]["id"]) == "napa" else 85))
 		for n in notes: bp[1].add_child(UI.label("ⓘ " + n, 13, UI.INK2, null, true))
 	bp[1].add_child(UI.kv("Volume", "%s L · about %s bottles" % [UI.thousands(int(total)), UI.thousands(int(total / 0.75))] if total > 0 else "choose at least one Lot"))
 	var go := UI.button("Bottle this Wine", true, 17); go.custom_minimum_size = Vector2(0, 48); go.disabled = total <= 0
@@ -108,11 +122,15 @@ static func build(D: Dictionary, shell) -> Control:
 		shell.D = JSON.parse_string(Sim.Snapshot())
 		shell._build_chrome()
 		if shell.D.get("wines", []).size() > 0: shell.state["wine_sel"] = shell.D["wines"][-1]["id"]
-		if String(shell.D.get("phase", "")) == "Finished" and not shell.state.get("report_shown", false):
-			shell.state["report_shown"] = true
-			shell.show_screen("report")
-			shell.notify("That was the last Lot: here is your Vintage report.")
-			return
+		var fl2: Array = shell.D.get("flags", [])
+		for bv in shell.D.get("bottledVintages", []):
+			if not fl2.has("report_%d" % int(bv)):
+				Sim.Command("flag", "report_%d" % int(bv), "", "", "", "")
+				shell.D = JSON.parse_string(Sim.Snapshot())
+				shell.state["report_vintage"] = int(bv)
+				shell._build_chrome(); shell.show_screen("report")
+				shell.notify("That was the last Lot of the %d Vintage: here is its report." % int(bv))
+				return
 		shell.show_screen("wines")
 		shell.notify("Bottled. Here is the Tasting sheet."))
 	bp[1].add_child(go)
@@ -121,6 +139,6 @@ static func build(D: Dictionary, shell) -> Control:
 	if wines.size() > 0:
 		var wp: Array = UI.panel("Bottled so far", "")
 		for w in wines:
-			wp[1].add_child(UI.kv(String(w["name"]), "%s · %s · %s bottles · €%.2f" % [w["label"], w["sheet"]["quality"], UI.thousands(int(w["bottles"])), float(w["price"])]))
+			wp[1].add_child(UI.kv("%s %s" % [str(int(w["vintage"])) if w.get("vintage") != null else "NV", String(w["name"])], "%s · %s · %s bottles · €%.2f" % [w["label"], w["sheet"]["quality"], UI.thousands(int(w["bottles"])), float(w["price"])]))
 		v.add_child(wp[0])
 	return UI.scroll(v)

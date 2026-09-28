@@ -8,11 +8,19 @@ const Avatar := preload("res://src/ui/avatar.gd")
 const Metrics := preload("res://src/ui/metrics.gd")
 
 static func build(D: Dictionary, shell) -> Control:
-	var R = D.get("report")
+	var reps: Array = D.get("reports", [])
 	var v := UI.vbox(16)
-	if R == null:
-		v.add_child(UI.page_header("Vintage report", "The report appears when every Lot of the Vintage is in bottle."))
+	if reps.is_empty():
+		v.add_child(UI.page_header("Vintage report", "A Vintage's report appears when every one of its Lots is in bottle."))
 		return v
+	var want := int(shell.state.get("report_vintage", int(reps[0]["vintage"])))
+	var R: Dictionary = reps[0]
+	for r in reps:
+		if int(r["vintage"]) == want: R = r
+	if reps.size() > 1:
+		var labels := []
+		for r in reps: labels.append(str(int(r["vintage"])))
+		v.add_child(UI.segmented(labels, str(int(R["vintage"])), func(x): shell.state["report_vintage"] = int(x); shell.show_screen("report"), 90))
 	var W: Dictionary = R["weather"]
 	# ---- title
 	var top := UI.hbox(18)
@@ -46,7 +54,7 @@ static func build(D: Dictionary, shell) -> Control:
 	var cp: Array = UI.panel("Weekly temperature", "this year against the 1991–2020 normal")
 	cp[0].custom_minimum_size = Vector2(760, 0)
 	var labels := []; var tm := []; var tn := []
-	for w in D.get("weather", {}).get("weekly", []):
+	for w in R.get("weekly", []):
 		labels.append(w["date"]); tm.append(w["tmean"]); tn.append(w["tmeanNormal"])
 	if labels.size() > 2:
 		var tc = Charts.LineChart.new()
@@ -89,7 +97,7 @@ static func build(D: Dictionary, shell) -> Control:
 	wp[1].add_child(wg)
 	row2.add_child(wp[0])
 	var M: Dictionary = R["money"]
-	var mn: Array = UI.panel("The money", "this Vintage")
+	var mn: Array = UI.panel("The money", "costs in %d, sales of its wines" % int(R["vintage"]))
 	mn[0].custom_minimum_size = Vector2(520, 0)
 	mn[1].add_child(UI.kv("Wine sales", UI.euro(int(M["revenue"]))))
 	mn[1].add_child(UI.kv("Costs", UI.euro(-int(M["costs"]))))
@@ -122,14 +130,15 @@ static func build(D: Dictionary, shell) -> Control:
 		np[1].add_child(h)
 	row3.add_child(np[0])
 	# ---- the Mentor's farewell
-	var fp := PanelContainer.new(); fp.add_theme_stylebox_override("panel", UI.sb(Color("2a2616"), 6, UI.GOLD.darkened(0.25), 1, 18))
-	var fh := UI.hbox(16); fp.add_child(fh)
-	var mentor: Dictionary = D.get("mentor", {})
-	fh.add_child(Avatar.make(String(mentor.get("name", "")), "mentor", 64))
-	var fl := UI.label("\"Every descriptor on your Tasting sheets traces back to this year's weather and your decisions. Read them next to this report, and you will know what to do differently.\" — %s" % mentor.get("name", "the Mentor"), 16, UI.INK, null, true)
-	fl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	fh.add_child(fl)
-	v.add_child(fp)
+	if R.get("farewell", false):
+		var fp := PanelContainer.new(); fp.add_theme_stylebox_override("panel", UI.sb(Color("2a2616"), 6, UI.GOLD.darkened(0.25), 1, 18))
+		var fh := UI.hbox(16); fp.add_child(fh)
+		var mentor: Dictionary = D.get("mentor", {})
+		fh.add_child(Avatar.make(String(mentor.get("name", "")), "mentor", 64))
+		var fl := UI.label("\"Every descriptor on your Tasting sheets traces back to this year's weather and your decisions. Read them next to this report, and you will know what to do differently.\" — %s" % mentor.get("name", "the Mentor"), 16, UI.INK, null, true)
+		fl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		fh.add_child(fl)
+		v.add_child(fp)
 	return UI.scroll(v)
 
 static func _tile(caption: String, value: String, sub: String, col: Color, tip: String) -> Control:

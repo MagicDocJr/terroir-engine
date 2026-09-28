@@ -116,10 +116,16 @@ func advance(days: int, stop := true, quiet := false) -> bool:
 	D = JSON.parse_string(Sim.Snapshot())
 	Sim.SaveGame("autosave")
 	busy = false
-	if String(D.get("phase", "")) == "Finished" and not state.get("report_shown", false):
-		state["report_shown"] = true
-		_build_chrome(); show_screen("report")
-		return false
+	# open each Vintage report once, the first time its Vintage is fully bottled (the flag lives in the save)
+	var fl: Array = D.get("flags", [])
+	for bv in D.get("bottledVintages", []):
+		var key := "report_%d" % int(bv)
+		if not fl.has(key):
+			Sim.Command("flag", key, "", "", "", "")
+			D = JSON.parse_string(Sim.Snapshot())
+			state["report_vintage"] = int(bv)
+			_build_chrome(); show_screen("report")
+			return false
 	var new_alerts := []
 	for m in D.get("inbox", []):
 		if m.get("stop", false) and not before.has(int(m["id"])): new_alerts.append(m)
@@ -135,13 +141,13 @@ func advance(days: int, stop := true, quiet := false) -> bool:
 	if view3d != null and view3d.visible and view3d.has_method("apply_snapshot"): view3d.apply_snapshot(D)
 	return new_alerts.size() > 0
 
-## Continue jumps further once everything is in the cellar (design review §1: the ageing months have few decisions).
+## Continue jumps further when nothing is growing or fermenting (design review §1).
 func continue_days() -> int:
-	return 120 if String(D.get("phase", "")) == "Cellar" else 60
+	return 120 if D.get("quiet", false) else 60
 
 ## Continuous play (spec §3.3): a day or more per tick, stopping at the first Alert.
 func toggle_play() -> void:
-	playing = not playing and String(D.get("phase", "")) != "Finished"
+	playing = not playing
 	if playing: play_timer.start()
 	else: play_timer.stop()
 	_topbar_refresh_count()
@@ -149,7 +155,7 @@ func toggle_play() -> void:
 func _play_tick() -> void:
 	if not playing or busy: return
 	var alert := advance(play_speed, true, true)
-	if alert or String(D.get("phase", "")) == "Finished":
+	if alert:
 		playing = false; play_timer.stop(); _topbar_refresh_count()
 
 func _alert_ids() -> Dictionary:
@@ -342,7 +348,7 @@ func _topbar() -> void:
 	h.add_child(UI.spacer())
 	var dv := UI.vbox(0)
 	var dl := UI.head(String(D.get("dateLabel", "")), 22, UI.INK); dl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; dv.add_child(dl)
-	var st := UI.label(String(D.get("stage", "")), 13, UI.INK2); st.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; dv.add_child(st)
+	var st := UI.label("%s · %s" % [String(D.get("seasonLabel", "")), String(D.get("stage", ""))], 13, UI.INK2); st.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; dv.add_child(st)
 	h.add_child(dv)
 	var today: Dictionary = D.get("weather", {}).get("today", {})
 	var wx := UI.hbox(4)
@@ -368,16 +374,15 @@ func _topbar() -> void:
 	var cash := UI.num(UI.euro(int(D.get("cash", 0))), 22, UI.INK if float(D.get("cash", 0)) >= 0 else UI.CRIT)
 	cash.size_flags_vertical = Control.SIZE_SHRINK_CENTER; cash.tooltip_text = "Cash. Open Estate for the P&L."; cash.mouse_filter = Control.MOUSE_FILTER_PASS
 	h.add_child(cash)
-	var finished: bool = String(D.get("phase", "")) == "Finished"
 	for spec in [["+1 day", 1, false, "Advance one day (Space)"], ["+1 week", 7, false, "Advance seven days, even through Alerts"]]:
 		var b := UI.button(spec[0]); b.custom_minimum_size = Vector2(0, 40); b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		b.tooltip_text = spec[3]; b.disabled = finished
+		b.tooltip_text = spec[3]
 		b.pressed.connect(advance.bind(spec[1], spec[2])); h.add_child(b)
 	var pb := UI.button("❚❚ Pause" if playing else "▶ Play", playing, 15); pb.custom_minimum_size = Vector2(96, 40); pb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	pb.tooltip_text = "Let time run, 4 days a second; stops at the next Alert (P)"; pb.disabled = finished
+	pb.tooltip_text = "Let time run, 4 days a second; stops at the next Alert (P)"
 	pb.pressed.connect(toggle_play); h.add_child(pb)
 	var cont := UI.button("Continue ▸", true, 16); cont.custom_minimum_size = Vector2(132, 42); cont.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	cont.tooltip_text = "Run day by day until the next Alert (Enter)"; cont.disabled = finished
+	cont.tooltip_text = "Run day by day until the next Alert (Enter)"
 	cont.pressed.connect(func(): advance(continue_days(), true))
 	h.add_child(cont)
 	var unread := int(D.get("unreadAlerts", 0))
@@ -581,7 +586,7 @@ func _run_capture() -> void:
 	show_screen("estate"); await _shot("%s_12_estate" % prefix)
 	# age and bottle every Lot as it becomes ready
 	guard = 0
-	while String(D.get("phase", "")) != "Finished" and guard < 40:
+	while D.get("bottledVintages", []).is_empty() and guard < 40:
 		guard += 1
 		Sim.Advance(30, false); D = JSON.parse_string(Sim.Snapshot())
 		for l in D["lots"]:
@@ -599,6 +604,26 @@ func _run_capture() -> void:
 	show_screen("wines"); await _shot("%s_14_wines" % prefix)
 	show_screen("estate"); await _shot("%s_15_estate_end" % prefix)
 	show_screen("glossary"); await _shot("%s_16_glossary" % prefix)
+	# second Vintage: the January message, the history, and a report selector with two Vintages
+	for m in D.get("inbox", []):
+		if String(m.get("kind", "")) == "newseason": state["inbox_sel"] = int(m["id"])
+	_build_chrome(); show_screen("inbox"); await _shot("%s_17_newseason" % prefix)
+	guard = 0
+	while D.get("bottledVintages", []).size() < 2 and guard < 40:
+		guard += 1
+		Sim.Advance(30, false); D = JSON.parse_string(Sim.Snapshot())
+		for b in D["blocks"]:
+			if not b["harvested"] and not b["picking"] and (b.get("inWindow", false) or String(b.get("stage", "")) == "Leaf fall"):
+				Sim.Command("harvest", b["id"], "hand", "Table", "", "")
+		for l in D["lots"]:
+			if l.get("ready", false): Sim.Command("wine", "%s %s" % [l["variety"], l["block"]], "Screwcap", "Sterile", "Bentonite", l["id"])
+			if l.get("stuck", false): Sim.Command("acceptstuck" if l.get("restarted", false) else "restart", l["id"], "", "", "", "")
+		D = JSON.parse_string(Sim.Snapshot())
+	_build_chrome()
+	show_screen("estate"); await _shot("%s_18_history" % prefix)
+	state["report_vintage"] = int(D["firstVintage"])
+	show_screen("report"); await _shot("%s_19_report_selector" % prefix)
+	show_screen("winery"); await _shot("%s_20_winery_vintages" % prefix)
 	# save → load round trip must reproduce the same state (event-sourced save)
 	var cash_before = D["cash"]
 	Sim.SaveGame("capture_test")
@@ -645,7 +670,7 @@ func _run_fuzz() -> void:
 	setup = {}; setup["region"] = "cote-dor"; setup["plot"] = "cotedor-village"
 	show_screen("planting"); await get_tree().process_frame
 	await start_game(load("res://src/ui/screens/pregame.gd").setup_json(self))
-	for stop_at in [0, 200, 60, 200]:
+	for stop_at in [0, 200, 60, 200, 150]:
 		if stop_at > 0: Sim.Advance(stop_at, false); D = JSON.parse_string(Sim.Snapshot()); _build_chrome()
 		for id in NAV: await _fuzz_screen(id)
 		print("FUZZ round done at ", D["date"])

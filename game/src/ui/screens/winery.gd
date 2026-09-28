@@ -9,6 +9,7 @@ static func build(D: Dictionary, shell) -> Control:
 	var lots: Array = []
 	for l in D.get("lots", []):
 		if String(l["phase"]) != "Blended": lots.append(l)
+	lots.sort_custom(func(a, b): return int(a["vintage"]) > int(b["vintage"]) or (int(a["vintage"]) == int(b["vintage"]) and String(a["id"]) < String(b["id"])))
 	var v := UI.vbox(16)
 	var b3 := UI.button("See the hall in 3D"); b3.pressed.connect(func(): shell.toggle_3d("hall"))
 	var b4 := UI.button("Barrel cellar in 3D"); b4.pressed.connect(func(): shell.toggle_3d("cellar"))
@@ -23,7 +24,12 @@ static func build(D: Dictionary, shell) -> Control:
 	for l in lots:
 		if l["id"] == sel_id: L = l
 	var tabs := UI.hbox(8)
+	var last_v := -1
 	for l in lots:
+		if int(l["vintage"]) != last_v:
+			last_v = int(l["vintage"])
+			var vl := UI.label(str(last_v), 14, UI.GOLD, UI.f_body_b); vl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			tabs.add_child(vl)
 		var sel: bool = l["id"] == L["id"]
 		var c := UI.card(sel, 12)
 		var h := UI.hbox(10); c.add_child(h)

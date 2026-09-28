@@ -15,14 +15,15 @@ public static class VintageReport
 
     private record YearStats(double Wi, double Gst, double RainSeason, double RainAutumn, int HeatDays, int FrostNights);
 
-    /// <summary>April–October statistics for a year, never looking past yesterday (the current Vintage is partial).</summary>
-    private static YearStats Stats(GameSession g, int year, DateOnly? budburst)
+    /// <summary>April–October statistics for a year. For a Vintage report it never looks past yesterday (the current Vintage is partial);
+    /// the 1991–2020 normal always uses complete years, whatever the game date.</summary>
+    private static YearStats Stats(GameSession g, int year, DateOnly? budburst, bool upToYesterday = true)
     {
         var clim = g.Blocks[0].Climate;
         double wi = 0, tsum = 0, rain = 0, rainAut = 0; int n = 0, heat = 0, frost = 0;
         var bb = budburst ?? new DateOnly(year, 4, 15);
         var end = new DateOnly(year, 10, 31);
-        if (end >= g.Date) end = g.Date.AddDays(-1);
+        if (upToYesterday && end >= g.Date) end = g.Date.AddDays(-1);
         for (var d = new DateOnly(year, 4, 1); d <= end; d = d.AddDays(1))
         {
             var w = clim.Adjust(g.Weather.Get(d));
@@ -40,7 +41,7 @@ public static class VintageReport
         if (NormalCache.TryGetValue(g.Plot.Id, out var c)) return c;
         var list = new List<YearStats>();
         for (int y = 1991; y <= 2020; y++)
-            if (g.Weather.Archive.Has(new DateOnly(y, 1, 1))) list.Add(Stats(g, y, new DateOnly(y, 4, 20)));
+            if (g.Weather.Archive.Has(new DateOnly(y, 1, 1))) list.Add(Stats(g, y, new DateOnly(y, 4, 20), upToYesterday: false));
         c = (list.Average(s => s.Wi), list.Average(s => s.Gst), list.Average(s => s.RainSeason), list.Average(s => s.RainAutumn), list.Average(s => s.HeatDays), list.Average(s => s.FrostNights));
         NormalCache[g.Plot.Id] = c;
         return c;

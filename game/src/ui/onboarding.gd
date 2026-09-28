@@ -70,8 +70,9 @@ static func next_step(D: Dictionary) -> int:
 		if not is_done(D, STEPS[i][0]): return i
 	return -1
 
+## The Mentor's plan belongs to the first Vintage only.
 static func enabled(D: Dictionary) -> bool:
-	return not flags(D).has("plan_hidden")
+	return not flags(D).has("plan_hidden") and not bool(D.get("mentor", {}).get("retired", false))
 
 ## Compact card for the left menu: progress and the next step with a Go button.
 static func nav_card(D: Dictionary, shell) -> Control:
