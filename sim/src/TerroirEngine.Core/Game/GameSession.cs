@@ -215,10 +215,7 @@ public sealed partial class GameSession
         string est = string.Join("\n\n", EstablishmentReports);
         Post("mentor", "Welcome — three years of Establishment are behind us", $"Your vines are now in their fourth leaf. Here is what happened while they grew:\n\n{est}\n\nThis year is the first real vintage. I will guide you through it — every decision, and why it matters — until the wine is in bottle. Then I retire, and the Estate is yours.",
             "Young vines crop lightly and give less concentrated fruit; the 4th leaf is the first near-full crop (flagged 'young vines').", "high", "intro", stop: false);
-        var pr = Post("mentor", "Winter pruning: choose the bud load for each Block",
-            $"January is pruning time. The number of buds you leave per vine sets this year's crop — and how well it ripens.\n\n• Low bud load: fewer, better-ripened grapes (≈6 buds/m²).\n• Balanced: the usual compromise (≈8 buds/m²).\n• High: a big crop that ripens slowly and may taste diluted (≈11 buds/m²).\n\n{(Region.Id == "cote-dor" ? "Remember: Village and Premier Cru rules allow at most 8 buds per vine." : Region.Id == "mosel" ? "Steep Einzelpfahl vines carry two bows; the buds are shared between them." : "On the valley floor vigour is high: too few buds and the canopy runs wild.")}",
-            "Bud load balances yield against ripening capacity: over ~1 kg of fruit per m² of leaf area ripens poorly (Kliewer & Dokoozlian 2005).", "high", "pruning", stop: true);
-        pr.Actions.Add(("Open Plot & Blocks", "goto", "plot"));
+        OpenPruningTasks();   // the Mentor's pruning message is the first Vintage's pruning task (tasks-in-3d design §4.3)
         Post("mentor", "Set your Programmes for the season", "Your Vineyard manager runs the spray, canopy, floor, frost-protection and labour Programmes every day at the tier you choose. Low saves money but lets problems through; High costs more. You can change them any time.",
             "Tiers bundle many real operations; the costs follow the economy study for this Region.", "normal", "programmes", stop: false).Actions.Add(("Open Programmes", "goto", "programmes"));
     }
@@ -240,7 +237,7 @@ public sealed partial class GameSession
         string disease = Ctx.DownyInoculum > BaseDownyInoculum * 1.1 ? " Last year's downy mildew left more overwintering spores in the leaf litter and soil: expect earlier, stronger pressure this spring." : "";
         string senior = VineyardManager == StaffLevel.Senior && res < 0.9 ? "\n\nMy recommendation: prune one step lower than last year (fewer buds) to let the vines recover." : "";
         var m = Post("vineyard", $"Vintage {year} begins: the vines are in their {Ordinal(leaf)} leaf",
-            $"A new Vintage starts. Your vines are in their {Ordinal(leaf)} leaf.{(leaf == 5 ? " From this year they carry a full crop." : "")} Age alone will not make them better: well-kept old vines and young vines in the same vineyard give the same yield and grape composition.\n\nWe cut open a sample of buds: they show {fruitText}. Fruit set in June still decides the final crop.\n\n{resText}{disease}\n\nNow choose the bud load for each Block for this year's pruning.{senior}",
+            $"A new Vintage starts. Your vines are in their {Ordinal(leaf)} leaf.{(leaf == 5 ? " From this year they carry a full crop." : "")} Age alone will not make them better: well-kept old vines and young vines in the same vineyard give the same yield and grape composition.\n\nWe cut open a sample of buds: they show {fruitText}. Fruit set in June still decides the final crop.\n\n{resText}{disease}\n\nThe pruning tasks follow in a separate message.{senior}",
             SeasonalWhy("Next year's bunches form inside the buds around this year's flowering, so warm, bright flowering weather means more bunches next year (Buttrose 1969). Stored starch feeds the spring flush; a heavy crop, a late harvest or early leaf loss runs it down (Bennett et al. 2005). Once vines are mature, age alone does not make better wine: well-kept old and young vines in the same vineyard gave the same yield and grape composition (Grigg et al. 2018)."),
             "high", "newseason", stop: true);
         m.Actions.Add(("Open Plot & Blocks", "goto", "plot"));
@@ -272,10 +269,10 @@ public sealed partial class GameSession
                 break;
             case "block":
                 var b = Blocks.First(x => x.Data.Id == c.A);
-                if (c.B == "budload") b.BudLoad = Enum.Parse<BudLoad>(c.C);
-                else if (c.B == "leafside") b.LeafSide = Enum.Parse<LeafRemovalSide>(c.C);
+                if (c.B == "budload") { b.BudLoad = Enum.Parse<BudLoad>(c.C); CompleteFromDashboard(TaskKind.Prune, c.A, "", c.C, ""); }
+                else if (c.B == "leafside") { b.LeafSide = Enum.Parse<LeafRemovalSide>(c.C); CompleteFromDashboard(TaskKind.LeafRemoval, c.A, "", c.C, b.LeafTiming.ToString()); }
                 else if (c.B == "leaftiming") b.LeafTiming = Enum.Parse<LeafRemovalTiming>(c.C);
-                else if (c.B == "thinning") { b.CropThinning = Math.Clamp(int.Parse(c.C), 0, 2); if (b.Veraison != null && !b.Harvested) VineyardModel.ApplyCropThinning(b); }
+                else if (c.B == "thinning") { b.CropThinning = Math.Clamp(int.Parse(c.C), 0, 2); if (b.Veraison != null && !b.Harvested) VineyardModel.ApplyCropThinning(b); CompleteFromDashboard(TaskKind.GreenHarvest, c.A, "", c.C, ""); }
                 break;
             case "harvest":
                 var hb = Blocks.First(x => x.Data.Id == c.A);
@@ -290,6 +287,7 @@ public sealed partial class GameSession
                 bool started = lot.Phase is not (LotPhase.Received or LotPhase.ColdSoak);
                 if (ch.LockedAfterFermentStart && started) break;
                 lot.Choices[c.B] = Math.Clamp(int.Parse(c.C), 0, ch.Options.Length - 1);
+                if (c.B == "Cap management") CompleteFromDashboard(TaskKind.CapManagement, "", c.A, lot.Choices[c.B].ToString(), "");
                 break;
             case "restart":
                 var sl = Lots.FirstOrDefault(x => x.Id == c.A);
@@ -307,6 +305,7 @@ public sealed partial class GameSession
                 if (c.A == "vineyard") { VineyardManager = lvl; Ctx.VineyardManager = lvl; } else CellarMaster = lvl;
                 break;
             case "wine": CreateWine(c); break;
+            case "task": TaskCommand(c); break;
             case "read":
                 // "all" marks everything read; ids may arrive as "12" or "12.0" from the UI's JSON numbers
                 if (c.A == "all") foreach (var x in Inbox) x.Read = true;
@@ -347,6 +346,7 @@ public sealed partial class GameSession
         HarvestProgress();
         // a Lot received today waits until tomorrow, so the player can set its cellar choices first
         foreach (var lot in Lots.Where(l => l.Phase != LotPhase.Blended && l.Harvested < Date)) WineryModel.Step(lot, Date, CellarMaster, Ctx.Events);
+        UpdateTasks();
         DailyCosts();
         HandleEvents();
         if (Phase == GamePhase.Running && Date.Month == 1 && Date.Day == 15 && Date.Year > FirstVintage && Gate($"newseason-{Date.Year}")) NewSeasonMessage();
