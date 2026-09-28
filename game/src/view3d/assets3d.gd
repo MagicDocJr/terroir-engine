@@ -13,7 +13,9 @@ static func clear() -> void:
 
 
 static func root() -> String:
-	return ProjectSettings.globalize_path("res://assets3d/")
+	# editor/dev: game/assets3d; exported build: an assets3d folder next to the .exe (scripts/export-windows.sh copies it)
+	if OS.has_feature("editor"): return ProjectSettings.globalize_path("res://assets3d/")
+	return OS.get_executable_path().get_base_dir().path_join("assets3d") + "/"
 
 
 static func path(rel: String) -> String:

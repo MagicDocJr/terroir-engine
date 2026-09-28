@@ -30,3 +30,6 @@ game/shots/
 
 # Python bytecode (tool scripts)
 __pycache__/
+
+# Standalone builds (scripts/export-windows.sh)
+build/

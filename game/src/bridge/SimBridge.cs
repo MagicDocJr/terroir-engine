@@ -21,7 +21,8 @@ public partial class SimBridge : Node
     {
         try
         {
-            var start = ProjectSettings.GlobalizePath("res://");
+            // editor/dev: data/ above the project; exported build: data/ next to the .exe
+            string start = OS.HasFeature("editor") ? ProjectSettings.GlobalizePath("res://") : System.IO.Path.GetDirectoryName(OS.GetExecutablePath())!;
             _data = new GameData(GameData.LocateDataRoot(start));
         }
         catch (Exception e) { _lastError = e.Message; GD.PushError("Terroir: could not load game data: " + e.Message); }

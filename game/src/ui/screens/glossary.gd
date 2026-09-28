@@ -35,7 +35,7 @@ static func build(_D: Dictionary, shell) -> Control:
 	return UI.scroll(v)
 
 static func _terms() -> Array:
-	var path := ProjectSettings.globalize_path("res://").path_join("../CONTEXT.md")
+	var path := ProjectSettings.globalize_path("res://").path_join("../CONTEXT.md") if OS.has_feature("editor") else OS.get_executable_path().get_base_dir().path_join("CONTEXT.md")
 	var out := []
 	if not FileAccess.file_exists(path): return [["Glossary", [["CONTEXT.md not found", path]]]]
 	var lines := FileAccess.get_file_as_string(path).split("\n")
