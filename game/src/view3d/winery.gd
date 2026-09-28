@@ -883,13 +883,21 @@ func _live_lots() -> Array:
 	return lots
 
 
+## The tank whose screen shows this Lot (tasks: cap management marker), or null (in barrel / not in a tank).
+func tank_for_lot(id: String) -> Node3D:
+	var tank_lots := _live_lots().filter(func(l): return not in_barrel(l))
+	for i in mini(tank_lots.size(), tanks.size()):
+		if String(tank_lots[i].get("id", "")) == id:
+			return tanks[i]
+	return null
+
+
 func apply_snapshot(snap: Dictionary) -> void:
 	D = snap
 	if not built:
 		return
 	_update_sign()
 	var lots := _live_lots()
-	var vintage := int(D.get("vintage", 0))
 	var units := String(D.get("region", {}).get("units", "oe"))
 	var tank_lots := lots.filter(func(l): return not in_barrel(l))
 	for i in panels.size():
@@ -918,14 +926,14 @@ func apply_snapshot(snap: Dictionary) -> void:
 			for k in nf:
 				if fi >= fuders.size():
 					break
-				(fuders[fi]["label"] as Label3D).text = "Lot %s · %d\n%s\n%s" % [l.get("id", ""), vintage, l.get("variety", ""), line3]
+				(fuders[fi]["label"] as Label3D).text = "Lot %s · %d\n%s\n%s" % [l.get("id", ""), int(l.get("vintage", D.get("vintage", 0))), l.get("variety", ""), line3]
 				fi += 1
 		else:
 			var nb := maxi(1, ceili(float(l.get("volume", 0.0)) / 225.0))
 			for k in nb:
 				if bi >= barrels.size():
 					break
-				(barrels[bi]["label"] as Label3D).text = "Lot %s  %d\n%s\n%s · %s" % [l.get("id", ""), vintage, l.get("variety", ""), VESSEL_SHORT[vessel], line3]
+				(barrels[bi]["label"] as Label3D).text = "Lot %s  %d\n%s\n%s · %s" % [l.get("id", ""), int(l.get("vintage", D.get("vintage", 0))), l.get("variety", ""), VESSEL_SHORT[vessel], line3]
 				bi += 1
 
 

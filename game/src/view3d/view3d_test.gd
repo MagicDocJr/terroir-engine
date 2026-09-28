@@ -92,6 +92,9 @@ func _ready() -> void:
 	add_child(view)
 	if not "--sound" in OS.get_cmdline_user_args():
 		view.set("sound_on", false)          # the mix still runs (and is logged); the bus is muted
+	if "--tasktest" in args:
+		_task_test()
+		return
 	var i := args.find("--capture3d")
 	if i < 0:
 		_manual()
@@ -681,3 +684,134 @@ func _pick_rates() -> void:
 				days.append(" ".join(row))
 			print(line, " blocks ", ids, " | ", " / ".join(days))
 	get_tree().quit()
+
+
+# ------------------------------------------------------------------ staff tasks (--tasktest)
+var _chosen := []
+
+func _frames(n: int) -> void:
+	for f in n:
+		await get_tree().process_frame
+
+
+func _save_shot(name: String) -> void:
+	await RenderingServer.frame_post_draw
+	var out := ProjectSettings.globalize_path("res://shots/3d_%s.png" % name)
+	DirAccess.make_dir_recursive_absolute(out.get_base_dir())
+	view.capture().save_png(out)
+	print("  saved ", out)
+
+
+func _open_task(kind: String) -> Dictionary:
+	for t in snap.get("tasks", []):
+		if String(t["kind"]) == kind and String(t["status"]) == "Open":
+			return t
+	return {}
+
+
+## Walks through one task: focus → E → choose → confirm → command → check. Returns true on success.
+func _do_task(kind: String, value: String, timing: String, check: Callable) -> bool:
+	var t := _open_task(kind)
+	if t.is_empty():
+		print("TASKTEST FAIL %s: no open task" % kind); return false
+	var id := int(t["id"])
+	view.apply_snapshot(snap)
+	if String(t["where"]) == "hall":
+		view.set_view("hall")
+	await _frames(20)
+	view.focus_task(id)
+	await _frames(30)
+	var near: Dictionary = view.get("tasks3d").call("nearest", (view.get("player") as Node3D).global_position, 2.5)
+	if near.is_empty() or int(near["id"]) != id:
+		print("TASKTEST FAIL %s: walker not at the marker" % kind); return false
+	await _save_shot("task_%s_marker" % kind.to_lower())
+	if not view.call("_interact") or int(view.get("closeup_id")) != id:
+		print("TASKTEST FAIL %s: close-up did not open" % kind); return false
+	await _frames(90)
+	await _save_shot("task_%s_closeup" % kind.to_lower())
+	view.call("_choose", value)
+	await _frames(20)
+	await _save_shot("task_%s_chosen" % kind.to_lower())
+	_chosen.clear()
+	view.call("_confirm")
+	var guard := 0
+	while _chosen.is_empty() and guard < 240:
+		await get_tree().process_frame; guard += 1
+	if _chosen.is_empty() or int(_chosen[0][0]) != id or String(_chosen[0][1]) != value:
+		print("TASKTEST FAIL %s: no task_chosen signal (%s)" % [kind, str(_chosen)]); return false
+	Sim.Command("task", str(id), "do", value, timing, "")
+	snap = _snap()
+	view.apply_snapshot(snap)
+	var ok: bool = check.call(snap)
+	print("TASKTEST %s %s" % [kind, "ok" if ok else "FAIL: setting not applied"])
+	return ok
+
+
+func _task_test() -> void:
+	view.task_chosen.connect(func(id, value, timing): _chosen.append([id, value, timing]))
+	var ok := true
+	# pruning, leaf removal and green harvest on a Mosel Guyot Plot
+	Sim.NewGame(JSON.stringify({"plotId": "mosel-seitental", "plantingYear": 2016, "seed": 5, "estateName": "Task Test"}))
+	snap = _snap()
+	view.apply_snapshot(snap)
+	view.set_view("vineyard")
+	await _frames(60)
+	var first := _open_task("Prune")
+	ok = await _do_task("Prune", "Low", "", func(s): return String(_block(s, String(first["block"])).get("budLoad", "")) == "Low") and ok
+	# E with no task in reach does nothing; leaving the 3D view closes a close-up without deciding
+	view.set_view("hall")
+	await _frames(20)
+	var none_ok: bool = not view.call("_interact") and int(view.get("closeup_id")) == -1
+	print("TASKTEST no_task_no_closeup %s" % ("ok" if none_ok else "FAIL"))
+	ok = ok and none_ok
+	var second := _open_task("Prune")
+	view.set_view("vineyard")
+	view.focus_task(int(second["id"]))
+	await _frames(20)
+	view.call("_interact")
+	await _frames(10)
+	_chosen.clear()
+	view.visible = false
+	await _frames(10)
+	var tab_ok: bool = int(view.get("closeup_id")) == -1 and _chosen.is_empty() and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED
+	view.visible = true
+	print("TASKTEST tab_leaves_closeup %s" % ("ok" if tab_ok else "FAIL"))
+	ok = ok and tab_ok
+	var guard := 0
+	while _open_task("LeafRemoval").is_empty() and guard < 300:
+		Sim.Advance(3, false); snap = _snap(); guard += 1
+	var lt := _open_task("LeafRemoval")
+	ok = await _do_task("LeafRemoval", "Morning", "", func(s): return String(_block(s, String(lt["block"])).get("leafSide", "")) == "Morning") and ok
+	guard = 0
+	while _open_task("GreenHarvest").is_empty() and guard < 300:
+		Sim.Advance(3, false); snap = _snap(); guard += 1
+	var gt := _open_task("GreenHarvest")
+	ok = await _do_task("GreenHarvest", "2", "", func(s): return int(_block(s, String(gt["block"])).get("thinning", 0)) == 2) and ok
+	# the crew at work after a decision
+	view.camera_preset("crew")
+	await _frames(60)
+	await _save_shot("task_crew")
+	# cap management on a red Lot (Côte d'Or Pinot Noir)
+	Sim.NewGame(JSON.stringify({"plotId": "cotedor-village", "plantingYear": 2013, "seed": 5, "estateName": "Task Test"}))
+	snap = _snap()
+	guard = 0
+	while guard < 400:
+		var inwin := false
+		for b in snap["blocks"]:
+			inwin = inwin or (b.get("inWindow", false) and b.get("red", false))
+		if inwin:
+			break
+		Sim.Advance(2, false); snap = _snap(); guard += 1
+	for b in snap["blocks"]:
+		if b.get("red", false): Sim.Command("harvest", String(b["id"]), "hand", "Table", "", "")
+	guard = 0
+	while _open_task("CapManagement").is_empty() and guard < 60:
+		Sim.Advance(1, false); snap = _snap(); guard += 1
+	var ct := _open_task("CapManagement")
+	ok = await _do_task("CapManagement", "1", "", func(s):
+		for l in s.get("lots", []):
+			if String(l["id"]) == String(ct["lot"]): return int(l["choices"].get("Cap management", -1)) == 1
+		return false) and ok
+	print("TASKTEST %s" % ("ok" if ok else "FAIL"))
+	get_tree().quit()
+

@@ -316,12 +316,27 @@ func toggle_3d(kind := "") -> void:
 		view3d = load("res://src/view3d/view3d.tscn").instantiate()
 		add_child(view3d)
 		if view3d.has_signal("exit_requested"): view3d.exit_requested.connect(func(): _hide_3d())
+		if view3d.has_signal("task_chosen"): view3d.task_chosen.connect(_on_task_chosen)
 		view3d.visible = false
 	if view3d.visible: _hide_3d(); return
 	root_box.visible = false
 	view3d.visible = true
 	if view3d.has_method("apply_snapshot"): view3d.apply_snapshot(D)
 	if view3d.has_method("set_view") and (kind != "" or first): view3d.set_view(kind if kind != "" else "vineyard")
+
+## A staff task done on its demonstration vine / tank in 3D: send it to the sim and redraw the world.
+func _on_task_chosen(id: int, value: String, timing: String) -> void:
+	var t := {}
+	for x in D.get("tasks", []):
+		if int(x["id"]) == id: t = x
+	command("task", str(id), "do", value, timing, "")
+	if view3d and view3d.visible and view3d.has_method("apply_snapshot"): view3d.apply_snapshot(D)
+	if t.is_empty(): return
+	var label := value
+	for o in t.get("options", []):
+		if String(o["value"]) == value: label = String(o["label"])
+	var place := ("Lot %s" % t["lot"]) if String(t["kind"]) == "CapManagement" else ("Block %s" % t["block"])
+	notify("%s · %s: %s. The crew does the rest the same way." % [t["title"], place, label], true)
 
 func _shot3d(name: String, kind: String) -> void:
 	if not ResourceLoader.exists("res://src/view3d/view3d.tscn"): return
