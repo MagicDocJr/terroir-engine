@@ -279,7 +279,8 @@ public static class VineyardModel
             // ripening.md: no slowdown for none-to-moderate stress, 0.4 when severe. Ψstem −1.2 → −1.6 MPa is the transition (UNVERIFIED breakpoints).
             double waterFactor = 1 - 0.6 * M.Clamp((-1.2 - b.PsiStem) / 0.4, 0, 1);
             double radiation = 0.7 + 0.4 * clear;
-            double heat = w.Tmax > 35 ? 0.5 : 1.0;
+            // photosynthesis falls off gradually above ~35 °C (not a switch): −4 % per degree, at most −40 % (UNVERIFIED slope)
+            double heat = 1 - M.Clamp((w.Tmax - 35) * 0.04, 0, 0.4);
             if (active) b.SEff += Math.Max(0, w.Tmean) * capacity * waterFactor * radiation * heat;
             double s50 = v.GsrF200 - 198, width = 180;   // anchored so the curve passes 200 g/L at GsrF200: 180·ln(0.75/0.25) = 198
             double cLoad = 20 + 240 * M.Sigmoid((b.SEff - s50) / width);   // plateau ≈ 260 g/L = berry weight × 0.24 g/g (ripening.md §3, S_max)

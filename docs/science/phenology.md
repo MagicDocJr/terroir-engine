@@ -187,6 +187,7 @@ What the table shows:
 
 **Provisional GSR F*₂₀₀ (derived here, not published; `UNVERIFIED`):**
 - **Pinot noir / Chardonnay ≈ 2750.** Beaune's recent harvests start around mid-September (Labbé et al. 2019), and the 15 September thermal sum there averages ~2780 in 2001–2020.
+- **Game calibration (28 Sep 2026, `UNVERIFIED`):** with the game's sugar-loading curve (ripening.md §3) and Block climate, the model reached 200 g/L on 19 Sep (Pinot noir) and 24 Sep (Chardonnay) on average over 1990–2018 at the Village Plot, against the sourced mid-September (Labbé et al. 2019). The model's F*₂₀₀ is now **2645 (Pinot noir)** and **2615 (Chardonnay)**, which gives a 15 Sep mean for both. Known limit: the model spreads the years too little. Very hot years are still late (2003: 5 Sep simulated against a 19 August start of harvest) and some cool years are early. GFV flowering on this grid averages 15–16 June, about a week later than the 100-day rule implies; the published Parker F* values are kept unchanged.
 - **Riesling ≈ 2900.** On a Block-adjusted Mosel slope (about +250 °C·day by 1 October from the lapse-rate correction alone), 200 g/L then falls in early October, matching the traditional October Mosel harvest (`UNVERIFIED`).
 - **Cabernet Sauvignon ≈ 3100.** In Oakville that gives 200 g/L around mid-September, leaving time to reach the 230–250 g/L typical of Napa picking (`UNVERIFIED`).
 

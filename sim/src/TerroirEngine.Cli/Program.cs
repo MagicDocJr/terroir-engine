@@ -55,6 +55,7 @@ if (cmd == "calib")
     var archive = new WeatherArchive(dataRoot, plot.Region.WeatherFile);
     var rw = new RegionWeather(archive, 42);
     double target = plot.Region.Id switch { "mosel" => Units.SugarFromOe(85), "cote-dor" => Units.SugarFromBrix(22.5), _ => Units.SugarFromBrix(25) };
+    if (Environment.GetEnvironmentVariable("TE_SUGAR") is { } ts) target = double.Parse(ts, System.Globalization.CultureInfo.InvariantCulture);   // g/L
     Console.WriteLine($"{plot.Name} ({plot.Region.Name}) {variety} spray={tier} target {Units.OeFromSugar(target):0} °Oe / {Units.BrixFromSugar(target):0.0} °Bx");
     Console.WriteLine("vint blk  budburst flower  veraison target    °Oe  °Bx   TA   pH malic  seeds anth IBMP  t/ha  frost downyL downyB powB grey noble sprays Wink Hugl");
     foreach (var vint in years)

@@ -176,6 +176,36 @@ public class VineyardCalibrationTests
         Assert.All(g.Lots, l => Assert.True(l.AlcoholPct <= 18.3, $"{l.Id} reached {l.AlcoholPct:0.0} %"));
     }
 
+    [Theory]
+    [InlineData(VarietyId.PinotNoir)]
+    [InlineData(VarietyId.Chardonnay)]
+    public void CoteDor_200gL_AveragesMidSeptember_1990To2018(VarietyId variety)
+    {
+        // phenology.md: Beaune harvests start around mid-September over 1988–2018 (Labbé et al. 2019); ±1 week tolerance
+        var plot = Fixture.Data.Plot("cotedor-village");
+        var archive = new WeatherArchive(Fixture.Data.DataRoot, plot.Region.WeatherFile);
+        var rw = new RegionWeather(archive, 42);
+        var bd = plot.Blocks[0];
+        var days = new List<int>();
+        for (int vint = 1990; vint <= 2018; vint += 2)
+        {
+            var b = new BlockState(plot, bd, new BlockClimate(plot, bd, archive.GridElevationM))
+            {
+                Planted = true, PlantingYear = vint - 3,
+                Planting = new PlantingChoice { Variety = variety, Rootstock = RootstockId.SO4, Training = TrainingSystem.Guyot, DensityVinesHa = 10000 },
+            };
+            var ctx = new VineyardContext { Spray = Tier.Medium };
+            for (var d = new DateOnly(vint - 3, 1, 1); d <= new DateOnly(vint, 11, 15); d = d.AddDays(1))
+            {
+                ctx.AutoManage = d.Year < vint;
+                VineyardModel.Step(b, rw.Get(d), ctx, 42);
+                if (d.Year == vint && b.Veraison != null && b.SugarGL >= 200) { days.Add(d.DayOfYear); break; }
+            }
+        }
+        double mean = days.Average();
+        Assert.InRange(mean, 251, 265);   // 8–22 September
+    }
+
     [Fact]
     public void Cabernet_OnTheMoselFlats_FailsToRipen()
     {
