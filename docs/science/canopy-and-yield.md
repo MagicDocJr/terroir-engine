@@ -166,23 +166,23 @@ Starch stored in roots and trunk feeds budburst, early shoot growth and flowerin
 **Model (at 1 January, for Blocks in their 4th leaf or older):**
 - `cropLoad` = kg fruit per vine ÷ (0.55 × peak leaf area per vine), the inverse of the ripening model's leaf-area-to-fruit ratio (§2.2); ≈ 1.0 is balanced (Kliewer & Dokoozlian 2005: 0.8–1.2 m² per kg).
 - `postHarvestDays` = days from harvest to leaf fall.
-- `defoliation` = peak downy leaf % + 0.4 × peak powdery leaf % (as fractions) + 0.01 per severe water-stress day, capped at 0.9.
-- `seasonR = clamp(1 − 0.20·max(0, cropLoad/1.2 − 1) − 0.10·max(0, 1 − postHarvestDays/30) − 0.30·defoliation + 0.05·max(0, 1 − cropLoad/0.6), 0.70, 1.05)`
+- `defoliation` = peak downy leaf % + 0.4 × peak powdery leaf % (as fractions) **before harvest or leaf fall**, + 0.01 per severe water-stress day, capped at 0.9. Late-season infection after the harvest does not count against the reserves (it still counts for next spring's inoculum, disease.md §10).
+- `seasonR = clamp(1 − 0.20·max(0, cropLoad/1.2 − 1) − 0.10·max(0, 1 − postHarvestDays/30) − 0.60·max(0, defoliation − 0.20) + 0.05·max(0, 1 − cropLoad/0.6), 0.70, 1.05)`. Vines compensate for moderate leaf loss through lateral growth and higher photosynthesis in the remaining leaves (Candolfi-Vasconcelos & Koblet 1990), so leaf loss only counts above 20 % (`UNVERIFIED` threshold); normal farming (Balanced bud load, Medium tiers, timely harvest) then keeps reserves near 1.0.
 - `Reserves = clamp(0.4·Reserves_prev + 0.6·seasonR, 0.70, 1.05)`: vines recover over more than one year.
 - Next season: shoot leaf-area growth × (0.8 + 0.2·Reserves); fruit-set ratio × min(1, Reserves).
 
-All coefficients `UNVERIFIED`. **Calibration (measured 2026-09-28, 10 consecutive Vintages 2011–2020, Balanced bud load except the Côte d'Or's Low, Medium tiers, scripted harvest):**
+All coefficients `UNVERIFIED`. **Calibration (measured 2026-09-28 after the review fix, 10 consecutive Vintages 2011–2020, Balanced bud load except the Côte d'Or's Low, Medium tiers, scripted harvest):**
 
 | Plot | Mean yield (hL/ha) | Year-to-year CV |
 |---|---|---|
-| Mosel Seitental | 72 | 20 % |
-| Mosel Blauschiefer | 67 | 13 % |
-| Côte d'Or Village | 53 | 19 % |
-| Côte d'Or Premier Cru | 52 | 18 % |
+| Mosel Seitental | 75 | 20 % |
+| Mosel Blauschiefer | 70 | 15 % |
+| Côte d'Or Village | 56 | 19 % |
+| Côte d'Or Premier Cru | 56 | 18 % |
 | Napa Rutherford Bench | 84 | 4 % |
 | Napa Carneros | 69 | 7 % |
 
-The Mosel and Côte d'Or spreads fall in the expected 15–30 % band (`UNVERIFIED` band); irrigated Napa varies less, as expected. The low years have causes in the weather (Mosel 2017 frost, Côte d'Or 2020 heat and drought). Open point: mature Côte d'Or vines (5th leaf on) average ≈ 53 hL/ha, above the §7 expectation of 35–50; the 4th-leaf factor hid this in the single-Vintage game. It is not caused by the carry-over.
+The Mosel and Côte d'Or spreads fall in the expected 15–30 % band (`UNVERIFIED` band); irrigated Napa varies less, as expected. The low years have causes in the weather (Mosel 2017 frost, Côte d'Or 2020 heat and drought). Open point: mature Côte d'Or vines (5th leaf on) average ≈ 56 hL/ha, above the §7 expectation of 35–50; the 4th-leaf factor hid this in the single-Vintage game. It is not caused by the carry-over.
 
 ## 4. Water stress
 
@@ -263,6 +263,7 @@ Staff level scales efficiency (Junior −10 %, Senior +10 %, `UNVERIFIED`).
 - Buttrose MS (1969). *Fruitfulness in grapevines: effects of light intensity and temperature.* Botanical Gazette 130(3):166–173. https://www.journals.uchicago.edu/doi/10.1086/336486
 - Bennett J, Jarvis P, Creasy GL, Trought MCT (2005). *Influence of defoliation on overwintering carbohydrate reserves, return bloom, and yield of mature Chardonnay grapevines.* American Journal of Enology and Viticulture 56(4):386–393. https://www.ajevonline.org/content/56/4/386
 - Holzapfel BP, Smith JP, Field SK, Hardie WJ (2010). *Dynamics of carbohydrate reserves in cultivated grapevines.* Horticultural Reviews 37:143–211. https://onlinelibrary.wiley.com/doi/10.1002/9780470543672.ch3
+- Candolfi-Vasconcelos MC, Koblet W (1990). *Yield, fruit quality, bud fertility and starch reserves of the wood as a function of leaf removal in* Vitis vinifera *— evidence of compensation and stress recovering.* Vitis 29(4):199–221. https://ojs.openagrar.de/index.php/VITIS/article/view/5455
 - Grigg D, Methven D, De Bei R, Rodríguez López CM, Dry P, Collins C (2018). *Effect of vine age on vine performance of Shiraz in the Barossa Valley, Australia.* Australian Journal of Grape and Wine Research 24(1):75–87. https://onlinelibrary.wiley.com/doi/10.1111/ajgw.12312
 - Kliewer WM, Dokoozlian NK (2005). *Leaf area/crop weight ratios of grapevines: influence on fruit composition and wine quality.* American Journal of Enology and Viticulture 56(2):170–181. doi:10.5344/ajev.2005.56.2.170. https://www.ajevonline.org/content/56/2/170
 - van Leeuwen C, Tregoat O, Choné X, Bois B, Pernet D, Gaudillère JP (2009). *Vine water status is a key factor in grape ripening and vintage quality for red Bordeaux wine. How can it be assessed for vineyard management purposes?* Journal International des Sciences de la Vigne et du Vin 43(3):121–134. https://oeno-one.eu/article/view/798 (the thresholds are verified; the full author list is cited from memory)

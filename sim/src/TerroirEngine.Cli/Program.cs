@@ -130,6 +130,8 @@ if (cmd == "play")
     }
     foreach (var grp in g.Provenance.Values.Where(p => p.Vintage <= lastVintage).GroupBy(p => p.Vintage).OrderBy(x => x.Key))
         Console.WriteLine($" Vintage {grp.Key}: mean yield {grp.Average(p => p.YieldHlHa):0} hL/ha, {grp.Average(p => p.HarvestOe):0} °Oe, rot {grp.Average(p => p.GreyRotPct):0.0} %");
+    foreach (var grp in g.Blocks.SelectMany(b => b.Seasons).Where(r => r.Leaf >= 4).GroupBy(r => r.Year).OrderBy(x => x.Key))
+        Console.WriteLine($" Carry-over after {grp.Key}: crop load {grp.Average(r => r.CropLoadKgM2):0.00} kg/m², post-harvest {grp.Average(r => r.PostHarvestDays):0} d, defoliation {grp.Average(r => r.Defoliation):0.00}, reserves {grp.Average(r => r.ReservesAfter):0.00}, fruitfulness next {grp.Average(r => r.FruitfulnessNext):0.00}");
     var ys = g.Provenance.Values.Where(p => p.Vintage <= lastVintage).GroupBy(p => p.Vintage).Select(x => x.Average(p => p.YieldHlHa)).ToList();
     if (ys.Count > 1) { double mean = ys.Average(), sd = Math.Sqrt(ys.Average(v => (v - mean) * (v - mean))); Console.WriteLine($" Yield over {ys.Count} Vintages: mean {mean:0} hL/ha, CV {sd / mean * 100:0} %"); }
     foreach (var l in g.Lots) Console.WriteLine($" Lot {l.Id}: {l.AlcoholPct:0.0}% RS {l.Rs:0.0} TA {l.Ta:0.0} pH {l.Ph:0.00} malic {l.Malic:0.0} VA {l.Acetic:0.00} H2S {l.H2sIndex:0.00} maxT {l.MaxTempC:0} tannin {l.TotalTannin:0} anth {l.Anthocyanin:0} fermDays {(l.FermentEnd?.DayNumber - l.FermentStart?.DayNumber)}");

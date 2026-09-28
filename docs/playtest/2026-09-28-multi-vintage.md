@@ -16,7 +16,7 @@ Spec: `docs/superpowers/specs/2026-09-28-multi-vintage-design.md` · Plan: `docs
 
 ## Verification
 
-- 52 simulation tests pass (25 existing unchanged apart from the "first Vintage bottled" loop condition, 27 new). Highlights: three Vintages back to back in each Region; save → load two Vintages in reproduces the snapshot byte for byte; a hard first year (High bud load, Low spraying) gives lower reserves and fewer berries the next year than a careful one on the same weather; vintage statement thresholds; monthly overdraft interest.
+- 57 simulation tests pass (25 existing unchanged apart from the "first Vintage bottled" loop condition, 32 new). Highlights: three Vintages back to back in each Region; save → load two Vintages in reproduces the snapshot byte for byte; a hard first year (High bud load, Low spraying) gives lower reserves and fewer berries the next year than a careful one on the same weather; vintage statement thresholds; monthly overdraft interest.
 - UI: the click-every-button check runs five rounds through the second Vintage's harvest with no script errors; the scripted capture plays two full Vintages and the save/load round trip matches.
 - Replay: a 5-Vintage save loads in **280 ms**, a 10-Vintage save in **569 ms** (budget 10 s). Snapshot: **203 KB** at 5 Vintages, **330 KB** at 10 (about +30 KB per Vintage).
 - Screen build times unchanged (inbox 28 ms, plot 67 ms, cached tab switch 9 ms).
@@ -25,18 +25,18 @@ Spec: `docs/superpowers/specs/2026-09-28-multi-vintage-design.md` · Plan: `docs
 
 | Plot | Mean yield (hL/ha) | Year-to-year CV |
 |---|---|---|
-| Mosel Seitental | 72 | 20 % |
-| Mosel Blauschiefer | 67 | 13 % |
-| Côte d'Or Village | 53 | 19 % |
-| Côte d'Or Premier Cru | 52 | 18 % |
+| Mosel Seitental | 75 | 20 % |
+| Mosel Blauschiefer | 70 | 15 % |
+| Côte d'Or Village | 56 | 19 % |
+| Côte d'Or Premier Cru | 56 | 18 % |
 | Napa Rutherford Bench | 84 | 4 % |
 | Napa Carneros | 69 | 7 % |
 
-Low years have weather causes (Mosel 2017 spring frost, Côte d'Or 2020 heat and drought). Irrigated Napa varies least, as expected.
+Low years have weather causes (Mosel 2017 spring frost, Côte d'Or 2020 heat and drought). Irrigated Napa varies least, as expected. Under this normal farming the vines' reserves average 0.97–1.00, so the January message only reports tired vines after a genuinely hard year.
 
 ## Findings for the science review
 
-1. **Mature Côte d'Or yields sit above the AOC limits in generous years.** From the 5th leaf the Côte d'Or Blocks average ≈ 53 hL/ha and reach 63–65 hL/ha in some years, above the Premier Cru (56) and Bourgogne/Village (58) limits, so a player who never green-harvests gets Vin de France (seen for 2016–2017 in a 4-Vintage Premier Cru run). The yield alert at véraison offers the green harvest, so the lever exists, but `canopy-and-yield.md` §7 expects 35–50 hL/ha. The single-Vintage game hid this behind the 4th-leaf crop factor. Not caused by the carry-over; needs a calibration decision (clusters per shoot, set, or bud numbers for Burgundy Guyot).
+1. **Mature Côte d'Or yields sit above the AOC limits in generous years.** From the 5th leaf the Côte d'Or Blocks average ≈ 56 hL/ha and reach 63–65 hL/ha in some years, above the Premier Cru (56) and Bourgogne/Village (58) limits, so a player who never green-harvests gets Vin de France (seen for 2016–2017 in a 4-Vintage Premier Cru run). The yield alert at véraison offers the green harvest, so the lever exists, but `canopy-and-yield.md` §7 expects 35–50 hL/ha. The single-Vintage game hid this behind the 4th-leaf crop factor. Not caused by the carry-over; needs a calibration decision (clusters per shoot, set, or bud numbers for Burgundy Guyot).
 2. **Burgundy 2016 frost is not reproduced on the mid-slope Plots** (the 27 April 2016 frost cut real Côte de Beaune yields hard; the model gives 64 hL/ha). The existing frost test covers the 2021 frost pocket only.
 3. The carry-over coefficients are `UNVERIFIED` design values, bounded (fruitfulness 0.85–1.15, reserves 0.70–1.05, inoculum 0.85–1.30). The directions are cited and web-verified (Buttrose 1969; Bennett et al. 2005; Holzapfel et al. 2010; Gadoury & Pearson 1990; Rossi et al. 2008).
 

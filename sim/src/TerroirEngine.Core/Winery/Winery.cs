@@ -229,7 +229,7 @@ public static class WineryModel
         lot.FermentStart = date;
         lot.Phase = LotPhase.Fermenting; lot.PhaseDay = 0;
         lot.Log.Add($"{Dates.Short(date)}: fermentation started with {(ambient ? "ambient yeast" : "cultured yeast")}{(lot.DapAddedMgL > 0 ? $", DAP added (+{lot.DapAddedMgL:0} mg/L YAN)" : "")}{(chap > 0 ? $", chaptalised +{chap} % vol" : "")}{(acid > 0 ? $", acidified +{acid} g/L" : "")}.");
-        events.Add(new VineEvent(date, lot.BlockId, "ferment-start", $"Lot {lot.Id}: fermentation has started ({lot.Oe:0} °Oe must, YAN {lot.YanMgL:0} mg/L)."));
+        events.Add(new VineEvent(date, lot.BlockId, "ferment-start", $"Lot {lot.Id}: fermentation has started ({lot.Oe:0} °Oe must, YAN {lot.YanMgL:0} mg/L).") { LotId = lot.Id });
     }
 
     private static double SetpointFor(Lot lot)
@@ -298,19 +298,19 @@ public static class WineryModel
         if (lot.MaxTempC > 32 && lot.Log.All(l => !l.Contains("heat")))
         {
             lot.Log.Add($"{Dates.Short(date)}: fermentation overheated to {lot.MaxTempC:0} °C — yeast are dying (heat).");
-            events.Add(new VineEvent(date, lot.BlockId, "ferment-hot", $"Lot {lot.Id} reached {lot.MaxTempC:0} °C. Above ~32 °C yeast die fast; the fermentation may stick.", 3));
+            events.Add(new VineEvent(date, lot.BlockId, "ferment-hot", $"Lot {lot.Id} reached {lot.MaxTempC:0} °C. Above ~32 °C yeast die fast; the fermentation may stick.", 3) { LotId = lot.Id });
         }
         if (lot.Sugar <= 2) { EndFermentationPhase(lot, date, events, pressedEarly: false); return; }
         if (lot.Phase == LotPhase.Fermenting && lot.PhaseDay > 5 && rate < 1.0 && lot.Sugar > 4)
         {
             lot.Phase = LotPhase.Stuck;
-            events.Add(new VineEvent(date, lot.BlockId, "ferment-stuck", $"Lot {lot.Id}: fermentation has STUCK at {lot.Sugar:0} g/L sugar ({lot.Oe:0} °Oe). Yeast are exhausted (YAN {lot.YanMgL:0} mg/L, max {lot.MaxTempC:0} °C, {lot.AlcoholPct:0.0} % vol). Re-inoculating with a robust yeast can restart it.", 3));
+            events.Add(new VineEvent(date, lot.BlockId, "ferment-stuck", $"Lot {lot.Id}: fermentation has STUCK at {lot.Sugar:0} g/L sugar ({lot.Oe:0} °Oe). Yeast are exhausted (YAN {lot.YanMgL:0} mg/L, max {lot.MaxTempC:0} °C, {lot.AlcoholPct:0.0} % vol). Re-inoculating with a robust yeast can restart it.", 3) { LotId = lot.Id });
             lot.Log.Add($"{Dates.Short(date)}: fermentation STUCK at {lot.Sugar:0} g/L.");
         }
         if (lot.H2sIndex > 0.5 && lot.Log.All(l => !l.Contains("H₂S")))
         {
             lot.Log.Add($"{Dates.Short(date)}: H₂S (rotten egg) detected — yeast short of nitrogen.");
-            events.Add(new VineEvent(date, lot.BlockId, "ferment-h2s", $"Lot {lot.Id} smells of rotten egg (H₂S): the yeast ran out of nitrogen. Aeration now helps; left alone it becomes a reduction fault.", 2));
+            events.Add(new VineEvent(date, lot.BlockId, "ferment-h2s", $"Lot {lot.Id} smells of rotten egg (H₂S): the yeast ran out of nitrogen. Aeration now helps; left alone it becomes a reduction fault.", 2) { LotId = lot.Id });
         }
     }
 
@@ -338,7 +338,7 @@ public static class WineryModel
         lot.MlfBlocked = true;
         lot.FermentEnd = date;
         lot.Log.Add($"{Dates.Short(date)}: fermentation stopped by chilling and SO₂ at {lot.Rs:0} g/L residual sugar, {lot.AlcoholPct:0.0} % vol.");
-        events.Add(new VineEvent(date, lot.BlockId, "ferment-stopped", $"Lot {lot.Id}: fermentation stopped at {lot.Rs:0} g/L sugar and {lot.AlcoholPct:0.0} % vol (chilled, SO₂ added)."));
+        events.Add(new VineEvent(date, lot.BlockId, "ferment-stopped", $"Lot {lot.Id}: fermentation stopped at {lot.Rs:0} g/L sugar and {lot.AlcoholPct:0.0} % vol (chilled, SO₂ added).") { LotId = lot.Id });
         lot.Phase = LotPhase.Pressed; lot.PhaseDay = 0;
     }
 
@@ -346,7 +346,7 @@ public static class WineryModel
     {
         lot.FermentEnd = date;
         lot.Log.Add($"{Dates.Short(date)}: fermentation finished — {lot.AlcoholPct:0.0} % vol, {lot.Rs:0.0} g/L sugar, peak {lot.MaxTempC:0} °C.");
-        events.Add(new VineEvent(date, lot.BlockId, "ferment-done", $"Lot {lot.Id}: fermentation finished at {lot.AlcoholPct:0.0} % vol ({lot.Rs:0.0} g/L sugar left).{(lot.Red && !pressedEarly && lot.Choices["Maceration"] == 1 ? " Extended maceration continues for 7 days." : "")}"));
+        events.Add(new VineEvent(date, lot.BlockId, "ferment-done", $"Lot {lot.Id}: fermentation finished at {lot.AlcoholPct:0.0} % vol ({lot.Rs:0.0} g/L sugar left).{(lot.Red && !pressedEarly && lot.Choices["Maceration"] == 1 ? " Extended maceration continues for 7 days." : "")}") { LotId = lot.Id });
         if (lot.Red && !pressedEarly && lot.Choices["Maceration"] == 1) { lot.Phase = LotPhase.PostMaceration; lot.PhaseDay = 0; }
         else if (lot.Red) Press(lot, date, events);
         else { lot.Phase = LotPhase.Pressed; lot.PhaseDay = 0; }
@@ -409,7 +409,7 @@ public static class WineryModel
         {
             lot.MlfEnd = date;
             lot.Log.Add($"{Dates.Short(date)}: malolactic fermentation complete — TA {lot.Ta:0.0} g/L, pH {lot.Ph:0.00}.");
-            events.Add(new VineEvent(date, lot.BlockId, "mlf-done", $"Lot {lot.Id}: malolactic fermentation finished (TA now {lot.Ta:0.0} g/L, pH {lot.Ph:0.00})."));
+            events.Add(new VineEvent(date, lot.BlockId, "mlf-done", $"Lot {lot.Id}: malolactic fermentation finished (TA now {lot.Ta:0.0} g/L, pH {lot.Ph:0.00}).") { LotId = lot.Id });
             AddSo2(lot, date);
             StartAgeing(lot, date, events);
         }
@@ -490,7 +490,7 @@ public static class WineryModel
         {
             lot.Phase = LotPhase.Ready; lot.ReadyDate = date;
             lot.Log.Add($"{Dates.Short(date)}: ready to bottle after {months:0} months.");
-            events.Add(new VineEvent(date, lot.BlockId, "lot-ready", $"Lot {lot.Id} has finished its {lot.AgeingMonthsTarget} months in {lot.Opt("Vessel").ToLowerInvariant()} and is ready to bottle or blend."));
+            events.Add(new VineEvent(date, lot.BlockId, "lot-ready", $"Lot {lot.Id} has finished its {lot.AgeingMonthsTarget} months in {lot.Opt("Vessel").ToLowerInvariant()} and is ready to bottle or blend.") { LotId = lot.Id });
         }
     }
 }

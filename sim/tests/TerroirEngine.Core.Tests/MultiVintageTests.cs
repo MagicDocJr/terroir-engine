@@ -346,3 +346,61 @@ public class VintageNormalTests
         Assert.Equal(Math.Round(totals.Average()), normal, 0);
     }
 }
+
+public class ReviewFixTests
+{
+    [Fact]
+    public void CellarMessages_NameTheirOwnLot_AfterTheYearTurns()
+    {
+        // Napa Cabernet ages 18 months: its Lots become ready after the next Vintage has begun (review finding #1)
+        var g = Fixture.Play("napa-bench", 2012, Units.OeFromBrix(25));
+        var readies = g.Inbox.Where(m => m.Kind == "lot-ready").ToList();
+        Assert.NotEmpty(readies);
+        Assert.All(readies, m => Assert.Contains($"Lot {g.FirstVintage % 100:00}-", m.Subject));
+    }
+
+    [Fact]
+    public void VintageReport_CountsEachWinesBottlingOnce()
+    {
+        // review finding #2: a report counts its own wines' bottling, never the previous Vintage's bottled in its calendar year
+        var g = Fixture.PlayVintages("mosel-seitental", 2014, 80, vintages: 3);
+        int v = g.FirstVintage + 1;
+        double yearCostsWithoutBottling = g.Ledger.Entries.Where(e => e.Date.Year == v && e.Amount < 0 && e.Category != "Bottling").Sum(e => -e.Amount);
+        double expected = yearCostsWithoutBottling + g.WinesOf(v).Sum(w => w.BottlingCost);
+        Assert.Equal(Math.Round(expected), VintageReport.Build(g, v)["money"]!["costs"]!.GetValue<double>(), 0);
+    }
+
+    [Fact]
+    public void NormalFarming_KeepsReservesNearNeutral()
+    {
+        // review finding #3: Balanced bud load, Medium tiers and a timely harvest should not tire the vines year after year
+        var g = Fixture.PlayVintages("mosel-seitental", 2014, 80, vintages: 3);
+        var later = g.Blocks.SelectMany(b => b.Seasons).Where(s => s.Year > g.FirstVintage && s.Year < g.Vintage).ToList();
+        Assert.NotEmpty(later);
+        Assert.InRange(later.Average(s => s.ReservesAfter), 0.97, 1.05);
+    }
+
+    [Fact]
+    public void VintageReport_KeyEvents_ListItsOwnBottlings()
+    {
+        // review finding #4
+        var g = Fixture.PlayVintages("mosel-seitental", 2014, 80, vintages: 3);
+        int v = g.FirstVintage + 1;
+        var bottled = VintageReport.Build(g, v)["events"]!.AsArray().Where(e => e!["kind"]!.GetValue<string>() == "bottled").Select(e => e!["text"]!.GetValue<string>()).ToList();
+        Assert.NotEmpty(bottled);
+        Assert.All(bottled, t => Assert.Contains($": {v} ", t));
+    }
+
+    [Fact]
+    public void GameRulesAndTheVineAgeStance_AreInTheMessageBody()
+    {
+        // review finding #5: a Junior's message drops the "why", so labels the rules require must sit in the body
+        var noInput = new GameSession(Fixture.Data, new GameSetup { PlotId = "mosel-seitental", PlantingYear = 2014 });
+        while (noInput.Date < new DateOnly(noInput.FirstVintage + 1, 1, 1)) noInput.Advance(60, stopAtAlerts: false);
+        Assert.All(noInput.Inbox.Where(m => m.Kind == "forced-harvest"), m => Assert.Contains("Game rule", m.Body));
+        var g = Fixture.PlayVintages("mosel-seitental", 2014, 80, vintages: 3);
+        var ns = g.Inbox.Where(m => m.Kind == "newseason" && m.Date > g.FinishedDate).ToList();
+        Assert.NotEmpty(ns);
+        Assert.All(ns, m => Assert.Contains("old vines", m.Body));
+    }
+}

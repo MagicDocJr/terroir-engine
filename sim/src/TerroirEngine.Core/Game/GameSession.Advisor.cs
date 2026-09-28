@@ -101,33 +101,33 @@ public sealed partial class GameSession
                             Post("vineyard", $"Leaf fall in Block {x.BlockId} — fruit still hanging", x.Text + " Pick soon: the grapes now only dehydrate and rot.", "Without leaves there is no more sugar loading; only water loss concentrates the berries.", "high", "leaffall", stop: true, blockId: x.BlockId);
                     break;
                 case "ferment-start":
-                    foreach (var x in list) Post("cellar", $"Fermentation started: Lot {LotOf(x.BlockId)}", x.Text, "", "low", e.Kind, stop: false, blockId: x.BlockId);
+                    foreach (var x in list) Post("cellar", $"Fermentation started: Lot {LotOf(x)}", x.Text, "", "low", e.Kind, stop: false, blockId: x.BlockId);
                     break;
                 case "ferment-stuck":
                 case "ferment-hot":
                 case "ferment-h2s":
                     foreach (var x in list)
                     {
-                        var m = Post("cellar", e.Kind == "ferment-stuck" ? $"STUCK fermentation: Lot {LotOf(x.BlockId)}" : e.Kind == "ferment-hot" ? $"Fermentation overheating: Lot {LotOf(x.BlockId)}" : $"Reduction (H₂S): Lot {LotOf(x.BlockId)}",
+                        var m = Post("cellar", e.Kind == "ferment-stuck" ? $"STUCK fermentation: Lot {LotOf(x)}" : e.Kind == "ferment-hot" ? $"Fermentation overheating: Lot {LotOf(x)}" : $"Reduction (H₂S): Lot {LotOf(x)}",
                             Detail(CellarMaster, "There is a problem in the cellar.", x.Text), e.Kind switch
                             {
                                 "ferment-stuck" => "Stuck fermentations follow low yeast-available nitrogen (< 140 mg/L), very high sugar, overheating (> 32 °C) or rot; restarting needs a robust yeast and nutrients.",
                                 "ferment-hot" => "Fermentation releases ~1.3 °C per °Brix; without enough cooling a tank runs away above 32 °C where yeast die.",
                                 _ => "Yeast short of nitrogen make hydrogen sulfide; early aeration or copper fixes it, but neglected it becomes a lasting fault.",
                             }, "high", e.Kind, stop: true, blockId: x.BlockId);
-                        if (e.Kind == "ferment-stuck") { m.Actions.Add(("Restart fermentation", "restart", LotOf(x.BlockId))); m.Actions.Add(("Stop here, keep the sugar", "acceptstuck", LotOf(x.BlockId))); }
+                        if (e.Kind == "ferment-stuck") { m.Actions.Add(("Restart fermentation", "restart", LotOf(x))); m.Actions.Add(("Stop here, keep the sugar", "acceptstuck", LotOf(x))); }
                         m.Actions.Add(("Open Winery", "goto", "winery"));
                     }
                     break;
                 case "ferment-done":
                 case "ferment-stopped":
                 case "mlf-done":
-                    foreach (var x in list) Post("cellar", e.Kind == "mlf-done" ? $"MLF finished: Lot {LotOf(x.BlockId)}" : $"Fermentation finished: Lot {LotOf(x.BlockId)}", x.Text, "", "normal", e.Kind, stop: false, blockId: x.BlockId);
+                    foreach (var x in list) Post("cellar", e.Kind == "mlf-done" ? $"MLF finished: Lot {LotOf(x)}" : $"Fermentation finished: Lot {LotOf(x)}", x.Text, "", "normal", e.Kind, stop: false, blockId: x.BlockId);
                     break;
                 case "lot-ready":
                     foreach (var x in list)
                     {
-                        var m = Post("cellar", $"Lot {LotOf(x.BlockId)} is ready to bottle", x.Text + " Decide whether to bottle it on its own or blend it with other Lots (up to 3 Wines).", "Blending Lots from different Blocks can balance acidity, body and flavour; keeping a special Block separate can earn a higher category.", "high", e.Kind, stop: true, blockId: x.BlockId);
+                        var m = Post("cellar", $"Lot {LotOf(x)} is ready to bottle", x.Text + " Decide whether to bottle it on its own or blend it with other Lots (up to 3 Wines).", "Blending Lots from different Blocks can balance acidity, body and flavour; keeping a special Block separate can earn a higher category.", "high", e.Kind, stop: true, blockId: x.BlockId);
                         m.Actions.Add(("Open Blending", "goto", "blending"));
                     }
                     break;
@@ -135,7 +135,7 @@ public sealed partial class GameSession
         }
     }
 
-    private string LotOf(string blockId) => Blocks.FirstOrDefault(b => b.Data.Id == blockId)?.LotId ?? blockId;
+    private string LotOf(VineEvent e) => e.LotId != "" ? e.LotId : Blocks.FirstOrDefault(b => b.Data.Id == e.BlockId)?.LotId ?? e.BlockId;
     private bool Gate(string key) => _gates.Add(key);
     /// <summary>Who sends the seasonal advice: the Mentor in the first Vintage, then your own Vineyard manager (multi-vintage design §7).</summary>
     private string SeasonalRole => MentorRetired ? "vineyard" : "mentor";
@@ -233,7 +233,7 @@ public sealed partial class GameSession
         foreach (var b in Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null && Date >= new DateOnly(Date.Year, 12, 1)))
         {
             Apply(new Command { Type = "harvest", A = b.Data.Id, B = "hand", C = "Rigorous" }, record: false);
-            Post(SeasonalRole, $"I had Block {b.Data.Id} picked", "It's December — anything left would rot or be eaten by birds. I sent the crew in with rigorous sorting.", SeasonalWhy("Game rule: unpicked fruit is harvested on 1 December."), "high", "forced-harvest", stop: true, blockId: b.Data.Id);
+            Post(SeasonalRole, $"I had Block {b.Data.Id} picked", "It's December — anything left would rot or be eaten by birds. I sent the crew in with rigorous sorting. (Game rule: unpicked fruit is harvested on 1 December.)", SeasonalWhy("Game rule: unpicked fruit is harvested on 1 December."), "high", "forced-harvest", stop: true, blockId: b.Data.Id);
         }
     }
 }

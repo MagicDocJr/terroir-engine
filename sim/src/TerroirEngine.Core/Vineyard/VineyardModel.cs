@@ -6,7 +6,11 @@ namespace TerroirEngine.Vineyard;
 
 public enum StaffLevel { Junior = 0, Experienced = 1, Senior = 2 }
 
-public sealed record VineEvent(DateOnly Date, string BlockId, string Kind, string Text, int Severity = 1, double Value = 0);
+public sealed record VineEvent(DateOnly Date, string BlockId, string Kind, string Text, int Severity = 1, double Value = 0)
+{
+    /// <summary>The Lot a cellar event belongs to (a Block's current LotId changes every Vintage).</summary>
+    public string LotId { get; init; } = "";
+}
 
 /// <summary>Estate-wide Programme settings and staff that the daily vineyard step needs.</summary>
 public sealed class VineyardContext
@@ -41,7 +45,7 @@ public static class VineyardModel
         }
         b.Fruitfulness = b.FruitfulnessNext; b.FruitfulnessNext = 1.0;
         b.FlowerWindowAnomSum = b.FlowerWindowExpSum = 0; b.FlowerWindowDays = 0;
-        b.LeafAreaPeak = b.DownyLeafPeak = b.PowderyLeafPeak = 0;
+        b.LeafAreaPeak = b.DownyLeafPeak = b.PowderyLeafPeak = b.EarlyDefoliationPeak = 0;
         b.SeasonYear = year;
         b.Chill = b.NextSeasonChill > 0 || b.Leaf(year) > 1 ? b.NextSeasonChill : ChillRequirementDays;
         b.NextSeasonChill = 0;
@@ -88,14 +92,15 @@ public static class VineyardModel
         double cropPerVine = b.Harvested ? b.PickedKg / Math.Max(1, b.Vines) : b.CropKgPerVine;
         double cropLoad = cropPerVine / Math.Max(0.1, 0.55 * b.LeafAreaPeak);
         int post = b.HarvestDate != null && b.LeafFall != null ? Math.Max(0, b.LeafFall.Value.DayNumber - b.HarvestDate.Value.DayNumber) : 0;
-        double defol = M.Clamp(b.DownyLeafPeak / 100 + 0.4 * b.PowderyLeafPeak / 100 + 0.01 * b.SevereStressDays, 0, 0.9);
+        double defol = M.Clamp(b.EarlyDefoliationPeak + 0.01 * b.SevereStressDays, 0, 0.9);
         return (cropLoad, post, defol);
     }
 
     /// <summary>Reserves a season leaves behind (Bennett et al. 2005; Holzapfel et al. 2010): over-cropping, a short post-harvest canopy
-    /// and early leaf loss deplete them; a light crop lets them recover. Coefficients UNVERIFIED.</summary>
+    /// and early leaf loss deplete them; a light crop lets them recover. Vines compensate for moderate leaf loss (Candolfi-Vasconcelos &amp;
+    /// Koblet 1990), so defoliation only counts above 20 %. Coefficients UNVERIFIED.</summary>
     public static double SeasonReserves(double cropLoad, int postHarvestDays, double defoliation) =>
-        M.Clamp(1 - 0.20 * Math.Max(0, cropLoad / 1.2 - 1) - 0.10 * Math.Max(0, 1 - postHarvestDays / 30.0) - 0.30 * defoliation + 0.05 * Math.Max(0, 1 - cropLoad / 0.6), 0.70, 1.05);
+        M.Clamp(1 - 0.20 * Math.Max(0, cropLoad / 1.2 - 1) - 0.10 * Math.Max(0, 1 - postHarvestDays / 30.0) - 0.60 * Math.Max(0, defoliation - 0.20) + 0.05 * Math.Max(0, 1 - cropLoad / 0.6), 0.70, 1.05);
 
     private static void CloseCarryOver(BlockState b)
     {
@@ -416,6 +421,7 @@ public static class VineyardModel
         b.LeafAreaPeak = Math.Max(b.LeafAreaPeak, b.LeafAreaPerVine);
         b.DownyLeafPeak = Math.Max(b.DownyLeafPeak, b.Disease.DownyLeaf);
         b.PowderyLeafPeak = Math.Max(b.PowderyLeafPeak, b.Disease.PowderyLeaf);
+        if (!b.Harvested && b.LeafFall == null) b.EarlyDefoliationPeak = Math.Max(b.EarlyDefoliationPeak, b.Disease.DownyLeaf / 100 + 0.4 * b.Disease.PowderyLeaf / 100);
     }
 
     private static void InitVeraison(BlockState b, DailyWeather w)

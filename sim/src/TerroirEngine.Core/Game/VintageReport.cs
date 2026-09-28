@@ -109,9 +109,13 @@ public static class VintageReport
             wines.Add(new JsonObject { ["name"] = w.Name, ["label"] = w.Legal?.Label, ["category"] = w.Legal?.Category, ["quality"] = w.Sheet?.Quality, ["bottles"] = w.Bottles, ["price"] = w.PricePerBottle, ["revenue"] = Math.Round(w.Revenue) });
 
         // money: the costs of the calendar year plus bottling done later, against the sales of this Vintage's wines
+        // bottling is attributed by wine, not by ledger date: the calendar year also holds the previous Vintage's bottling
         var cats = g.Ledger.ByCategory(new DateOnly(vintage, 1, 1), new DateOnly(vintage, 12, 31));
+        cats.Remove("Bottling");
+        double bottling = vintageWines.Sum(w => w.BottlingCost);
+        if (bottling > 0) cats["Bottling"] = -Math.Round(bottling);
         double revenue = vintageWines.Sum(w => w.Revenue);
-        double costs = cats.Where(kv => kv.Value < 0).Sum(kv => -kv.Value) + vintageWines.Where(w => w.Bottled?.Year != vintage).Sum(w => w.BottlingCost);
+        double costs = cats.Where(kv => kv.Value < 0).Sum(kv => -kv.Value);
         var topCosts = new JsonArray();
         foreach (var kv in cats.Where(kv => kv.Value < 0).OrderBy(kv => kv.Value).Take(5)) topCosts.Add(new JsonObject { ["category"] = kv.Key, ["amount"] = Math.Round(-kv.Value) });
 
@@ -127,7 +131,11 @@ public static class VintageReport
         if (next.Count == 0) next.Add("A clean year. Next time, experiment: split a Block's harvest dates, or try a different vessel or yeast on one Lot and compare the Tasting sheets.");
 
         var events = new JsonArray();
-        foreach (var m in g.Inbox.Where(m => m.Date.Year == vintage && m.Priority == "high" && m.Kind is "frost" or "frost-warning" or "downy" or "botrytis" or "veraison" or "budburst" or "ferment-stuck" or "overdrawn" or "bottled" or "newseason").OrderBy(m => m.Id).Take(14))
+        // the season's events from its own year, plus the bottling of its own wines (which happens the year after)
+        var labels = vintageWines.Select(w => w.Legal?.Label).Where(l => l != null).ToHashSet();
+        var seasonEvents = g.Inbox.Where(m => m.Date.Year == vintage && m.Priority == "high" && m.Kind is "frost" or "frost-warning" or "downy" or "botrytis" or "veraison" or "budburst" or "ferment-stuck" or "overdrawn" or "newseason").OrderBy(m => m.Id).Take(12);
+        var bottledEvents = g.Inbox.Where(m => m.Kind == "bottled" && labels.Any(l => m.Subject.EndsWith(": " + l)));
+        foreach (var m in seasonEvents.Concat(bottledEvents).OrderBy(m => m.Id))
             events.Add(new JsonObject { ["date"] = Dates.Short(m.Date), ["text"] = m.Subject, ["kind"] = m.Kind });
 
         // weekly temperature, March to November (or yesterday), against the weekly normal

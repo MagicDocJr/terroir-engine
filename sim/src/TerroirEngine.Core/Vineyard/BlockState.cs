@@ -94,6 +94,7 @@ public sealed class BlockState
     public double[]? ClimNormalTmean { get; set; }
     public double FlowerWindowAnomSum, FlowerWindowExpSum; public int FlowerWindowDays;
     public double LeafAreaPeak, DownyLeafPeak, PowderyLeafPeak;
+    public double EarlyDefoliationPeak;   // mildew leaf loss before harvest or leaf fall: what costs the vine its reserves (§3.6)
     // water
     public double Taw, Raw, Dr, PsiPd, PsiStem = -0.3, StressIndex, IrrigationMmSeason, Et0Season, RainSeason;
     // harvest
