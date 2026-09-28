@@ -34,7 +34,14 @@ public static class VineyardModel
     // ------------------------------------------------------------------------------------------ season set-up
     public static void StartSeason(BlockState b, int year)
     {
-        if (b.SeasonYear > 0) b.Seasons.Add(Record(b));
+        if (b.SeasonYear > 0)
+        {
+            if (b.Leaf(b.SeasonYear) >= 4) CloseCarryOver(b);   // Establishment years drop their fruit and leave the vines neutral
+            b.Seasons.Add(Record(b));
+        }
+        b.Fruitfulness = b.FruitfulnessNext; b.FruitfulnessNext = 1.0;
+        b.FlowerWindowAnomSum = b.FlowerWindowExpSum = 0; b.FlowerWindowDays = 0;
+        b.LeafAreaPeak = b.DownyLeafPeak = b.PowderyLeafPeak = 0;
         b.SeasonYear = year;
         b.Chill = b.NextSeasonChill > 0 || b.Leaf(year) > 1 ? b.NextSeasonChill : ChillRequirementDays;
         b.NextSeasonChill = 0;
@@ -66,7 +73,48 @@ public static class VineyardModel
     {
         Year = b.SeasonYear, Leaf = b.Leaf(b.SeasonYear), Budburst = b.Budburst, Flowering = b.Flowering, Veraison = b.Veraison, HarvestDate = b.HarvestDate, LeafFall = b.LeafFall,
         YieldKgHa = b.Harvested ? b.PickedKg / Math.Max(0.01, b.AreaHa) : 0, FrostShootLoss = b.FrostShootLoss, GreyRotPct = b.Disease.GreyRot * 100, Winkler = b.Winkler, RainSeason = b.RainSeason,
+        DownyLeafPeak = b.DownyLeafPeak, PowderyLeafPeak = b.PowderyLeafPeak, CropLoadKgM2 = CarryInputs(b).CropLoad, PostHarvestDays = CarryInputs(b).PostHarvestDays,
+        Defoliation = CarryInputs(b).Defoliation, FruitfulnessNext = b.FruitfulnessNext, ReservesAfter = b.Reserves,
     };
+
+    /// <summary>Next season's bunches per shoot from the weather while the buds initiate inflorescences: warmth relative to the Block's
+    /// normal and fruit-zone light (Buttrose 1969, 1974; canopy-and-yield.md §3.2). Coefficients UNVERIFIED.</summary>
+    public static double FruitfulnessFrom(double tAnomC, double exposure) => M.Clamp(1 + 0.04 * tAnomC + 0.30 * (exposure - 0.45), 0.85, 1.15);
+
+    /// <summary>Inputs to next season's reserves (canopy-and-yield.md §3.6). Crop load is kg fruit per m² of effective leaf area,
+    /// the inverse of the ripening model's leaf-area-to-fruit ratio (0.55 × peak leaf area; balanced ≈ 1.0).</summary>
+    public static (double CropLoad, int PostHarvestDays, double Defoliation) CarryInputs(BlockState b)
+    {
+        double cropPerVine = b.Harvested ? b.PickedKg / Math.Max(1, b.Vines) : b.CropKgPerVine;
+        double cropLoad = cropPerVine / Math.Max(0.1, 0.55 * b.LeafAreaPeak);
+        int post = b.HarvestDate != null && b.LeafFall != null ? Math.Max(0, b.LeafFall.Value.DayNumber - b.HarvestDate.Value.DayNumber) : 0;
+        double defol = M.Clamp(b.DownyLeafPeak / 100 + 0.4 * b.PowderyLeafPeak / 100 + 0.01 * b.SevereStressDays, 0, 0.9);
+        return (cropLoad, post, defol);
+    }
+
+    /// <summary>Reserves a season leaves behind (Bennett et al. 2005; Holzapfel et al. 2010): over-cropping, a short post-harvest canopy
+    /// and early leaf loss deplete them; a light crop lets them recover. Coefficients UNVERIFIED.</summary>
+    public static double SeasonReserves(double cropLoad, int postHarvestDays, double defoliation) =>
+        M.Clamp(1 - 0.20 * Math.Max(0, cropLoad / 1.2 - 1) - 0.10 * Math.Max(0, 1 - postHarvestDays / 30.0) - 0.30 * defoliation + 0.05 * Math.Max(0, 1 - cropLoad / 0.6), 0.70, 1.05);
+
+    private static void CloseCarryOver(BlockState b)
+    {
+        var (load, post, defol) = CarryInputs(b);
+        b.Reserves = M.Clamp(0.4 * b.Reserves + 0.6 * SeasonReserves(load, post, defol), 0.70, 1.05);
+    }
+
+    /// <summary>1991–2020 mean Tmean per day of year for the Block's microclimate (the reference for the fruitfulness anomaly).</summary>
+    public static double[] ClimNormalTmean(BlockState b, WeatherArchive archive)
+    {
+        var sum = new double[367]; var n = new int[367];
+        for (int y = 1991; y <= 2020; y++)
+        {
+            if (!archive.Has(new DateOnly(y, 1, 1))) continue;
+            for (var d = new DateOnly(y, 1, 1); d.Year == y; d = d.AddDays(1)) { sum[d.DayOfYear] += b.Climate.Adjust(archive.Get(d)).Tmean; n[d.DayOfYear]++; }
+        }
+        for (int i = 1; i <= 366; i++) sum[i] = n[i] > 0 ? sum[i] / n[i] : sum[i - 1];
+        return sum;
+    }
 
     /// <summary>Total available water in the root zone (FAO-56 TAW with stone correction; soil-and-water.md §3). Adds a fracture-water
     /// reserve for very stony slate/volcanic Blocks (regions-and-plots open question 4; UNVERIFIED design value) and young-vine rooting (§9).</summary>
@@ -179,7 +227,7 @@ public static class VineyardModel
         if (b.Budburst != null && b.LeafFall == null)
         {
             double effShoots = b.Shoots * (1 - b.FrostShootLoss * 0.55);   // secondary shoots replace some
-            double laShoot = 0.35 * vigour * (1 - 0.4 * stressMean) * (1 - Math.Exp(-0.004 * b.Gdd10SinceBudburst * 2.2));
+            double laShoot = 0.35 * vigour * (0.8 + 0.2 * b.Reserves) * (1 - 0.4 * stressMean) * (1 - Math.Exp(-0.004 * b.Gdd10SinceBudburst * 2.2));
             double capPerVine = 2.6 * 10000.0 / b.Planting.DensityVinesHa * vigour;         // LAI cap ≈ 2.6 (UNVERIFIED)
             double diseaseLoss = M.Clamp((b.Disease.DownyLeaf + b.Disease.PowderyLeaf * 0.4) / 100.0, 0, 0.9);
             double severeLoss = b.SevereStressDays * 0.01;
@@ -195,6 +243,14 @@ public static class VineyardModel
             if (b.Veraison == null && b.FruitSet != null) { b.ExposureEarlySum += b.Exposure; b.ExposureEarlyDays++; }
             else if (b.Veraison != null) { b.ExposureLateSum += b.Exposure; b.ExposureLateDays++; }
             if (removalActive && b.LeafTiming == LeafRemovalTiming.Early) b.AcclimatedFraction = Math.Min(1, b.AcclimatedFraction + 0.05);
+        }
+
+        // next season's fruitfulness: the weather while this season's buds initiate inflorescences, flowering → +25 days (canopy-and-yield.md §3.2)
+        if (b.Flowering != null && leaf >= 4 && b.ClimNormalTmean != null)
+        {
+            int relF = date.DayNumber - b.Flowering.Value.DayNumber;
+            if (relF >= 0 && relF <= 25) { b.FlowerWindowAnomSum += w.Tmean - b.ClimNormalTmean[doy]; b.FlowerWindowExpSum += b.Exposure; b.FlowerWindowDays++; }
+            if (relF == 25 && b.FlowerWindowDays > 0) b.FruitfulnessNext = FruitfulnessFrom(b.FlowerWindowAnomSum / b.FlowerWindowDays, b.FlowerWindowExpSum / b.FlowerWindowDays);
         }
 
         // --- water balance (FAO-56; soil-and-water.md §4–6)
@@ -251,12 +307,12 @@ public static class VineyardModel
                 double needed = 1.2 * b.Shoots * 0.12;
                 double fCarb = M.Clamp(0.6 + 0.4 * b.LeafAreaPerVine / Math.Max(0.1, needed), 0.6, 1.0);
                 double coulure = 1 - v.CoulureProne * (1 - fTemp * fRain) * 0.6;
-                b.SetFraction = v.BaseSet * fTemp * fRain * fCarb * coulure / Math.Max(0.3, 0.85);
+                b.SetFraction = v.BaseSet * fTemp * fRain * fCarb * coulure / Math.Max(0.3, 0.85) * Math.Min(1.0, b.Reserves);
                 b.SetFraction = M.Clamp(b.SetFraction, 0.1, v.BaseSet * 1.1);
                 b.MillerandageShare = 0.5 * (1 - fTemp) * (1 + v.MillerandageProne);
                 double setRatio = b.SetFraction / v.BaseSet;
                 double fruitfulShoots = b.Shoots * (1 - b.FrostShootLoss) + b.Shoots * b.FrostShootLoss * 0.4;   // secondary shoots ~40 % fruitful
-                b.BerriesPerVine = fruitfulShoots * v.ClustersPerShoot * v.BerriesPerCluster * setRatio;
+                b.BerriesPerVine = fruitfulShoots * v.ClustersPerShoot * b.Fruitfulness * v.BerriesPerCluster * setRatio;
                 if (leaf <= 3 || ctx.AutoManage) b.BerriesPerVine = 0;                                          // young vines: fruit dropped
                 if (leaf == 4) b.BerriesPerVine *= 0.85;                                                         // 4th leaf (soil-and-water.md §9)
                 b.BerryWeight = v.BerryWeightG * 0.12;
@@ -357,6 +413,9 @@ public static class VineyardModel
 
         // --- diseases (disease.md)
         Disease(b, w, ctx, seed);
+        b.LeafAreaPeak = Math.Max(b.LeafAreaPeak, b.LeafAreaPerVine);
+        b.DownyLeafPeak = Math.Max(b.DownyLeafPeak, b.Disease.DownyLeaf);
+        b.PowderyLeafPeak = Math.Max(b.PowderyLeafPeak, b.Disease.PowderyLeaf);
     }
 
     private static void InitVeraison(BlockState b, DailyWeather w)

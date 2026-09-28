@@ -48,7 +48,7 @@ Rejected:
 - `Gate(key)` keys today are one-shot for the whole game ("budburst", "flowering", "window-A"). Seasonal gates get the year appended (`budburst-2022`). One-shot gates that must stay one-shot (`overdrawn`, onboarding) keep their keys. Lot-level gates are already unique (the Lot id carries the year).
 
 ### 3.5 The January "New season" message
-Each 15 January from the second Vintage on, the Vineyard manager posts **"The {year} season"** (stop: true), with:
+Each 15 January from the second Vintage on, the Vineyard manager posts **"Vintage {year} begins"** (stop: true; CONTEXT.md avoids "season"), with:
 - vine age ("5th leaf"), and the young-vine note while it applies;
 - the **bud-dissection estimate**: expected bunches per shoot against normal, from the fruitfulness factor (§4.1), in words and percent;
 - vine reserves in words (e.g. "the vines went into winter tired after the big crop and the early leaf loss"), from §4.2;
@@ -64,8 +64,8 @@ Direction and mechanism come from the literature; the sizes are design values ma
 ### 4.1 Bud fruitfulness (`FruitfulnessNext`)
 Inflorescence primordia form in the latent buds around flowering of the *previous* season; warmth and light on the buds then set next year's bunches per shoot (Buttrose 1969, 1974; Keller, *The Science of Grapevines*). `canopy-and-yield.md` §3.2 already reserves "±15 % from the previous season's weather once multi-vintage play exists".
 
-- Recorded at flowering + 20 days, per Block:
-  `T_anom` = mean `Tmean` (Block microclimate) over flowering −10 … +20 days, minus the 1991–2020 mean of the same calendar window for that Block;
+- Recorded at flowering + 25 days, per Block:
+  `T_anom` = mean `Tmean` (Block microclimate) over flowering … +25 days (the flowering date is only known once it happens), minus the 1991–2020 mean of the same calendar window for that Block;
   `E` = mean fruit-zone exposure over the same window (today's `Exposure`, 0.45 = typical).
 - `FruitfulnessNext = clamp(1 + 0.04·T_anom + 0.30·(E − 0.45), 0.85, 1.15)` (`UNVERIFIED`).
 - Applied next season as a multiplier on `ClustersPerShoot` in the fruit-set calculation.
@@ -122,7 +122,7 @@ Soil water refills to field capacity each winter (existing game simplification, 
 
 ## 8. Screens
 
-- **Top bar:** date plus "{year} season · {n}th leaf".
+- **Top bar:** date plus "Vintage {year} · {n}th leaf".
 - **Inbox:** unchanged (it already pages older messages).
 - **Winery, Blending:** Lots grouped under Vintage headings, newest first.
 - **Vintage report:** `VintageReport.Build(g, vintage)` reads `History[vintage]`. A report becomes available when every Lot of that Vintage is bottled; a message with an "Open the Vintage report" action announces it and the shell opens it once. The report screen gets a Vintage selector. The Mentor farewell panel appears only on the first Vintage's report.

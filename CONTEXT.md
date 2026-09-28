@@ -88,6 +88,14 @@ _Avoid_: Rank, grade, skill
 An expert who is about to retire and guides the player through the start of the game, including the first Vintage and its ageing, before leaving.
 _Avoid_: Tutor, guide, tutorial
 
+**Bud fruitfulness**:
+How many bunches each shoot carries. It is set inside the buds around flowering of the previous Vintage, so warm, bright flowering weather means more bunches next year. Growers estimate it in winter by cutting buds open (bud dissection).
+_Avoid_: Bud fertility, bud potential
+
+**Vine reserves**:
+The starch a vine stores in its roots and trunk after the harvest. It feeds the next spring's growth. A big crop, a late harvest or early leaf loss runs it down.
+_Avoid_: Vine energy, vine health
+
 ### Wine
 
 **Lot**:

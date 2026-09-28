@@ -101,3 +101,75 @@ public class VintageReportTests
         Assert.Equal(g.FirstVintage + 1, snap["report"]!["vintage"]!.GetValue<int>());
     }
 }
+
+public class CarryOverTests
+{
+    [Fact]
+    public void FirstVintage_HasNeutralCarryOver()
+    {
+        var g = new GameSession(Fixture.Data, new GameSetup { PlotId = "mosel-seitental", PlantingYear = 2014 });
+        Assert.All(g.Blocks, b => { Assert.Equal(1.0, b.Fruitfulness); Assert.Equal(1.0, b.Reserves); Assert.Equal(1.0, b.FruitfulnessNext); });
+        Assert.All(g.Blocks, b => Assert.NotNull(b.ClimNormalTmean));
+    }
+
+    [Fact]
+    public void Fruitfulness_FollowsFloweringWarmthAndLight_AndIsBounded()
+    {
+        Assert.Equal(1.0, VineyardModel.FruitfulnessFrom(0, 0.45), 6);
+        Assert.True(VineyardModel.FruitfulnessFrom(2, 0.45) > 1.05);
+        Assert.True(VineyardModel.FruitfulnessFrom(-2, 0.45) < 0.95);
+        Assert.True(VineyardModel.FruitfulnessFrom(0, 0.65) > 1.05);
+        Assert.Equal(1.15, VineyardModel.FruitfulnessFrom(10, 0.9), 6);
+        Assert.Equal(0.85, VineyardModel.FruitfulnessFrom(-10, 0.1), 6);
+    }
+
+    [Fact]
+    public void SeasonReserves_DropWithBigCropLateHarvestAndLeafLoss()
+    {
+        double balanced = VineyardModel.SeasonReserves(1.0, 40, 0);
+        Assert.InRange(balanced, 0.99, 1.01);
+        Assert.True(VineyardModel.SeasonReserves(1.8, 40, 0) < balanced - 0.05);    // over-cropped
+        Assert.True(VineyardModel.SeasonReserves(1.0, 0, 0) < balanced - 0.05);     // picked at leaf fall
+        Assert.True(VineyardModel.SeasonReserves(1.0, 40, 0.4) < balanced - 0.1);   // mildew defoliation
+        Assert.True(VineyardModel.SeasonReserves(0.3, 40, 0) > balanced);           // light crop: vines recover
+        Assert.Equal(0.70, VineyardModel.SeasonReserves(5, 0, 0.9), 6);
+    }
+
+    [Fact]
+    public void InoculumCarry_RisesWithLastYearsMildew()
+    {
+        Assert.Equal(0.85, GameSession.InoculumCarry(0), 6);
+        Assert.True(GameSession.InoculumCarry(20) > 1.1);
+        Assert.Equal(1.30, GameSession.InoculumCarry(80), 6);
+    }
+
+    private static GameSession YearTwoAfter(string budLoad, string spray)
+    {
+        // Mosel 2016 was a heavy downy-mildew year in Germany (cited in disease.md)
+        var g = new GameSession(Fixture.Data, new GameSetup { PlotId = "mosel-seitental", PlantingYear = 2013 });
+        foreach (var b in g.Blocks) g.Apply(new Command { Type = "block", A = b.Data.Id, B = "budload", C = budLoad });
+        g.Apply(new Command { Type = "programme", A = "spray", B = spray });
+        while (g.Date.Year == g.FirstVintage)
+        {
+            g.Advance(7, stopAtAlerts: false);
+            foreach (var b in g.Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null && (Chemistry.MustFromBlock(b).Oe >= 80 || b.LeafFall != null)))
+                g.Apply(new Command { Type = "harvest", A = b.Data.Id, B = "hand", C = "Table" });
+        }
+        // the second Vintage is farmed identically in both games
+        foreach (var b in g.Blocks) g.Apply(new Command { Type = "block", A = b.Data.Id, B = "budload", C = "Balanced" });
+        g.Apply(new Command { Type = "programme", A = "spray", B = "Medium" });
+        while (g.Blocks.Any(b => b.SetFraction < 0)) g.Advance(7, stopAtAlerts: false);
+        return g;
+    }
+
+    [Fact]
+    public void HardYear_ShrinksNextYearsCrop_ComparedWithACarefulYear()
+    {
+        var hard = YearTwoAfter("High", "Low");
+        var careful = YearTwoAfter("Low", "High");
+        Assert.True(hard.Blocks.Average(b => b.Reserves) < careful.Blocks.Average(b => b.Reserves));
+        Assert.True(hard.Blocks.Average(b => b.Reserves) < 1.0);
+        Assert.True(hard.Blocks.Sum(b => b.BerriesPerVine) < careful.Blocks.Sum(b => b.BerriesPerVine));
+        Assert.All(hard.Blocks, b => Assert.Contains(b.Seasons, s => s.Year == hard.FirstVintage && s.ReservesAfter == b.Reserves));
+    }
+}

@@ -282,10 +282,17 @@ Hourly temperature, RH, rain and leaf wetness (reconstructed from daily Historic
 4. Noble vs grey rot is decided by a weather rule, not simulated fungal physiology.
 5. Other diseases and pests (black rot, phomopsis, trunk diseases, grape moth) are left out (backlog).
 
+## 10. Inoculum carry-over between Vintages
+
+Downy mildew overwinters as oospores in fallen leaves and soil (the seasonal oospore dose drives primary infections: Rossi et al. 2008); powdery mildew overwinters as chasmothecia (cleistothecia) on the bark, which release ascospores from leaf fall to budbreak (Gadoury & Pearson 1990). A severe season leaves more of both, and the next spring's primary infections start from a larger source.
+
+**Model:** at 1 January the Region's primary inoculum for the new season is multiplied by `clamp(0.85 + 0.015 × peak leaf infection %, 0.85, 1.30)`, averaged over the Blocks, separately for downy and powdery mildew. It is not cumulative: each season starts again from the Region's base value. Coefficients `UNVERIFIED`. The first Vintage uses the base value.
+
 ## Sources
 
+- Gadoury DM, Pearson RC (1990). *Ascocarp dehiscence and ascospore discharge in* Uncinula necator. Phytopathology 80:393–401. https://www.apsnet.org/publications/phytopathology/backissues/Documents/1990Abstracts/Phyto80_393.htm
 - Gessler C, Pertot I, Perazzolli M (2011). *Plasmopara viticola: a review of knowledge on downy mildew of grapevine and effective disease management.* Phytopathologia Mediterranea 50:3–44. (10 mm / 10 °C primary infection conditions)
-- Rossi V, Caffi T, Giosuè S, Bugiani R (2008). *A mechanistic model simulating primary infections of downy mildew in grapevine.* Ecological Modelling 212:480–491. Cited from memory, not re-checked in this pass.
+- Rossi V, Caffi T, Giosuè S, Bugiani R (2008). *A mechanistic model simulating primary infections of downy mildew in grapevine.* Ecological Modelling 212:480–491. https://www.sciencedirect.com/science/article/abs/pii/S0304380007005881
 - Magarey RD, Sutton TB, Thayer CL (2005). *A simple generic infection model for foliar fungal plant pathogens.* Phytopathology 95:92–100. Cited from memory; its parameterisation for *P. viticola* is reported in the next source.
 - *A weather-driven model for predicting infections of grapevines by sporangia of Plasmopara viticola* (2021). Frontiers in Plant Science 12:636607. https://www.frontiersin.org/journals/plant-science/articles/10.3389/fpls.2021.636607/full (reports the Caffi et al. 2016 parameters, the Caffi et al. 2013a sporulation rule and Brischetto et al. 2020 survival)
 - Lalancette N, Ellis MA, Madden LV (1988). *Development of an infection efficiency model for Plasmopara viticola on American grape based on temperature and duration of leaf wetness.* Phytopathology 78:794–800.

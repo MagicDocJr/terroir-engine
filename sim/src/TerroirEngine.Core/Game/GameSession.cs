@@ -69,6 +69,9 @@ public sealed partial class GameSession
     public Ledger Ledger { get; } = new();
     public List<Message> Inbox { get; } = new();
     public VineyardContext Ctx { get; } = new();
+    /// <summary>The Region's primary mildew inoculum before any carry-over from last season (disease.md).</summary>
+    public double BaseDownyInoculum { get; }
+    public double BasePowderyInoculum { get; }
     public StaffLevel VineyardManager { get; private set; }
     public StaffLevel CellarMaster { get; private set; }
     public DateOnly Date { get; private set; }
@@ -129,9 +132,11 @@ public sealed partial class GameSession
             b.Planting = setup.Planting.TryGetValue(bd.Id, out var pc) ? pc : DefaultPlanting(Plot, bd);
             Blocks.Add(b);
         }
+        foreach (var b in Blocks) b.ClimNormalTmean = VineyardModel.ClimNormalTmean(b, archive);
         Ctx.IrrigationLegal = Region.Id == "napa";
         Ctx.DownyInoculum = Region.Id == "napa" ? 0.1 : Region.Id == "cote-dor" ? 0.65 : 0.7;
         Ctx.PowderyInoculum = Region.Id == "napa" ? 0.9 : 0.6;
+        BaseDownyInoculum = Ctx.DownyInoculum; BasePowderyInoculum = Ctx.PowderyInoculum;
         Ctx.BotrytisInoculum = Region.Id == "napa" ? 0.4 : 0.7;
         Ctx.Irrigation = Region.Id == "napa" ? Tier.Medium : Tier.Low;
         Ctx.VineyardManager = VineyardManager;
@@ -309,6 +314,7 @@ public sealed partial class GameSession
         Ctx.LabourFactor = Ctx.Labour switch { Tier.Low => 0.85, Tier.High => 1.2, _ => 1.0 };
         Ctx.SprayPassesToday = 0; Ctx.FrostProtectionNights = 0;
         foreach (var b in Blocks) VineyardModel.Step(b, w, Ctx, Setup.Seed);
+        if (Date.Month == 1 && Date.Day == 1) ApplyDiseaseCarryOver();
         if (Ctx.ForceSprayToday)
         {
             Post("vineyard", Ctx.SprayPassesToday > 0 ? "Extra spray pass done" : "Extra spray pass cancelled: raining", Ctx.SprayPassesToday > 0 ? "All Blocks were sprayed today, outside the normal schedule. The next regular pass moves back accordingly." : "Spraying in heavy rain washes the product off; the crew stayed in. Order it again for a dry day.",
@@ -555,6 +561,17 @@ public sealed partial class GameSession
                 Ledger.Post(Date, "Barrels", -n * vp.PricePer, $"{n} × {lot.Opt("Vessel").ToLowerInvariant()} for Lot {lot.Id}");
             }
         }
+    }
+
+    /// <summary>Overwintering inoculum follows last season's mildew (disease.md): multiplier on this season's primary inoculum only.</summary>
+    public static double InoculumCarry(double peakLeafPct) => M.Clamp(0.85 + 0.015 * peakLeafPct, 0.85, 1.30);
+
+    private void ApplyDiseaseCarryOver()
+    {
+        var last = Blocks.Select(b => b.Seasons.LastOrDefault()).Where(s => s != null && s.Year == Date.Year - 1 && s.Leaf >= 4).Select(s => s!).ToList();
+        if (last.Count == 0) return;
+        Ctx.DownyInoculum = BaseDownyInoculum * InoculumCarry(last.Average(s => s.DownyLeafPeak));
+        Ctx.PowderyInoculum = BasePowderyInoculum * InoculumCarry(last.Average(s => s.PowderyLeafPeak));
     }
 
     // ================================================================================== save / load

@@ -105,7 +105,7 @@ The player picks **Low / Balanced / High** bud load, translated into buds per vi
 
 ### 3.2 Fruitfulness (clusters per shoot)
 
-Inflorescence primordia form in the latent buds **during the previous season**, around flowering. Temperature and light on the buds then set next year's fruitfulness. **Game simplification (MVP):** fruitfulness is an initial condition per Variety, scaled ±15 % by the previous season's weather once multi-vintage play exists (backlog).
+Inflorescence primordia form in the latent buds **during the previous season**, around flowering. Temperature and light on the buds then set next year's fruitfulness. **Model:** `FruitfulnessNext = clamp(1 + 0.04·T_anom + 0.30·(E − 0.45), 0.85, 1.15)`, where `T_anom` is the Block's mean temperature from flowering to 25 days after, minus its 1991–2020 mean for the same days, and `E` is the mean fruit-zone exposure over the same window. It multiplies next season's clusters per shoot. Direction from Buttrose (1969): bunch primordia per bud rise with light intensity, and with temperature from barren buds at 20 °C to a maximum between 30 and 35 °C (controlled conditions). Coefficients `UNVERIFIED`. The first Vintage uses 1.0 (no previous cropping season). Growers estimate fruitfulness in winter by dissecting buds; the game's January message reports this factor as that estimate.
 
 ### 3.3 Variety table
 
@@ -153,9 +153,36 @@ Leaf 1 is the planting year. **Game simplification** (spec §3.1), using typical
 | 1–2 | 0 (fruit removed) | – |
 | 3 | 0.3–0.5 (the first crop is often thinned) | concentration −10 % |
 | 4 | 0.8 | concentration −5 %, flagged "young vines" |
-| ≥ 5 | 1.0 | quality improves slowly with vine age (multi-vintage, backlog) |
+| ≥ 5 | 1.0 | no quality bonus for older vines |
+
+**Vine age and quality:** the game does not make older vines give better wine. In a Barossa Shiraz study, well-maintained old and young vines in the same vineyard did not differ in yield or basic grape composition (Grigg et al. 2018), so a bonus would teach something the evidence does not support.
 
 A drought in the planting year kills a share of the young vines (`UNVERIFIED`: 10–30 % losses without irrigation in a dry first summer). Replanting costs money and delays those vines.
+
+### 3.6 Carbohydrate reserves (multi-vintage)
+
+Starch stored in roots and trunk feeds budburst, early shoot growth and flowering until the new leaves export sugar. A crop that is large for the leaf area, a harvest so late that the leaves have little time to refill the reserves, and early leaf loss (downy mildew, drought, frost) all deplete them. In defoliated Chardonnay, lower root and trunk reserves went with up to 50 % fewer inflorescences per shoot and flowers per inflorescence the next year (Bennett et al. 2005; review: Holzapfel et al. 2010).
+
+**Model (at 1 January, for Blocks in their 4th leaf or older):**
+- `cropLoad` = kg fruit per vine ÷ (0.55 × peak leaf area per vine), the inverse of the ripening model's leaf-area-to-fruit ratio (§2.2); ≈ 1.0 is balanced (Kliewer & Dokoozlian 2005: 0.8–1.2 m² per kg).
+- `postHarvestDays` = days from harvest to leaf fall.
+- `defoliation` = peak downy leaf % + 0.4 × peak powdery leaf % (as fractions) + 0.01 per severe water-stress day, capped at 0.9.
+- `seasonR = clamp(1 − 0.20·max(0, cropLoad/1.2 − 1) − 0.10·max(0, 1 − postHarvestDays/30) − 0.30·defoliation + 0.05·max(0, 1 − cropLoad/0.6), 0.70, 1.05)`
+- `Reserves = clamp(0.4·Reserves_prev + 0.6·seasonR, 0.70, 1.05)`: vines recover over more than one year.
+- Next season: shoot leaf-area growth × (0.8 + 0.2·Reserves); fruit-set ratio × min(1, Reserves).
+
+All coefficients `UNVERIFIED`. **Calibration (measured 2026-09-28, 10 consecutive Vintages 2011–2020, Balanced bud load except the Côte d'Or's Low, Medium tiers, scripted harvest):**
+
+| Plot | Mean yield (hL/ha) | Year-to-year CV |
+|---|---|---|
+| Mosel Seitental | 72 | 20 % |
+| Mosel Blauschiefer | 67 | 13 % |
+| Côte d'Or Village | 53 | 19 % |
+| Côte d'Or Premier Cru | 52 | 18 % |
+| Napa Rutherford Bench | 84 | 4 % |
+| Napa Carneros | 69 | 7 % |
+
+The Mosel and Côte d'Or spreads fall in the expected 15–30 % band (`UNVERIFIED` band); irrigated Napa varies less, as expected. The low years have causes in the weather (Mosel 2017 frost, Côte d'Or 2020 heat and drought). Open point: mature Côte d'Or vines (5th leaf on) average ≈ 53 hL/ha, above the §7 expectation of 35–50; the 4th-leaf factor hid this in the single-Vintage game. It is not caused by the carry-over.
 
 ## 4. Water stress
 
@@ -233,6 +260,10 @@ Staff level scales efficiency (Junior −10 %, Senior +10 %, `UNVERIFIED`).
 
 ## Sources
 
+- Buttrose MS (1969). *Fruitfulness in grapevines: effects of light intensity and temperature.* Botanical Gazette 130(3):166–173. https://www.journals.uchicago.edu/doi/10.1086/336486
+- Bennett J, Jarvis P, Creasy GL, Trought MCT (2005). *Influence of defoliation on overwintering carbohydrate reserves, return bloom, and yield of mature Chardonnay grapevines.* American Journal of Enology and Viticulture 56(4):386–393. https://www.ajevonline.org/content/56/4/386
+- Holzapfel BP, Smith JP, Field SK, Hardie WJ (2010). *Dynamics of carbohydrate reserves in cultivated grapevines.* Horticultural Reviews 37:143–211. https://onlinelibrary.wiley.com/doi/10.1002/9780470543672.ch3
+- Grigg D, Methven D, De Bei R, Rodríguez López CM, Dry P, Collins C (2018). *Effect of vine age on vine performance of Shiraz in the Barossa Valley, Australia.* Australian Journal of Grape and Wine Research 24(1):75–87. https://onlinelibrary.wiley.com/doi/10.1111/ajgw.12312
 - Kliewer WM, Dokoozlian NK (2005). *Leaf area/crop weight ratios of grapevines: influence on fruit composition and wine quality.* American Journal of Enology and Viticulture 56(2):170–181. doi:10.5344/ajev.2005.56.2.170. https://www.ajevonline.org/content/56/2/170
 - van Leeuwen C, Tregoat O, Choné X, Bois B, Pernet D, Gaudillère JP (2009). *Vine water status is a key factor in grape ripening and vintage quality for red Bordeaux wine. How can it be assessed for vineyard management purposes?* Journal International des Sciences de la Vigne et du Vin 43(3):121–134. https://oeno-one.eu/article/view/798 (the thresholds are verified; the full author list is cited from memory)
 - Choné X, van Leeuwen C, Dubourdieu D, Gaudillère JP (2001). *Stem water potential is a sensitive indicator of grapevine water status.* Annals of Botany 87:477–483. (Volume and pages cited from memory.)

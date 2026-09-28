@@ -86,6 +86,14 @@ public sealed class BlockState
     public double SunburnFraction, AcclimatedFraction;
     public DiseaseState Disease { get; set; } = new();
     public double Chlorosis;
+    // multi-vintage carry-over (canopy-and-yield.md §3.2 and §3.6; disease.md). All 1.0 until the first cropping season closes.
+    public double Fruitfulness { get; set; } = 1.0;       // this season's bunches-per-shoot factor, set by last season's flowering weather
+    public double FruitfulnessNext { get; set; } = 1.0;   // being set this season, 25 days after flowering
+    public double Reserves { get; set; } = 1.0;           // carbohydrate reserves the vine went into this season with
+    /// <summary>1991–2020 mean daily Tmean for this Block's microclimate, indexed by day of year (1–366). Null in bare model tests.</summary>
+    public double[]? ClimNormalTmean { get; set; }
+    public double FlowerWindowAnomSum, FlowerWindowExpSum; public int FlowerWindowDays;
+    public double LeafAreaPeak, DownyLeafPeak, PowderyLeafPeak;
     // water
     public double Taw, Raw, Dr, PsiPd, PsiStem = -0.3, StressIndex, IrrigationMmSeason, Et0Season, RainSeason;
     // harvest
@@ -145,6 +153,13 @@ public sealed class SeasonRecord
     public double GreyRotPct { get; init; }
     public double Winkler { get; init; }
     public double RainSeason { get; init; }
+    public double DownyLeafPeak { get; init; }
+    public double PowderyLeafPeak { get; init; }
+    public double CropLoadKgM2 { get; init; }
+    public int PostHarvestDays { get; init; }
+    public double Defoliation { get; init; }
+    public double FruitfulnessNext { get; init; }
+    public double ReservesAfter { get; init; }
 }
 
 public enum SortingLevel { None, Table, Rigorous }
