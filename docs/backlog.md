@@ -40,6 +40,7 @@ Found while building or reviewing; not urgent, but not to be forgotten. Remove a
 - Napa year-to-year yield variation is 4–7 %; check against the Napa County crush reports.
 - Multi-vintage carry-over coefficients (fruitfulness, reserves, inoculum, 20 % leaf-loss tolerance) are `UNVERIFIED`.
 - Reserves ignore frost at leaf fall (spec §4.2 lists it).
+- At 5,000 vines/ha a Guyot Block's High bud load (11 buds/m² = 22 buds per vine) hits the Guyot cap of 16 buds per vine, so High gives the same crop as Balanced; decide whether the cap should allow a double Guyot (≈ 2 × 10 buds) or the options should say so.
 - A harvest still running on 31 December is wiped on 1 January (the December rule finishes picks on 2 December, so this is rare).
 
 ### Engine and performance

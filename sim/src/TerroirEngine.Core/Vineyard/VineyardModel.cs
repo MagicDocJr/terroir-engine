@@ -134,9 +134,12 @@ public static class VineyardModel
         return Math.Max(25, (baseTaw + fracture) * rootFrac);
     }
 
-    public static double BudsPerVine(BlockState b)
+    public static double BudsPerVine(BlockState b) => BudsPerVine(b, b.BudLoad);
+
+    /// <summary>Buds per vine that a bud load gives on this Block (density and training cap).</summary>
+    public static double BudsPerVine(BlockState b, BudLoad load)
     {
-        double perM2 = b.BudLoad switch { BudLoad.Low => 6.0, BudLoad.High => 11.0, _ => 8.0 };   // buds per m² (UNVERIFIED design)
+        double perM2 = load switch { BudLoad.Low => 6.0, BudLoad.High => 11.0, _ => 8.0 };   // buds per m² (UNVERIFIED design)
         double buds = perM2 * 10000.0 / b.Planting.DensityVinesHa;
         double cap = b.Planting.Training switch { TrainingSystem.Einzelpfahl => 26, TrainingSystem.Guyot => 16, _ => 24 };
         return M.Clamp(buds, 4, cap);

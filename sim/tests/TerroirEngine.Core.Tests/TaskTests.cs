@@ -153,6 +153,8 @@ public class TaskTests
         Assert.Equal(3, t["options"]!.AsArray().Count);
         Assert.False(string.IsNullOrEmpty(t["options"]![0]!["why"]!.GetValue<string>()));
         Assert.Equal(g.Blocks[0].BudLoad.ToString(), t["plan"]!.GetValue<string>());
+        var buds = t["options"]!.AsArray().Select(o => o!["buds"]!.GetValue<double>()).ToList();   // buds per vine for each pruning option
+        Assert.True(buds[0] < buds[2] && buds[0] <= buds[1] && buds[1] <= buds[2]);   // the training system caps buds per vine (Guyot 16)
         g.Apply(new Command { Type = "task", A = t["id"]!.GetValue<int>().ToString(), B = "do", C = "Low" });
         var after = Snapshot.Build(g)["tasks"]!.AsArray().First(x => x!["id"]!.GetValue<int>() == t["id"]!.GetValue<int>())!;
         Assert.Equal("Done", after["status"]!.GetValue<string>());

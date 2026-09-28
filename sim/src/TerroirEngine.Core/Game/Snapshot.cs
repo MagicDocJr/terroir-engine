@@ -100,7 +100,13 @@ public static class Snapshot
                 ["block"] = t.BlockId, ["lot"] = t.LotId, ["variety"] = g.Blocks.FirstOrDefault(b => b.Data.Id == t.BlockId)?.Variety.Name,
                 ["status"] = t.Status.ToString(), ["opened"] = D(t.Opened), ["due"] = D(t.Due), ["daysLeft"] = t.Due.DayNumber - g.Date.DayNumber,
                 ["plan"] = plan, ["planLabel"] = TaskCatalog.Label(t.Kind, plan), ["choice"] = t.Choice, ["timing"] = t.Timing, ["decidedBy"] = t.DecidedBy,
-                ["options"] = Arr(TaskCatalog.Options(t.Kind).Select(o => (JsonNode)new JsonObject { ["value"] = o.Value, ["label"] = o.Label, ["why"] = o.Why })),
+                ["options"] = Arr(TaskCatalog.Options(t.Kind).Select(o =>
+                {
+                    var jo = new JsonObject { ["value"] = o.Value, ["label"] = o.Label, ["why"] = o.Why };
+                    var blk = g.Blocks.FirstOrDefault(b => b.Data.Id == t.BlockId);
+                    if (t.Kind == TaskKind.Prune && blk != null) jo["buds"] = R(VineyardModel.BudsPerVine(blk, Enum.Parse<BudLoad>(o.Value)), 0);   // buds per vine: the 3D canes carry this many
+                    return (JsonNode)jo;
+                })),
                 ["crewActive"] = t.CrewActive(g.Date), ["crewUntil"] = t.CrewUntil == null ? null : D(t.CrewUntil.Value), ["where"] = TaskCatalog.Where(t.Kind),
             };
         }));
