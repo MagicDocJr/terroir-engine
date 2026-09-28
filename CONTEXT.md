@@ -100,6 +100,10 @@ _Avoid_: Bud fertility, bud potential
 The starch a vine stores in its roots and trunk after the harvest. It feeds the next spring's growth. A big crop, a late harvest or early leaf loss runs it down.
 _Avoid_: Vine energy, vine health
 
+**Vine age**:
+Counted in leaves: the planting year is the 1st leaf, and the 4th leaf gives the first near-full crop. Older vines root deeper, but age alone does not make better wine: well-kept old and young vines in the same vineyard give the same yield and grape composition.
+_Avoid_: Old-vine quality, vieilles vignes bonus
+
 ### Wine
 
 **Lot**:
