@@ -84,11 +84,41 @@ a timed exam mode; a walkable 3D fair hall; sharing results.
 - **Record:** per skill, a running score (last 20 answers) stored in `user://tasting_record.json` by the game (a study
   record, separate from any Estate save).
 
+## 6b. Fun and progression (owner: "fun and gamified while still learning")
+
+Every reward is earned by learning something and points back to it; nothing rewards clicking for its own sake.
+Design references (rationale only, not in-game facts): gamification as game elements in a non-game context
+(Deterding et al. 2011); spacing and retrieval practice help retention (Cepeda et al. 2006; Roediger & Karpicke 2006).
+
+- **Taster rank (XP):** every marked item earns points (full, half, none); ranks Novice taster → Cellar hand →
+  Taster → Senior taster → Fair judge, each with a short line on what it means. The rank badge sits on the title
+  screen and the Fair.
+- **Medals per stand:** bronze, silver, gold at 50 / 70 / 85 % of the stand's marks (Tasting sheets + quiz), best
+  result kept. Stand cards show the medal; gold everywhere is the Fair's long-term goal.
+- **Unlocks:** the Fair opens with three stands; each medal unlocks more (a sense of discovery), and ranks unlock
+  harder formats (e.g. flights served without the vintages named). The no-future-knowledge rule still applies in a game.
+- **Vintage cards (collection):** every vintage tasted at a stand adds a card to the **Cellar book**: the vintage's
+  weather in numbers, its effect on the Wine, and the sourced real note if one exists. Completing a Region's row is a
+  visible goal; the cards are the revision material.
+- **Glass of the day:** one blind glass per calendar day (seeded by the date), Identify format, bonus points;
+  a **days-in-a-row** counter rewards coming back (missing a day resets it without any penalty to rank).
+- **Streaks within a flight:** consecutive correct items build a streak shown with a small flourish; the reveal plays
+  each item's verdict one by one (green / amber / red with its "because"), then the medal.
+- **Adaptive practice:** Tasting practice leans towards the player's weakest skills ("Your weak spot: tannin —
+  here are three reds to fix it"), so the fun loop is also the study plan.
+- **Hints:** a hint (e.g. show the site in Identify, or one palate line) costs points, so beginners can progress
+  and experts can go for full marks.
+- **Hosts:** each stand has an invented producer as host with a name, a portrait (the game's avatar style) and a
+  greeting line, so the Fair feels like a place. Sounds: pour, glass clink, medal.
+- Progression is computed in the simulation layer (`PracticeProgress`) from the stored record, the UI only shows it
+  (ADR 0001 spirit); the record file carries XP, medals, cards, streaks and per-skill history.
+
 ## 7. Architecture
 
 - **Sim (`TerroirEngine.Core/Tasting/Practice/`):** `TastingLab` (pour), `WinemakerStyle`, `VintageFacts`
   (weather-record summaries per Region and vintage), `FairStands` (load stands, resolve cool/warm picks),
-  `VintageQuiz` (questions + answers + evidence), `TastingMarker`. JSON in/out via `PracticeJson`.
+  `VintageQuiz` (questions + answers + evidence), `TastingMarker`, `PracticeProgress` (XP, ranks, medals, unlocks,
+  cards, daily glass, streaks, adaptive picks). JSON in/out via `PracticeJson`.
 - **Bridge:** `PourFlight(requestJson)` starts a background job; `PourStatus()` / `PourResult()`; `Mark(json)`;
   `FairStands()`. The bridge never decides anything.
 - **UI:** a **Tasting practice** screen (exercise picker, one Wine at a time) and a **Wine Fair** screen (stands as
