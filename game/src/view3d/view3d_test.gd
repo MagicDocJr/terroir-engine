@@ -95,6 +95,9 @@ func _ready() -> void:
 	if "--tasktest" in args:
 		_task_test()
 		return
+	if "--winerylook" in args:
+		_winery_look("--perf" in args)
+		return
 	var i := args.find("--capture3d")
 	if i < 0:
 		_manual()
@@ -683,6 +686,129 @@ func _pick_rates() -> void:
 					row.append(str(_block(_snap(), e[0]).get("pickedPct")) + ("" if _block(_snap(), e[0]).get("picking", false) else "✓"))
 				days.append(" ".join(row))
 			print(line, " blocks ", ids, " | ", " / ".join(days))
+	get_tree().quit()
+
+
+# ------------------------------------------------------------------ the Winery look (--winerylook [--perf])
+const LOOK_GAMES := {"mosel": {"plotId": "mosel-blauschiefer", "plantingYear": 2015}, "cote-dor": {"plotId": "cotedor-village", "plantingYear": 2013}, "napa": {"plotId": "napa-bench", "plantingYear": 2014}}
+const LOOK_CAMS := ["hall", "hall_stairs", "corner", "cellar", "door"]
+const WineryStyleT := preload("res://src/view3d/winery_style.gd")
+
+
+func _look_game(region: String) -> void:
+	var g: Dictionary = LOOK_GAMES[region].duplicate()
+	g["seed"] = 5
+	g["estateName"] = "Look Test"
+	Sim.NewGame(JSON.stringify(g))
+
+
+func _decor(look: Dictionary) -> void:
+	for k in look:
+		Sim.Command("decor", k, String(look[k]), "", "", "")
+
+
+func _look_cam(cam: String) -> void:
+	var wy: Node3D = view.get("winery")
+	if cam == "corner":                   # the tasting corner, from the aisle between the last tanks
+		view.set_view("hall")
+		view.set_camera(wy.to_global(Vector3(5.6, 1.6, 2.3)), wy.to_global(Vector3(8.2, 0.75, 5.9)))
+	else:
+		view.set_view("cellar" if cam.begins_with("cellar") else ("vineyard" if cam == "door" else "hall"))
+		view.camera_preset(cam)
+
+
+func _look_shots(tag: String, cams: Array) -> void:
+	for cam in cams:
+		_look_cam(cam)
+		await _frames(150)
+		await _save_shot("look_%s_%s" % [tag, cam])
+
+
+func _node_count(n: Node) -> int:
+	var c := 1
+	for ch in n.get_children():
+		c += _node_count(ch)
+	return c
+
+
+func _winery_look(perf_mode: bool) -> void:
+	var ok := true
+	var wy: Node3D = view.get("winery")
+	if perf_mode:
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+		Engine.max_fps = 0
+		var res := {}
+		for region in ["mosel", "cote-dor"]:
+			for which in ["plain", "regional"]:
+				_look_game(region)
+				if which == "plain": _decor(WineryStyleT.PLAIN)
+				snap = _snap()
+				view.apply_snapshot(snap)
+				_look_cam("hall")
+				await _frames(120)
+				var t := 0.0
+				var n := 0
+				while n < 300:
+					await get_tree().process_frame
+					t += get_process_delta_time(); n += 1
+				res["%s_%s" % [region, which]] = snappedf(n / t, 0.1)
+				print("WINERYLOOK perf %s %s: %.1f fps, %d draw calls, %d primitives" % [region, which, n / t,
+					RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
+					RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)])
+		for region in ["mosel", "cote-dor"]:
+			var ratio: float = res["%s_regional" % region] / maxf(res["%s_plain" % region], 0.1)
+			print("WINERYLOOK perf %s regional/plain = %.2f %s" % [region, ratio, "ok" if ratio >= 0.9 else "SLOW"])
+		get_tree().quit()
+		return
+	# a choice made before the 3D view was ever opened shows on the first open
+	_look_game("mosel")
+	Sim.Command("decor", "walls", "brick", "", "", "")
+	snap = _snap()
+	view.apply_snapshot(snap)
+	var first_ok := String((wy.get("style") as Dictionary).get("walls", "")) == "brick"
+	print("WINERYLOOK decor_before_first_open %s" % ("ok" if first_ok else "FAIL"))
+	ok = ok and first_ok
+	# unknown keys and values from another build are ignored
+	Sim.Command("decor", "hologram", "on", "", "", "")
+	Sim.Command("decor", "floor", "marble", "", "", "")
+	snap = _snap()
+	view.apply_snapshot(snap)
+	var st: Dictionary = wy.get("style")
+	var unk_ok: bool = not st.has("hologram") and String(st.get("floor", "")) == "slate"
+	print("WINERYLOOK unknown_ignored %s" % ("ok" if unk_ok else "FAIL"))
+	ok = ok and unk_ok
+	# restyling back and forth builds each prop group once: no duplicated props, no leaked lights
+	var A_look := {"walls": "slate", "lights": "chandelier", "corner": "lounge", "plants": "on", "outside": "on", "cellar": "on"}
+	var B_look := {"walls": "limestone", "lights": "warm", "corner": "table", "plants": "off", "outside": "off", "cellar": "off"}
+	var counts := []
+	for look in [A_look, B_look, A_look, B_look, A_look]:
+		_decor(look)
+		snap = _snap()
+		view.apply_snapshot(snap)
+		await _frames(2)
+		counts.append([_node_count(wy), (wy.get("hall_lights") as Array).size() + (wy.get("cellar_lights") as Array).size()])
+	var dup_ok: bool = counts[1] == counts[3] and counts[2] == counts[4]
+	print("WINERYLOOK restyle_same_node_count %s %s" % ["ok" if dup_ok else "FAIL", str(counts)])
+	ok = ok and dup_ok
+	# each Region's own look, then two mixes
+	for region in ["mosel", "cote-dor", "napa"]:
+		_look_game(region)
+		snap = _snap()
+		view.apply_snapshot(snap)
+		var want: Dictionary = WineryStyleT.defaults(region)
+		var reg_ok: bool = wy.get("style") == want
+		print("WINERYLOOK default_%s %s" % [region, "ok" if reg_ok else "FAIL"])
+		ok = ok and reg_ok
+		await _look_shots(region, LOOK_CAMS)
+	_look_game("mosel")
+	_decor({"walls": "brick", "lights": "chandelier", "corner": "lounge"})
+	snap = _snap(); view.apply_snapshot(snap)
+	await _look_shots("mosel_mix", ["hall", "corner"])
+	_look_game("napa")
+	_decor({"walls": "render", "lights": "workshop", "corner": "none", "floor": "concrete", "ceiling": "steel"})
+	snap = _snap(); view.apply_snapshot(snap)
+	await _look_shots("napa_plain", ["hall"])
+	print("WINERYLOOK %s" % ("ok" if ok else "FAIL"))
 	get_tree().quit()
 
 

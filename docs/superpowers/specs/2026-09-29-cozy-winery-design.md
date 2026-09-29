@@ -24,7 +24,7 @@ Each element has 3–5 options; the Region's default is marked ★. All textures
 | Floor (hall) | Polished concrete (`concrete_floor_worn_001`, today's) · Stone flags (`monastery_stone_floor`) · Slate flags (`slate_floor_03`) · Terracotta tiles (`terracotta_floor_tiles`) · Herringbone brick (`herringbone_brick`) | Slate flags | Stone flags | Terracotta tiles |
 | Ceiling | Steel trusses (today's) · Oak beams (`dark_wood` on the trusses and roof underside) | Oak beams | Oak beams | Oak beams |
 | Lights | Workshop lamps (today's, neutral white) · Warm pendants (same lamps at 2700 K, a warm fill) · Lantern chandeliers (`lantern_chandelier_01`, warm) | Warm pendants | Lantern chandeliers | Warm pendants |
-| Tasting corner (south-east corner of the hall) | None · Tasting table (`WoodenTable_02`, four `WoodenChair_01`, `wine_bottles_01`, a `wine_barrel_01` side table, `Lantern_01`) · Lounge (`Sofa_01`, two `ArmChair_01`, `CoffeeTable_01`, a rug) | Tasting table | Tasting table | Lounge |
+| Tasting corner (south-east corner of the hall) | None · Tasting table (`dining_table`, four `gallinera_chair`, `wine_bottles_01`, a `wine_barrel_01` side table, `Lantern_01`) · Lounge (`Sofa_01`, two `ArmChair_01`, `WoodenTable_01` coffee table, `WoodenTable_02` side table, a rug) | Tasting table | Tasting table | Lounge |
 | Plants | Off · On (`potted_plant_01/02` by the door and the corner; `planter_box_01` under the outside windows) | On | On | On |
 | Outside | Plain · Cosy (a bench `painted_wooden_bench`, window boxes, two `wooden_lantern_01` by the doors, warm window glow) | Cosy | Cosy | Cosy |
 | Cellar | Plain · Candlelit (`wooden_candlestick` and `Lantern_01` on the racks, a warm unshadowed light every 6 m) | Candlelit | Candlelit | Candlelit |

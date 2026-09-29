@@ -11,6 +11,7 @@ extends Node3D
 
 const A := preload("res://src/view3d/assets3d.gd")
 const TankPanel := preload("res://src/view3d/tank_panel.gd")
+const Style := preload("res://src/view3d/winery_style.gd")
 const VESSEL_SHORT := ["steel", "Fuder", "neutral", "1st fill", "new FR", "new US"]
 
 var L: Dictionary
@@ -46,6 +47,14 @@ var panel_t := 0.0
 var Y: Dictionary                  # L.yard: sign, lamp, tractor spot, props
 var sign_label: Label3D
 var tractors := {}                 # node name -> Node3D (one shown, per Region)
+# the Winery look (winery_style.gd; cosmetic): hall surfaces, lights and prop groups swapped by apply_style
+var style := {}                    # the look applied now (winery_style.gd resolve)
+var hall_mesh: MeshInstance3D      # hall.glb: walls (+ ceiling), floor, steel trusses and stairs as surfaces
+var hall_surf := {}                # material name -> surface index on hall_mesh
+var ceiling: MeshInstance3D        # a ceiling under the roof (the plaster or oak look)
+var hall_spots: Array[SpotLight3D] = []
+var lamp_props: Array[Node3D] = [] # the industrial pendants (hidden when the chandeliers hang)
+var groups := {}                   # prop group name -> Node3D, built on first use
 
 
 func build() -> void:
@@ -618,7 +627,23 @@ func _update_sign() -> void:
 # ------------------------------------------------------------------ fermentation hall + stairs
 func _build_hall() -> void:
 	var Hd: Dictionary = L["hall"]
-	_add_static(self, "models/" + String(Hd["model"]), true)
+	var hall_root := _add_static(self, "models/" + String(Hd["model"]), true)
+	var hm: Array = A.meshes(hall_root)
+	if not hm.is_empty():
+		hall_mesh = hm[0]
+		for i in hall_mesh.mesh.get_surface_count():
+			for k in ["hall_wall", "hall_floor", "hall_steel"]:
+				if hall_mesh.mesh.surface_get_material(i) == mats.get(k):
+					hall_surf[k] = i
+	var dm: Dictionary = Hd["dims"]
+	ceiling = MeshInstance3D.new()
+	var cpm := PlaneMesh.new(); cpm.size = Vector2(float(dm["x1"]) - float(dm["x0"]), float(dm["z1"]) - float(dm["z0"]))
+	ceiling.mesh = cpm
+	ceiling.transform = Transform3D(Basis(Vector3.RIGHT, PI), Vector3((float(dm["x0"]) + float(dm["x1"])) / 2.0, float(dm["h"]) - 0.04, 0.0))
+	ceiling.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ceiling.gi_mode = GeometryInstance3D.GI_MODE_STATIC
+	ceiling.material_override = _look_mat("grey_plaster_02", 0.35, Color(0.80, 0.82, 0.86))
+	add_child(ceiling)
 	var tank_mesh := _with_tangents(_prep("models/" + String(Hd["tankModel"])))
 	var info: Dictionary = Hd["tankInfo"]
 	var pnl: Dictionary = info["panel"]
@@ -643,7 +668,7 @@ func _build_hall() -> void:
 	for l in Hd["lights"]:
 		var p: Array = l["pos"]
 		var top := Vector3(p[0], 6.98, p[2])
-		_prop(self, "props/hanging_industrial_lamp/hanging_industrial_lamp.gltf", Transform3D(Basis(), top))
+		lamp_props.append(_prop(self, "props/hanging_industrial_lamp/hanging_industrial_lamp.gltf", Transform3D(Basis(), top)))
 		var sp := SpotLight3D.new()
 		sp.position = top + Vector3(0, -1.25, 0)
 		sp.rotation = Vector3(-PI / 2, 0, 0)
@@ -658,8 +683,10 @@ func _build_hall() -> void:
 		sp.distance_fade_length = 8.0
 		sp.set_meta("shadow", sp.shadow_enabled)
 		sp.light_volumetric_fog_energy = 0.8
+		sp.set_meta("base_color", sp.light_color)
 		add_child(sp)
 		hall_lights.append(sp)
+		hall_spots.append(sp)
 	for pr in Hd["props"]:
 		var p: Array = pr["pos"]
 		var rel := "props/%s/%s.gltf" % [pr["model"], pr["model"]]
@@ -800,6 +827,224 @@ func _build_cellar() -> void:
 	var size := Vector3(float(dims["L"]) + 1.0, 5.4, float(dims["W"]) + 1.0)
 	voxel_cellar = _gi(cellar, size, Vector3(0, 2.6, 0))
 	cellar_gi = [voxel_cellar, cellar.get_child(cellar.get_child_count() - 1)]
+
+
+# ------------------------------------------------------------------ the Winery look (cosmetic; winery_style.gd)
+# Texture, triplanar scale (repeats per metre) and tint of each surface option. "render" / "concrete" / "steel" keep the
+# hall's own materials. Tints and scales are chosen by eye from the screenshots (look only).
+const WALL_LOOK := {"slate": ["castle_wall_slates", 0.42, Color(0.62, 0.64, 0.70)], "limestone": ["white_sandstone_blocks_02", 0.3, Color(0.98, 0.95, 0.90)],
+	"brick": ["whitewashed_brick", 0.5, Color(1.0, 1.0, 1.0)], "redwood": ["brown_planks_07", 0.45, Color(0.74, 0.54, 0.44)]}
+const FLOOR_LOOK := {"stone": ["monastery_stone_floor", 0.4, Color(0.82, 0.80, 0.78)], "slate": ["slate_floor_03", 0.45, Color(0.50, 0.54, 0.60)],
+	"terracotta": ["terracotta_floor_tiles", 0.55, Color(0.90, 0.82, 0.78)], "herringbone": ["herringbone_brick", 0.6, Color(1.0, 1.0, 1.0)]}
+const WARM := Color(1.0, 0.86, 0.70)          # warm pendants (≈ 3000 K; warmer turned the steel tanks copper)
+const CANDLE := Color(1.0, 0.72, 0.48)
+const CHANDELIER := Color(1.0, 0.82, 0.62)
+const CHANDELIER_X := [-10.0, -6.0, -2.0, 2.0, 6.0, 10.0]
+const CORNER := Vector3(7.7, 0.0, 5.55)       # the tasting corner: east of the last tank pair, by the south wall
+
+
+## Applies a look (winery_style.gd resolve): hall wall / floor / ceiling materials, the light colour and fixtures, and
+## the prop groups. Re-bakes the hall GI only when a surface changed. No-op for the look already shown.
+func apply_style(s: Dictionary) -> void:
+	if not built or s.is_empty() or s == style:
+		return
+	var surfaces: bool = style.is_empty() or s.get("walls") != style.get("walls") or s.get("floor") != style.get("floor") or s.get("ceiling") != style.get("ceiling")
+	style = s.duplicate()
+	if hall_mesh:
+		var w: Array = WALL_LOOK.get(String(s.get("walls", "")), [])
+		var f: Array = FLOOR_LOOK.get(String(s.get("floor", "")), [])
+		var oak := String(s.get("ceiling", "")) == "oak"
+		if hall_surf.has("hall_wall"):
+			hall_mesh.set_surface_override_material(int(hall_surf["hall_wall"]), null if w.is_empty() else _look_mat(w[0], w[1], w[2]))
+		if hall_surf.has("hall_floor"):
+			hall_mesh.set_surface_override_material(int(hall_surf["hall_floor"]), null if f.is_empty() else _look_mat(f[0], f[1], f[2]))
+		if hall_surf.has("hall_steel"):
+			hall_mesh.set_surface_override_material(int(hall_surf["hall_steel"]), _look_mat("dark_wood", 0.9, Color(0.62, 0.45, 0.32), "beam") if oak else null)
+		ceiling.material_override = _look_mat("dark_wood", 0.45, Color(0.78, 0.60, 0.44), "ceiling") if oak else _look_mat("grey_plaster_02", 0.35, Color(0.80, 0.82, 0.86))
+	var lights := String(s.get("lights", "workshop"))
+	for sp in hall_spots:
+		sp.light_color = (sp.get_meta("base_color") as Color) if lights == "workshop" else (WARM if lights == "warm" else CHANDELIER)
+		sp.light_energy = {"workshop": 5.0, "warm": 4.25, "chandelier": 4.0}.get(lights, 5.0)
+	for lp in lamp_props:
+		lp.visible = lights != "chandelier"
+	_show("chandeliers", lights == "chandelier")
+	_show("corner_table", String(s.get("corner", "")) == "table")
+	_show("corner_lounge", String(s.get("corner", "")) == "lounge")
+	_show("plants", String(s.get("plants", "")) == "on")
+	_show("outside", String(s.get("outside", "")) == "on")
+	_show("cellar_candles", String(s.get("cellar", "")) == "on")
+	if mats.has("window_dark"):                  # the office windows glow warm from inside
+		var wd: StandardMaterial3D = mats["window_dark"]
+		wd.emission_enabled = String(s.get("outside", "")) == "on"
+		wd.emission = Color(1.0, 0.75, 0.5)
+		wd.emission_energy_multiplier = 0.3
+	if surfaces and baked:
+		bake_gi()
+	elif baked:
+		refresh_probes()
+
+
+## A PBR set mapped triplanar in the mesh's own frame, so blocks and planks keep their real size on every wall.
+func _look_mat(tex: String, uv: float, tint: Color, variant := "") -> StandardMaterial3D:
+	var k := "look_%s_%s" % [tex, variant]
+	if mats.has(k):
+		return mats[k]
+	var m := A.pbr(tex, uv, tint, 1.0)
+	m.uv1_triplanar = true
+	m.uv1_scale = Vector3(uv, uv, uv)
+	if variant == "beam":                        # the trusses' faces are single-sided like the steel ones
+		m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mats[k] = m
+	return m
+
+
+## Shows or hides a prop group, building it the first time it is shown (so a look never duplicates props).
+func _show(name: String, on: bool) -> void:
+	if on and not groups.has(name):
+		var g := Node3D.new()
+		g.name = "Look_" + name
+		(cellar if name == "cellar_candles" else self).add_child(g)
+		groups[name] = g
+		call("_build_" + name, g)
+	if groups.has(name):
+		(groups[name] as Node3D).visible = on
+
+
+## A warm unshadowed glow (lanterns, candles, chandeliers); it follows the room's lights (set_active).
+func _glow(g: Node3D, pos: Vector3, col: Color, energy: float, rng: float, in_cellar := false) -> OmniLight3D:
+	var o := _omni(g, pos, col, energy, rng, false)
+	o.light_volumetric_fog_energy = 0.6
+	if in_cellar:
+		cellar_lights.append(o)
+		o.visible = cellar_on
+	else:
+		hall_lights.append(o)
+		o.visible = hall_on
+	return o
+
+
+func _look_prop(g: Node3D, model: String, pos: Vector3, yaw := 0.0) -> Node3D:
+	return _prop(g, "props/%s/%s.gltf" % [model, model], Transform3D(Basis(Vector3.UP, yaw), pos))
+
+
+## A tiny flame: an emissive drop (candles and lanterns have no bulbs of their own).
+func _flame(g: Node3D, pos: Vector3, r := 0.012) -> void:
+	var mi := MeshInstance3D.new()
+	var sm := SphereMesh.new(); sm.radius = r; sm.height = r * 2.6; sm.radial_segments = 8; sm.rings = 4
+	mi.mesh = sm
+	var m := StandardMaterial3D.new(); m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.albedo_color = Color(1.0, 0.8, 0.45); m.emission_enabled = true; m.emission = Color(1.0, 0.62, 0.28); m.emission_energy_multiplier = 6.0
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.position = pos
+	g.add_child(mi)
+
+
+## A candle in a turned wooden holder, built from three low-poly cylinders (the scanned candlestick is 213k triangles).
+var _candle_parts := []
+func _candle(g: Node3D, base: Vector3) -> void:
+	if _candle_parts.is_empty():
+		var wood := StandardMaterial3D.new(); wood.albedo_color = Color(0.32, 0.2, 0.12); wood.roughness = 0.7
+		var wax := StandardMaterial3D.new(); wax.albedo_color = Color(0.93, 0.9, 0.82); wax.roughness = 0.6
+		wax.subsurf_scatter_enabled = true; wax.subsurf_scatter_strength = 0.4
+		for spec in [[0.045, 0.05, 0.02, 0.01, wood], [0.014, 0.02, 0.09, 0.065, wood], [0.013, 0.013, 0.085, 0.152, wax]]:
+			var cm := CylinderMesh.new(); cm.top_radius = spec[0]; cm.bottom_radius = spec[1]; cm.height = spec[2]; cm.radial_segments = 10; cm.rings = 1
+			_candle_parts.append([cm, spec[3], spec[4]])
+	for part in _candle_parts:
+		var mi := MeshInstance3D.new()
+		mi.mesh = part[0]
+		mi.material_override = part[2]
+		mi.position = base + Vector3(0.0, part[1], 0.0)
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		g.add_child(mi)
+
+
+func _build_chandeliers(g: Node3D) -> void:
+	# six iron lantern chandeliers over the aisle, on chains from the ceiling, clear of the catwalk (top ≈ 3.8 m)
+	var chain := CylinderMesh.new(); chain.top_radius = 0.012; chain.bottom_radius = 0.012; chain.height = 1.68; chain.radial_segments = 6
+	for x in CHANDELIER_X:
+		_look_prop(g, "lantern_chandelier_01", Vector3(x, 5.3, 0.0))
+		var c := MeshInstance3D.new(); c.mesh = chain; c.material_override = _mat("tank_dark")
+		c.position = Vector3(x, 5.3 + chain.height / 2.0, 0.0)
+		g.add_child(c)
+		_glow(g, Vector3(x, 4.85, 0.0), CHANDELIER, 1.0, 6.5)
+
+
+func _build_corner_table(g: Node3D) -> void:
+	_look_prop(g, "dining_table", CORNER)
+	for side in [-1.0, 1.0]:
+		for dx in [-0.55, 0.55]:
+			_look_prop(g, "gallinera_chair", CORNER + Vector3(dx, 0.0, side * -1.02), 0.0 if side > 0 else PI)
+	_look_prop(g, "wine_bottles_01", CORNER + Vector3(-0.3, 0.877, -0.05), 0.4)
+	var barrel := CORNER + Vector3(1.75, 0.0, 0.8)
+	_look_prop(g, "wine_barrel_01", barrel)
+	_look_prop(g, "Lantern_01", barrel + Vector3(0.05, 0.87, 0.0))
+	_flame(g, barrel + Vector3(0.05, 0.99, 0.0), 0.01)
+	_glow(g, barrel + Vector3(0.05, 1.05, 0.0), CANDLE, 0.7, 4.0)
+
+
+func _build_corner_lounge(g: Node3D) -> void:
+	var rug := MeshInstance3D.new()
+	var pm := PlaneMesh.new(); pm.size = Vector2(3.4, 2.5)
+	rug.mesh = pm
+	var rm := StandardMaterial3D.new(); rm.albedo_color = Color(0.46, 0.17, 0.12); rm.roughness = 1.0
+	var nt := NoiseTexture2D.new(); nt.width = 256; nt.height = 256
+	var fn := FastNoiseLite.new(); fn.frequency = 0.08; nt.noise = fn
+	rm.detail_enabled = true; rm.detail_albedo = nt; rm.detail_blend_mode = BaseMaterial3D.BLEND_MODE_MUL
+	rug.material_override = rm
+	rug.position = CORNER + Vector3(0.0, 0.006, -0.1)
+	rug.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	g.add_child(rug)
+	_look_prop(g, "Sofa_01", CORNER + Vector3(0.0, 0.0, 1.0), PI)
+	_look_prop(g, "WoodenTable_01", CORNER + Vector3(0.0, 0.0, -0.25))
+	_look_prop(g, "ArmChair_01", CORNER + Vector3(-1.55, 0.0, -0.3), PI / 2.0)
+	_look_prop(g, "ArmChair_01", CORNER + Vector3(1.55, 0.0, -0.3), -PI / 2.0)
+	_look_prop(g, "wine_bottles_01", CORNER + Vector3(-0.25, 0.55, -0.3), 0.3)
+	var side := CORNER + Vector3(1.15, 0.0, 1.05)
+	_look_prop(g, "WoodenTable_02", side)
+	_look_prop(g, "Lantern_01", side + Vector3(0.0, 0.42, 0.0))
+	_flame(g, side + Vector3(0.0, 0.54, 0.0), 0.01)
+	_glow(g, side + Vector3(0.0, 0.6, 0.0), CANDLE, 0.7, 4.0)
+
+
+func _build_plants(g: Node3D) -> void:
+	# inside: by the roller door and in the corner; outside: planter boxes along the south wall
+	_look_prop(g, "potted_plant_02", Vector3(11.4, 0.0, 3.0))
+	_look_prop(g, "potted_plant_02", Vector3(11.4, 0.0, -3.1), 1.3)
+	_look_prop(g, "potted_plant_02", Vector3(5.9, 0.0, 6.45))
+	_look_prop(g, "potted_plant_02", Vector3(-9.4, 0.0, 6.4), 0.8)
+	for x in [2.5, 5.5, 8.5]:
+		_look_prop(g, "planter_box_01", Vector3(x, 0.0, 7.58))
+
+
+func _build_outside(g: Node3D) -> void:
+	_look_prop(g, "painted_wooden_bench", Vector3(12.75, 0.0, -4.4), PI / 2.0)
+	for z in [2.8, -2.8]:
+		var at := Vector3(12.72, 0.16, z)
+		_look_prop(g, "wooden_lantern_01", at, PI / 2.0)
+		_flame(g, at + Vector3(0.0, 0.07, 0.0), 0.014)
+		_glow(g, at + Vector3(0.25, 0.15, 0.0), CANDLE, 0.8, 3.5)
+
+
+func _build_cellar_candles(g: Node3D) -> void:
+	# a candlestick on every fourth barrique of the top tier, lanterns at both ends, a warm glow every 6 m
+	var n := 0
+	for b in barrels:
+		var node: Node3D = b["node"]
+		if node.position.y < 0.8:
+			continue
+		n += 1
+		if n % 4 != 1:
+			continue
+		var top := node.position + Vector3(0.0, 0.34, 0.0)
+		_candle(g, top)
+		_flame(g, top + Vector3(0.0, 0.2, 0.0))
+	for x in [-10.3, 10.3]:
+		var at := Vector3(x, 0.0, 1.9)
+		_look_prop(g, "Lantern_01", at)
+		_flame(g, at + Vector3(0.0, 0.12, 0.0), 0.01)
+	for x in [-8.0, -2.0, 4.0, 9.5]:
+		_glow(g, Vector3(x, 1.7, 0.0), CANDLE, 0.45, 5.5, true)
 
 
 # ------------------------------------------------------------------ collision & occlusion

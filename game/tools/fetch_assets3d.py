@@ -43,9 +43,9 @@ TEXTURES = [
 ]
 PROPS = ["hanging_industrial_lamp", "industrial_caged_sconce", "plastic_crate_01", "ladder_sectioned_01",
          # winery look: lights, tasting corner, lounge, plants, outside and cellar details
-         "lantern_chandelier_01", "WoodenTable_02", "WoodenChair_01", "wine_bottles_01", "wine_barrel_01", "Lantern_01",
-         "Sofa_01", "ArmChair_01", "CoffeeTable_01", "potted_plant_01", "potted_plant_02", "planter_box_01",
-         "painted_wooden_bench", "wooden_lantern_01", "wooden_candlestick"]
+         "lantern_chandelier_01", "dining_table", "gallinera_chair", "WoodenTable_02", "wine_bottles_01", "wine_barrel_01", "Lantern_01",
+         "Sofa_01", "ArmChair_01", "WoodenTable_01", "potted_plant_02", "planter_box_01",
+         "painted_wooden_bench", "wooden_lantern_01"]
 
 
 def get(url, path):

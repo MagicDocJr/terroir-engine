@@ -17,6 +17,7 @@ signal exit_requested
 signal task_chosen(id: int, value: String, timing: String)
 
 const A := preload("res://src/view3d/assets3d.gd")
+const WineryStyle := preload("res://src/view3d/winery_style.gd")
 const VIEWS := ["vineyard", "cellar", "hall"]
 const NEAR_WINERY := 45.0          # metres: hall lights/GI stay on this close to the building
 const EYE_OUT := 1.7               # vineyard.gd EYE (eye height of its camera presets)
@@ -176,6 +177,8 @@ func apply_snapshot(snap: Dictionary) -> void:
 	vineyard.call("apply_snapshot", snap)
 	winery.call("build")
 	winery.call("set_region", String(snap.get("region", {}).get("id", "mosel")))
+	# the Winery look, before a GI bake so the first bake already sees it (winery_style.gd; cosmetic)
+	winery.call("apply_style", WineryStyle.resolve(String(snap.get("region", {}).get("id", "")), snap.get("decor", {})))
 	var moved := false
 	if String(vineyard.get("plot_key")) != placed_key:
 		placed_key = String(vineyard.get("plot_key"))

@@ -18,6 +18,7 @@ fermentation all come from `Sim.Snapshot()`.
 | `focus_task(id)` | Puts the walker in front of that task's demonstration vine (or its Lot's tank). |
 | `show_hud` | Small date/Block/weather overlay plus the key hint line (default on). |
 | `sound_volume_db`, `sound_on` | Master volume of the view's sound (dB, 0 = as mixed) and on/off. M toggles it. |
+| `D.decor` (the Winery look) | Cosmetic choices (`decor <key> <value>` in the sim, never read by it). `winery_style.gd resolve(region, decor)` lays them over the Region's default and `winery.gd apply_style` shows them; see "The Winery look" below. |
 | `camera_preset(name, block)` / `set_camera(pos, target)` / `capture()` | Used by the test harness. The eye is put exactly there, and the walker waits until the next move key. |
 
 Input is read only while the node is visible. Click to capture the mouse, then walk with WASD (or the arrow
@@ -44,7 +45,34 @@ view is hidden.
 | `ambience.gd` | Ambient sound per Region and place (see below). |
 | `workers.gd` | People and machines at work, staged from the snapshot (see below). One MultiMesh for all people, posed in `shaders/worker.gdshader`. |
 | `tasks3d.gd` | Staff tasks: a stake with a ribbon and label at each open task's demonstration vine (the real vine nearest the headland on the Block's middle row) or above its Lot's tank; the close-up parts (Guyot canes, Cordon arms with two-bud spurs or Einzelpfahl bows, with the Block's bud counts; lobed leaves on the morning / afternoon side, berry bunches, cellar tools), picking (collision layer 20; pruning picks the cane whose axis passes nearest the mouse ray, since the fanned canes' boxes overlap) and the confirm animations. |
+| `winery_style.gd` | The Winery look catalogue: elements, options, blurbs, each Region's default and `resolve()`. Shared with the Winery screen's "Winery look" panel (`ui/winery_look_panel.gd`). |
 | `view3d_test.gd` | Test harness: screenshots, FPS, the walk test and the LOD probe. |
+
+## The Winery look (cosmetic)
+
+Spec: `docs/superpowers/specs/2026-09-29-cozy-winery-design.md`. The player changes it on the Winery screen; each Region has a
+default (★). Nothing here affects the simulation.
+
+| Element | Options | Mosel | Côte d'Or | Napa | How it is drawn |
+|---|---|---|---|---|---|
+| walls | render · slate · limestone · brick · redwood | slate | limestone | redwood | surface override on hall.glb's `hall_wall` (triplanar in the mesh frame, so blocks keep their size) |
+| floor | concrete · stone · slate · terracotta · herringbone | slate | stone | terracotta | override on `hall_floor` |
+| ceiling | steel · oak | oak | oak | oak | oak: `dark_wood` on the `hall_steel` surface (trusses, catwalk posts, stairs) and on a ceiling plane under the roof |
+| lights | workshop · warm · chandelier | warm | chandelier | warm | the 12 spot colours/energies; chandelier hides the pendants and hangs six `lantern_chandelier_01` over the aisle, each with an unshadowed glow |
+| corner | none · table · lounge | table | table | lounge | a prop group east of the last tank pair by the south wall (`CORNER`) |
+| plants | off · on | on | on | on | pots by the roller door and the corner; planter boxes along the south wall outside |
+| outside | off · on | on | on | on | a bench and two lanterns at the east gable; the office windows glow |
+| cellar | off · on | on | on | on | a candlestick on every fourth top-tier barrique, lanterns at both ends, a warm glow every 6 m |
+
+Prop groups are built the first time they are shown and then only hidden or shown, so switching back and forth never
+duplicates props or lights. Their glows join the room's light list, so they switch off with the room (`set_active`); none
+casts shadows. The hall GI is re-baked only when walls, floor or ceiling change. `view3d.apply_snapshot` applies the look
+before a GI bake, so the first open bakes once. Test: `scripts/winerylook.sh` (checks + `game/shots/3d_look_*.png`),
+`scripts/winerylook.sh --perf` (hall frame rate, draw calls and primitives, regional look vs the plain one). Measured
+2026-09-29 on the hall camera: Mosel 303 → 334 draw calls, 3.72 → 4.32 M primitives; Côte d'Or 232 → 316, 3.05 → 3.52 M;
+frame rate unchanged (but the display was asleep, capping it near 11 fps: recheck with the screen on). Heavy scans are
+avoided: the candles are built from cylinders (the scanned candlestick is 213k triangles) and the tall `potted_plant_01`
+(176k) is not used.
 
 ## The Estate layout
 
