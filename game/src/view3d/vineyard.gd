@@ -13,6 +13,7 @@ extends Node3D
 const A := preload("res://src/view3d/assets3d.gd")
 const SH := "res://src/view3d/shaders/"
 const EYE := 1.7
+const LEAF_CELL := {"Riesling": 0, "Chardonnay": 1, "Pinot Noir": 2, "Cabernet Sauvignon": 3}   # leaf atlas cells
 const CHUNK := 12.0           # scatter / trellis cells
 const VCHUNK_NEAR := 3.0      # vine cells for the near LODs (visibility ranges are per cell centre, so keep them small)
 const VCHUNK_FAR := 18.0      # vine cells for the far LOD
@@ -164,7 +165,8 @@ func _mat(name: String) -> Material:
 		"vine_leaf":
 			var sm := ShaderMaterial.new()
 			sm.shader = load(SH + "leaf.gdshader")
-			sm.set_shader_parameter("leaf_detail", A.tex("models/leaf_detail.png"))
+			sm.set_shader_parameter("leaf_atlas", A.tex("models/leaf_atlas.png"))
+			sm.set_shader_parameter("leaf_normal", A.tex("models/leaf_normal.png"))
 			m = sm
 		"vine_berry":
 			var sm := ShaderMaterial.new()
@@ -206,36 +208,43 @@ func _prep(mesh: Mesh) -> Mesh:
 	return mesh
 
 
-## Per-Block copy of a vine mesh whose leaf/berry surfaces use that Block's own materials.
+## Per-Block vine mesh whose leaf/berry surfaces use that Block's own materials, built from CPU arrays (no GPU
+## read-back: see A.glb_surfaces).
 func _block_mesh(owner: Dictionary, training: String, g: int, seed: int, lod: int) -> Mesh:
 	var key := "%s_%d_%d_%d" % [training, g, seed, lod]
 	var cache: Dictionary = owner["meshes"]
 	if cache.has(key):
 		return cache[key]
-	var base := _vine_mesh(training, g, seed, lod)
-	var m: Mesh = base.duplicate()
-	for i in m.get_surface_count():
-		var sm := m.surface_get_material(i)
-		if sm == _mat("vine_leaf"):
-			m.surface_set_material(i, owner["leaf_mat"])
-		elif sm == _mat("vine_berry"):
-			m.surface_set_material(i, owner["berry_mat"])
+	var m := ArrayMesh.new()
+	for sf in _vine_surfaces(training, g, seed, lod):
+		m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, sf[0])
+		var nm := String(sf[1])
+		var mat: Material = owner["leaf_mat"] if nm == "vine_leaf" else (owner["berry_mat"] if nm == "vine_berry" else _mat(nm))
+		m.surface_set_material(m.get_surface_count() - 1, mat)
 	cache[key] = m
 	return m
 
 
-## Every growth stage's vine meshes, prepared one per frame after the world is built: a stage change during the
-## time-lapse then swaps meshes that already exist (loading a stage's models took 20–60 ms in one frame).
+## Every growth stage's vine meshes, prepared a few per frame after the world is built (≈ 0.1–0.3 ms each from the
+## CPU arrays): a stage change during the time-lapse then swaps meshes that already exist.
 var warm_queue := []
 func _queue_warm() -> void:
 	warm_queue.clear()
+	var seen := {}                   # meshes are shared per owner, stage, seed and detail level: queue each once
 	for blk in blocks:
 		for e in blk["mm"]:
 			for g in 5:
-				warm_queue.append([blk, String(blk["training"]), g, int(e["seed"]), [0, 1, 2, 2, 3][int(e["lod"])]])
+				var lod: int = [0, 1, 2, 2, 3][int(e["lod"])]
+				var k := "%s|%d|%d|%d" % [blk["id"], g, int(e["seed"]), lod]
+				if not seen.has(k):
+					seen[k] = true
+					warm_queue.append([blk, String(blk["training"]), g, int(e["seed"]), lod])
 	for e in neighbour_mm:
 		for g in 5:
-			warm_queue.append([neighbour_owner, neighbour_training, g, int(e["seed"]), 3])
+			var k2 := "nb|%d|%d" % [g, int(e["seed"])]
+			if not seen.has(k2):
+				seen[k2] = true
+				warm_queue.append([neighbour_owner, neighbour_training, g, int(e["seed"]), 3])
 
 
 ## Stage changes swap meshes over the next frames (≤ 2 ms per frame): swapping every vine group at once made the
@@ -270,32 +279,24 @@ func _owner_materials(owner: Dictionary) -> void:
 
 
 var _vine_cache := {}
-func _vine_mesh(training: String, g: int, seed: int, lod: int) -> Mesh:
+## A vine's surfaces as [[arrays, material name], …]. Near vines (lod 0) combine the LOD0 bunches with the LOD1 leaves
+## and wood, which look the same at arm's length (the full LOD0 foliage cost ~3 ms a frame close up).
+func _vine_surfaces(training: String, g: int, seed: int, lod: int) -> Array:
 	var key := "%s_%d_%d_%d" % [training, g, seed, lod]
 	if _vine_cache.has(key):
 		return _vine_cache[key]
-	var d := A.glb_meshes("models/vine_%s_g%d.glb" % [training, g])
-	var mesh: Mesh = d.get("s%d_lod%d" % [seed, lod], BoxMesh.new())
-	_prep(mesh)
+	var d := A.glb_surfaces("models/vine_%s_g%d.glb" % [training, g])
+	var out: Array = d.get("s%d_lod%d" % [seed, lod], [])
 	if lod == 0 and HYBRID_LOD0 and d.has("s%d_lod1" % seed):
-		mesh = _hybrid(mesh, _prep(d["s%d_lod1" % seed]))
-	_vine_cache[key] = mesh
-	return mesh
-
-
-## Near vines: the LOD0 bunches (the berries are what you look at) on the LOD1 leaves and wood, which look the
-## same at arm's length. The full LOD0 foliage is thousands of tiny triangles and cost ~3 ms a frame close up.
-func _hybrid(near: Mesh, mid: Mesh) -> Mesh:
-	var out := ArrayMesh.new()
-	var berry := _mat("vine_berry")
-	for i in near.get_surface_count():
-		if near.surface_get_material(i) == berry:
-			out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, near.surface_get_arrays(i))
-			out.surface_set_material(out.get_surface_count() - 1, berry)
-	for i in mid.get_surface_count():
-		if mid.surface_get_material(i) != berry:
-			out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, mid.surface_get_arrays(i))
-			out.surface_set_material(out.get_surface_count() - 1, mid.surface_get_material(i))
+		var mix := []
+		for sf in out:
+			if String(sf[1]) == "vine_berry":
+				mix.append(sf)
+		for sf in d["s%d_lod1" % seed]:
+			if String(sf[1]) != "vine_berry":
+				mix.append(sf)
+		out = mix
+	_vine_cache[key] = out
 	return out
 
 
@@ -565,6 +566,7 @@ func _layout_blocks() -> void:
 			"training": TRAINING_FILE.get(tr, "guyot"), "vsp": tr != "Einzelpfahl", "density": _num(b, "density", 5000.0), "rows": String(b.get("rows", "")),
 			"stones": _num(b.get("soilProfile", {}), "stones", 20.0), "mm": [], "g": -1})
 		_owner_materials(blocks[-1])
+		(blocks[-1]["leaf_mat"] as ShaderMaterial).set_shader_parameter("variety_cell", int(LEAF_CELL.get(String(b.get("variety", "")), 0)))
 		x += w + gap
 	# per-x slope offsets, smoothed across the paths and faded out beside the band
 	bd_x0 = band_x0 - 40.0
@@ -1582,6 +1584,7 @@ func _build_neighbours() -> void:
 	neighbour_mm.clear()
 	neighbour_owner = {}
 	_owner_materials(neighbour_owner)
+	(neighbour_owner["leaf_mat"] as ShaderMaterial).set_shader_parameter("variety_cell", {"mosel": 0, "cote-dor": 2, "napa": 3}.get(region, 0))
 	neighbour_training = "einzelpfahl" if region == "mosel" and sv >= 0.3 else ("cordon" if region == "napa" else "guyot")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5

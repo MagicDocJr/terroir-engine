@@ -15,7 +15,7 @@
 import bpy, bmesh, math, random, json, sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import common as C
-from common import V, Acc, make_object, tube, catmull, leaf_blade, berry_sphere, export, ss
+from common import V, Acc, make_object, tube, catmull, leaf_blade, leaf_card, berry_sphere, export, ss
 
 OUT = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv else os.getcwd()
 C.set_out(OUT)
@@ -112,7 +112,7 @@ def leaves_on_shoot(P, R, E, spts, L, g, out_fn, cluster_nodes, lateral_p, clust
         col = leaf_col(R, frac, g, node)
         lr = R.random()
         if E.keep_leaf():
-            leaf_blade(P["vine_leaf"], attach, tip, normal, E.leaf_size(size), col, (lr, frac))
+            leaf_card(P["vine_leaf"], attach, tip, normal, E.leaf_size(size), col, (lr, frac))
         if g >= 4 and node >= 3 and R.random() < lateral_p:                  # lateral shoot, 2-3 leaves
             ldir = (out * 0.6 + V((0, 0, 0.55))).normalized()
             for q in range(R.randint(2, 3)):
@@ -124,7 +124,7 @@ def leaves_on_shoot(P, R, E, spts, L, g, out_fn, cluster_nodes, lateral_p, clust
                 s2 = size * R.uniform(0.55, 0.8)
                 lr2 = R.random()
                 if E.keep_leaf():
-                    leaf_blade(P["vine_leaf"], la, lt, ln, E.leaf_size(s2), (0.10 + 0.02 * k, 0.26 + 0.04 * k, 0.04), (lr2, 0.9))
+                    leaf_card(P["vine_leaf"], la, lt, ln, E.leaf_size(s2), (0.10 + 0.02 * k, 0.26 + 0.04 * k, 0.04), (lr2, 0.9))
         if g >= 3 and node in cluster_nodes[0] and R.random() < cluster_nodes[1][cluster_nodes[0].index(node)]:
             cluster(P, R, E, p, cluster_dir_fn(p, alt, out), g)
 
@@ -140,7 +140,7 @@ def budburst_rosette(P, R, E, p, up):
         col = leaf_col(R, 1.0, 1, 1)
         lr = R.random()
         if E.keep_leaf() or C.LOD >= 2:
-            leaf_blade(P["vine_leaf"], attach, tip, normal, R.uniform(0.022, 0.042) * (1.0 if C.LOD < 2 else 1.5), col, (lr, 1.0), cup=1.8)
+            leaf_card(P["vine_leaf"], attach, tip, normal, R.uniform(0.022, 0.042) * (1.0 if C.LOD < 2 else 1.5), col, (lr, 1.0), cup=1.8)
 
 
 # --------------------------------------------------------------------------- Einzelpfahl (single stake, heart-shaped bows)

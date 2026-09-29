@@ -10,6 +10,7 @@ static var _glb := {}
 static func clear() -> void:
 	_tex.clear()
 	_glb.clear()
+	_glb_arr.clear()
 
 
 static func root() -> String:
@@ -61,6 +62,33 @@ static func meshes(n: Node, out: Array = []) -> Array:
 		out.append(n)
 	for c in n.get_children():
 		meshes(c, out)
+	return out
+
+
+## The surfaces of every mesh in a GLB, keyed by node name, as CPU arrays: [[arrays, material name], …] (cached).
+## Read from the importer's meshes before anything is uploaded, so building new meshes from them never reads the
+## GPU back (duplicating an uploaded ArrayMesh stalled ~9 ms per mesh).
+static var _glb_arr := {}
+static func glb_surfaces(rel: String) -> Dictionary:
+	if _glb_arr.has(rel):
+		return _glb_arr[rel]
+	var out := {}
+	var doc := GLTFDocument.new()
+	var state := GLTFState.new()
+	if doc.append_from_file(path(rel), state) == OK:
+		var gms := state.get_meshes()
+		for node in state.get_nodes():
+			if node.mesh < 0 or node.mesh >= gms.size():
+				continue
+			var im: ImporterMesh = (gms[node.mesh] as GLTFMesh).mesh
+			var surfs := []
+			for i in im.get_surface_count():
+				var m := im.get_surface_material(i)
+				surfs.append([im.get_surface_arrays(i), String(m.resource_name) if m else ""])
+			out[String(node.resource_name)] = surfs
+	else:
+		push_warning("view3d: gltf load failed: " + rel)
+	_glb_arr[rel] = out
 	return out
 
 

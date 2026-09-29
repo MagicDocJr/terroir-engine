@@ -212,6 +212,36 @@ def leaf_outline_r(theta):
     return r
 
 
+LEAF_CARD_V0 = 0.33          # v of the petiole point in the leaf atlas cells (build_leaf_atlas.py PETIOLE_PT)
+LEAF_CARD_SCALE = 1.12       # the atlas leaf fills ~0.9 of its cell; the outline blades spanned ~1.06
+
+
+def leaf_card(acc, origin, up_dir, normal, size, col, uv2=(0.0, 0.0), cup=1.0):
+    """Textured leaf card (the Variety's outline comes from the leaf atlas, alpha-tested in leaf.gdshader). The
+    petiole point of the atlas leaf sits at origin; tip towards up_dir, facing normal. Same UV layout and cupping as
+    leaf_blade: petiole at (0.5, ~0.33), blade centre (0.5, 0.5). 8 triangles near (LOD 0-1), 2 far."""
+    n = normal.normalized()
+    u_axis = n.cross(up_dir).normalized()
+    v_axis = u_axis.cross(n).normalized()
+    s = size * LEAF_CARD_SCALE
+    k = 3 if LOD < 2 else 2
+    verts, uvs, cols, faces = [], [], [], []
+    for j in range(k):
+        for i in range(k):
+            uu, vv = i / (k - 1), j / (k - 1)
+            x = uu - 0.5
+            z = cup * (0.10 * abs(x) + 0.12 * ((x * x + (vv - 0.5) ** 2) * 1.2)) if k == 3 else 0.0
+            verts.append(origin + s * (x * u_axis + (vv - LEAF_CARD_V0) * v_axis + z * n))
+            uvs.append((uu, vv))
+            shade = 0.9 + 0.1 * min(1.0, 2 * math.hypot(x, vv - 0.5))
+            cols.append((col[0] * shade, col[1] * shade, col[2] * shade))
+    for j in range(k - 1):
+        for i in range(k - 1):
+            a, b, c, d = j * k + i, j * k + i + 1, (j + 1) * k + i + 1, (j + 1) * k + i
+            faces.append((a, b, c, d))
+    acc.add(verts, faces, uvs, cols, [uv2] * len(verts))
+
+
 def leaf_blade(acc, origin, up_dir, normal, size, col, uv2=(0.0, 0.0), cup=1.0):
     """Blade whose petiole attachment is at origin, tip direction up_dir, facing normal.
     UV: petiole at (0.5, 0), blade centre (0.5, 0.5). uv2 = (per-leaf random, position along the shoot)."""

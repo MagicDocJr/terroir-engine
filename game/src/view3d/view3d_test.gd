@@ -296,6 +296,7 @@ func _run() -> void:
 		print("  saved ", out, " ", img.get_size())
 		_log_state(shot)
 		if perf:
+			print("  warm queue at measurement start: %d" % ((view.get("vineyard") as Node3D).get("warm_queue") as Array).size())
 			var times := PackedFloat32Array()
 			var t := 0.0
 			while t < 4.0:

@@ -2,14 +2,19 @@
 // wetness with droplet beads. Bound to the simulation per Block (one material per Block) through:
 //   leaf_state  = (downy mildew 0..1, lime chlorosis 0..1, autumn colour 0..1, leaves dropped 0..1)
 //   leaf_state2 = (water stress 0..1, red variety 0/1, -, -)
-// UV2 = (per-leaf random, position along the shoot: 0 base .. 1 tip). leaf_detail.a = vein mask.
+// UV2 = (per-leaf random, position along the shoot: 0 base .. 1 tip).
+// Leaves are cards: the outline, veins and relief come from the Variety's cell in the leaf atlas (build_leaf_atlas.py):
+//   leaf_atlas RGB = albedo multiplier, A = coverage (alpha-tested); leaf_normal RG = normal, B = vein mask.
 shader_type spatial;
 render_mode cull_disabled, depth_draw_opaque;
 
 uniform float roughness = 0.55;
 uniform vec3 backlight_col = vec3(0.22, 0.32, 0.06);
 uniform float wind = 1.0;
-uniform sampler2D leaf_detail : hint_default_white, filter_linear_mipmap_anisotropic, repeat_disable;
+uniform sampler2D leaf_atlas : hint_default_white, filter_linear_mipmap_anisotropic, repeat_disable;
+uniform sampler2D leaf_normal : hint_normal, filter_linear_mipmap_anisotropic, repeat_disable;
+uniform int variety_cell = 0;                  // 0 Riesling, 1 Chardonnay, 2 Pinot Noir, 3 Cabernet Sauvignon
+uniform float normal_strength = 0.45;
 global uniform float wetness;
 global uniform float wind_strength;
 uniform vec4 leaf_state = vec4(0.0);
@@ -45,8 +50,28 @@ void vertex() {
 }
 
 void fragment() {
-	vec4 det = texture(leaf_detail, UV);
-	vec3 detail = det.rgb * 1.45;
+	vec2 cuv = (clamp(UV, vec2(0.002), vec2(0.998)) + vec2(float(variety_cell % 2), float(variety_cell / 2))) * 0.5;
+	vec4 det = texture(leaf_atlas, cuv);
+	vec3 nt = texture(leaf_normal, cuv).rgb;
+	// the silhouette: alpha test, a little lower threshold far away so thin mipped lobes don't vanish
+	float mip = log2(max(length(fwidth(UV * 1024.0)), 1.0));
+	ALPHA = det.a;
+	ALPHA_SCISSOR_THRESHOLD = mix(0.5, 0.25, clamp(mip / 5.0, 0.0, 1.0));
+	vec3 detail = det.rgb * 1.3;
+	det.a = nt.b;                              // vein mask (for the chlorosis below)
+	// relief: normal from the atlas in a derivative-built frame (the vine meshes carry no tangents)
+	vec3 dp1 = dFdx(VERTEX);
+	vec3 dp2 = dFdy(VERTEX);
+	vec2 du1 = dFdx(UV);
+	vec2 du2 = dFdy(UV);
+	vec3 N = NORMAL;
+	vec3 dp2p = cross(dp2, N);
+	vec3 dp1p = cross(N, dp1);
+	vec3 T = dp2p * du1.x + dp1p * du2.x;
+	vec3 B = dp2p * du1.y + dp1p * du2.y;
+	float inv = inversesqrt(max(max(dot(T, T), dot(B, B)), 1e-12));
+	vec2 nxy = (nt.rg * 2.0 - 1.0) * normal_strength;
+	NORMAL = normalize(N + (T * nxy.x + B * nxy.y) * inv);
 	vec3 base = COLOR.rgb;
 	// lime-induced chlorosis: young leaves turn yellow between the veins (veins stay green)
 	float chl = leaf_state.y * mix(0.35, 1.0, smoothstep(0.35, 0.9, v_frac)) * (1.0 - det.a);

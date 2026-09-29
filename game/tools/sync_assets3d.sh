@@ -8,6 +8,7 @@
 #   game/tools/sync_assets3d.sh winery     # only the winery models + winery.json
 #   game/tools/sync_assets3d.sh groundcover  # only the decimated ground-cover plants (gc_*.glb)
 #   game/tools/sync_assets3d.sh trees      # only the near trees (tree3d_*_lod*.glb, thinned scans)
+#   game/tools/sync_assets3d.sh leaves     # only the variety leaf atlas (leaf_atlas.png, leaf_normal.png)
 #   game/tools/sync_assets3d.sh audio      # only the ambience/one-shot WAVs + audio.json + CREDITS.md
 #
 # Needs: python3 (WSL), Windows Blender 5.2 LTS (headless). Everything downloaded is CC0 (Poly Haven;
@@ -34,6 +35,9 @@ if [[ "$STEP" == "all" || "$STEP" == "vineyard" ]]; then
 fi
 if [[ "$STEP" == "all" || "$STEP" == "groundcover" ]]; then
   blender_run build_groundcover.py "$DEST/models" "$(wslpath -w "$DEST/props")"
+fi
+if [[ "$STEP" == "all" || "$STEP" == "leaves" ]]; then
+  blender_run build_leaf_atlas.py "$DEST/models"
 fi
 if [[ "$STEP" == "all" || "$STEP" == "trees" ]]; then
   blender_run build_trees3d.py "$DEST/models" "$(wslpath -w "$DEST/props")"
