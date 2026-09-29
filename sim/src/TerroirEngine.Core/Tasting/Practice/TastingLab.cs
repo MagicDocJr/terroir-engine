@@ -5,8 +5,10 @@ using TerroirEngine.Winery;
 
 namespace TerroirEngine.Tasting.Practice;
 
-/// <summary>What to pour: a Plot, a vintage, optionally a Block or Variety, a winemaker style id and a ripeness target.</summary>
-public sealed record PourSpec(string PlotId, int Vintage, string? BlockId = null, string? Variety = null, string? Style = null, double? TargetOe = null);
+/// <summary>What to pour: a Plot, a vintage, optionally a Block or Variety, a winemaker style id, a ripeness target and the producer
+/// (a Wine Fair host pours its own Wines).</summary>
+public sealed record PourSpec(string PlotId, int Vintage, string? BlockId = null, string? Variety = null, string? Style = null, double? TargetOe = null,
+    string? Producer = null);
 
 /// <summary>Everything the reveal and the quiz need about how a poured Wine came to be.</summary>
 public sealed class PourContext
@@ -118,7 +120,7 @@ public static class TastingLab
         {
             RegionId = g.Region.Id, RegionName = g.Region.Name, PlotId = plot.Id, PlotName = plot.Name, BlockId = bs.Data.Id, Variety = variety,
             // stable across runs (HashCode.Combine is randomised per process)
-            Producer = names[Math.Abs(spec.Vintage * 31 + bs.Data.Id.Sum(ch => ch) * 7 + seed) % names.Length],
+            Producer = spec.Producer ?? names[Math.Abs(spec.Vintage * 31 + bs.Data.Id.Sum(ch => ch) * 7 + seed) % names.Length],
             StyleId = style.Id, StyleLabel = style.Label, Red = bs.Variety.Red, Vintage = spec.Vintage,
             Gdd = prov.WinklerBlock, SeasonTemp = prov.SeasonTemp, FrostLossPct = prov.FrostLoss * 100,   // Provenance stores a fraction
             GreyRotPct = prov.GreyRotPct, NobleRotPct = prov.NobleRotPct,
