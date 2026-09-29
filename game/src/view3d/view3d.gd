@@ -74,6 +74,18 @@ var tp_why: Label
 var tp_options: VBoxContainer
 var tp_late: CheckBox
 var tp_confirm: Button
+# time-lapse (time-lapse and visuals design §2): the view asks for days, the shell advances the sim and hands the
+# snapshot back; an Alert pauses it
+signal advance_requested(days: int)
+const TL_SPEEDS := ["Day", "Days", "Weeks"]
+var tl_on := false
+var tl_speed := 1
+var tl_hour := 12.0
+var tl_acc := 0.0
+var tl_waiting := false            # a day was requested and its snapshot hasn't come back yet
+var tl_wait_t := 0.0
+var tl_note := ""                  # e.g. the Alert that paused it
+var tl_label: Label
 
 
 func _ready() -> void:
@@ -155,6 +167,17 @@ func _build_hud() -> void:
 	hint_label.add_theme_color_override("font_color", Color(0.85, 0.88, 0.9, 0.85))
 	hint_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
 	add_child(hint_label)
+	tl_label = Label.new()
+	tl_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	tl_label.position = Vector2(-420, 16)
+	tl_label.size = Vector2(840, 30)
+	tl_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tl_label.add_theme_font_size_override("font_size", 18)
+	tl_label.add_theme_color_override("font_color", Color(1.0, 0.92, 0.72))
+	tl_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.85))
+	tl_label.add_theme_constant_override("shadow_offset_x", 1)
+	tl_label.add_theme_constant_override("shadow_offset_y", 1)
+	add_child(tl_label)
 	_update_hint()
 	if missing:
 		hud_label.text = "3D assets missing — run game/tools/sync_assets3d.sh"
@@ -165,8 +188,85 @@ func _update_hint() -> void:
 		hint_label.text = "Drone · drag to orbit · WASD pan · wheel height · Shift faster · 4 or 1/2/3 back to walking · M sound %s · Tab back" % ["on" if sound_on else "off"]
 		return
 	var where: String = {"": "Follow the track to the winery", "hall": "Stairs to the cellar at the far end", "cellar": "Stairs up to the hall by the door"}.get(zone, "")
-	hint_label.text = "Click to look around · WASD walk · Shift run · 1 vineyard  2 cellar  3 hall (jump) · 4 drone · M sound %s · Tab back%s" % [
+	hint_label.text = "Click to look around · WASD walk · Shift run · 1 vineyard  2 cellar  3 hall (jump) · 4 drone · Space time-lapse · M sound %s · Tab back%s" % [
 		"on" if sound_on else "off", ("   —   " + where) if where != "" else ""]
+
+
+# ------------------------------------------------------------------ time-lapse
+## Starts or pauses the time-lapse. Leaving the view or an Alert pauses it.
+func timelapse_set(on: bool) -> void:
+	if missing or placed_key == "":
+		return
+	tl_on = on
+	tl_acc = 0.0
+	vineyard.set("blend_weather", on)
+	if on:
+		tl_note = ""
+		if tl_speed == 0:
+			var h := float(vineyard.get("daytime"))
+			tl_hour = h if h >= 0.0 else float(vineyard.call("default_hour", int(vineyard.get("day_doy"))))
+	_update_tl_label()
+
+
+func timelapse_speed(i: int) -> void:
+	tl_speed = clampi(i, 0, TL_SPEEDS.size() - 1)
+	if tl_speed == 0:
+		var h := float(vineyard.get("daytime"))
+		tl_hour = h if h >= 0.0 else float(vineyard.call("default_hour", int(vineyard.get("day_doy"))))
+	else:
+		vineyard.call("set_daytime", -1.0)
+	_update_tl_label()
+
+
+## The shell reports an Alert that arrived during the time-lapse: pause and say why.
+func timelapse_alert(subject: String) -> void:
+	tl_note = subject
+	timelapse_set(false)
+	tl_note = subject
+	_update_tl_label()
+
+
+func _update_tl_label() -> void:
+	if tl_label == null:
+		return
+	var date := String(D.get("dateLabel", D.get("date", "")))
+	if tl_on:
+		tl_label.text = "⏵ %s  ·  %s  ·  Space pause  ·  [ ] speed" % [TL_SPEEDS[tl_speed], date]
+	elif tl_note != "":
+		tl_label.text = "❚❚ Paused: %s  ·  Tab to read it  ·  Space continue" % tl_note
+	else:
+		tl_label.text = ""
+
+
+func _timelapse_step(delta: float) -> void:
+	if tl_waiting:
+		tl_wait_t += delta
+		if tl_wait_t > 1.0:
+			tl_waiting = false      # the shell was busy and dropped the request: ask again
+	if not tl_on:
+		return
+	if tl_speed == 0:
+		# one day ≈ 8 s: 05:00 → 23:00 in 7 s, the night in 1 s; the next day starts at midnight
+		var rate := 18.0 / 7.0 if tl_hour >= 5.0 and tl_hour < 23.0 else 6.0
+		tl_hour += delta * rate
+		if tl_hour >= 24.0 and not tl_waiting:
+			tl_hour -= 24.0
+			_request_day()
+		elif tl_hour >= 24.0:
+			tl_hour = 23.99
+		vineyard.call("set_daytime", tl_hour)
+	else:
+		var per_day := 1.0 if tl_speed == 1 else 1.0 / 7.0
+		tl_acc += delta
+		if tl_acc >= per_day and not tl_waiting:
+			tl_acc = 0.0
+			_request_day()
+
+
+func _request_day() -> void:
+	tl_waiting = true
+	tl_wait_t = 0.0
+	advance_requested.emit(1)       # the shell advances the sim now and hands the day back next frame (apply_snapshot)
 
 
 func _on_light_changed(elev: float) -> void:
@@ -177,6 +277,7 @@ func _on_light_changed(elev: float) -> void:
 # ------------------------------------------------------------------ contract
 func apply_snapshot(snap: Dictionary) -> void:
 	D = snap
+	tl_waiting = false
 	if missing or snap.is_empty():
 		return
 	vineyard.call("apply_snapshot", snap)
@@ -204,6 +305,7 @@ func apply_snapshot(snap: Dictionary) -> void:
 	if closeup_id >= 0:
 		_leave_closeup()
 	tasks3d.call("apply", snap)
+	_update_tl_label()
 	player.set("bounds", vineyard.call("walk_rect"))
 	_configure_sound()
 	if moved or not has_view:
@@ -333,6 +435,10 @@ func _configure_sound() -> void:
 
 func _on_visibility_changed() -> void:
 	var on := is_visible_in_tree()
+	if not on and tl_on:
+		timelapse_set(false)
+	if not on and vineyard and float(vineyard.get("daytime")) >= 0.0:
+		vineyard.call("set_daytime", -1.0)          # back to the afternoon for the next visit
 	set_process(on)
 	set_process_input(on)
 	if player:
@@ -398,6 +504,12 @@ func _input(e: InputEvent) -> void:
 				else:
 					set_view("drone")
 				get_viewport().set_input_as_handled()
+			KEY_SPACE:
+				timelapse_set(not tl_on); get_viewport().set_input_as_handled()
+			KEY_BRACKETLEFT:
+				timelapse_speed(tl_speed - 1); get_viewport().set_input_as_handled()
+			KEY_BRACKETRIGHT:
+				timelapse_speed(tl_speed + 1); get_viewport().set_input_as_handled()
 			KEY_M:
 				sound_on = not sound_on
 				_update_hint()
@@ -410,6 +522,7 @@ func _input(e: InputEvent) -> void:
 func _process(delta: float) -> void:
 	if missing or placed_key == "":
 		return
+	_timelapse_step(delta)
 	if drone:
 		_drone_step(delta)
 	_update_zone()

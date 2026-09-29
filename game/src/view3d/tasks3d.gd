@@ -18,6 +18,7 @@ const THIN_DROP := {"0": [], "1": [2, 7], "2": [1, 3, 6, 8]}   # which of the te
 var vy: Node3D                       # vineyard.gd
 var wy: Node3D                       # winery.gd
 var markers := {}                    # task id -> {node, spot: [vine, stand, marker], task}
+var markers_key := ""                # the open tasks the markers were built for
 var parts: Node3D                    # the close-up's clickable parts (null when none)
 var pickables: Array = []            # [{body, value, meshes: [MeshInstance3D], mat: StandardMaterial3D}]
 var extras: Array = []               # close-up meshes animated on confirm: {mesh, value, role}
@@ -38,16 +39,64 @@ func setup(vineyard: Node3D, winery: Node3D) -> void:
 
 # ------------------------------------------------------------------ markers
 func apply(D: Dictionary) -> void:
-	for id in markers:
-		(markers[id]["node"] as Node3D).queue_free()
-	markers.clear()
+	# rebuild only when the open tasks change (the time-lapse applies a snapshot every day)
+	var key := ""
 	for task in D.get("tasks", []):
-		if String(task.get("status", "")) != "Open":
+		if String(task.get("status", "")) == "Open":
+			key += "%d:%s;" % [int(task["id"]), task.get("lot", "")]
+	if key == markers_key:
+		for task in D.get("tasks", []):          # keep the task data fresh (days left, plan) for the close-up
+			if markers.has(int(task.get("id", -1))):
+				markers[int(task["id"])]["task"] = task
+		return
+	markers_key = key
+	# only the markers that changed: remove closed tasks, add new ones, keep the rest
+	var open_ids := {}
+	for task in D.get("tasks", []):
+		if String(task.get("status", "")) == "Open":
+			open_ids[int(task["id"])] = task
+	for id in markers.keys():
+		if not open_ids.has(id) or String((markers[id]["task"] as Dictionary).get("lot", "")) != String((open_ids[id] as Dictionary).get("lot", "")):
+			(markers[id]["node"] as Node3D).queue_free()
+			markers.erase(id)
+	for id in open_ids:
+		var task: Dictionary = open_ids[id]
+		if markers.has(id):
+			markers[id]["task"] = task
 			continue
 		var spot := demo_spot(task)
 		if spot.is_empty():
 			continue
-		markers[int(task["id"])] = {"node": _marker(task, spot), "spot": spot, "task": task}
+		markers[id] = {"node": _marker(task, spot), "spot": spot, "task": task}
+
+
+## Finds every Block's demonstration vine ahead of time, one Block per frame (a scan of the Block's vines took
+## ~15 ms; four tasks opening on one day made a 66 ms frame in the time-lapse).
+var warmed_plot := ""
+var warm_label: Node3D
+var glyphs_warm := false
+var warm_frames := 0
+var warm_blocks := []
+func _warm_spots() -> void:
+	if vy == null:
+		return
+	var pk := String(vy.get("plot_key"))
+	if pk != warmed_plot:
+		warmed_plot = pk
+		warm_blocks = []
+		for b in vy.get("blocks"):
+			warm_blocks.append(String(b["id"]))
+	if not warm_blocks.is_empty():
+		demo_spot({"block": warm_blocks.pop_back(), "where": "vineyard", "id": -1})
+	elif warm_label == null and not glyphs_warm:
+		# a marker's first label cost one 65 ms frame (text set-up on first use, released when no label is left):
+		# one marker lives permanently far below the ground
+		warm_label = _marker({"kind": "LeafRemoval", "title": "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz", "block": "0123456789", "due": "·:,.-()éèàüöäß"}, [Vector3.ZERO, Vector3.ZERO, Vector3(0, -40, 0)])
+		warm_frames = 6
+	elif warm_label != null and not glyphs_warm:
+		warm_frames -= 1
+		if warm_frames <= 0:
+			glyphs_warm = true      # kept: once no marker label is left, the next one paid the 65 ms again
 
 
 ## [vine, stand, marker] in this node's frame, or [] when the task has no place now (e.g. its Lot went into barrel).
@@ -155,6 +204,7 @@ func _marker(task: Dictionary, spot: Array) -> Node3D:
 
 func _process(delta: float) -> void:
 	t += delta
+	_warm_spots()
 	for id in markers:
 		var rib: Node3D = (markers[id]["node"] as Node3D).get_node_or_null("Ribbon")
 		if rib:

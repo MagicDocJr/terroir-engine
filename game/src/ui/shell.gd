@@ -318,6 +318,7 @@ func toggle_3d(kind := "") -> void:
 		add_child(view3d)
 		if view3d.has_signal("exit_requested"): view3d.exit_requested.connect(func(): _hide_3d())
 		if view3d.has_signal("task_chosen"): view3d.task_chosen.connect(_on_task_chosen)
+		if view3d.has_signal("advance_requested"): view3d.advance_requested.connect(_on_advance_requested)
 		view3d.visible = false
 	if view3d.visible: _hide_3d(); return
 	root_box.visible = false
@@ -351,6 +352,34 @@ func _hide_3d() -> void:
 	if view3d: view3d.visible = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	root_box.visible = true
+	if stale_2d:                       # days passed in the 3D time-lapse: rebuild the screens once
+		stale_2d = false
+		Sim.SaveGame("autosave")
+		_build_chrome()
+		show_screen("inbox" if tl_alert_id >= 0 else current)
+		tl_alert_id = -1
+
+## The 3D time-lapse asks for a day: the sim advances (stopping at an Alert) without rebuilding the hidden 2D screens.
+var stale_2d := false
+var tl_alert_id := -1              # the Alert that paused the time-lapse: Tab opens it in the Inbox
+func _on_advance_requested(days: int) -> void:
+	if busy or not Sim.HasGame(): return
+	busy = true
+	var before := _alert_ids()
+	Sim.Advance(days, true)
+	D = JSON.parse_string(Sim.Snapshot())
+	await get_tree().process_frame   # the sim step and the 3D update land in different frames (time-lapse smoothness)
+	busy = false
+	stale_2d = true
+	var subject := ""
+	for m in D.get("inbox", []):
+		if m.get("stop", false) and not before.has(int(m["id"])):
+			subject = String(m["subject"]); tl_alert_id = int(m["id"]); state["inbox_sel"] = tl_alert_id
+	view3d.apply_snapshot(D)
+	if subject != "":
+		if sfx: sfx.play("alert")
+		view3d.timelapse_alert(subject)
+		Sim.SaveGame("autosave")
 
 # ------------------------------------------------------------------ chrome
 func _build_chrome() -> void:
@@ -738,7 +767,21 @@ func _fuzz_task3d() -> void:
 	for t in D.get("tasks", []):
 		if int(t["id"]) == id: st = "%s/%s" % [t["status"], t.get("decidedBy", "")]
 	print("FUZZ task3d %s (opened=%s, task %d → %s)" % ["ok" if opened and st == "Done/3d" else "FAIL", opened, id, st])
+	# the time-lapse through the real shell: days pass, the 2D screens show the new date after leaving the view
+	var d0 := String(D["date"])
+	view3d.call("timelapse_speed", 1)
+	view3d.call("timelapse_set", true)
+	await get_tree().create_timer(3.5).timeout
+	view3d.call("timelapse_set", false)
+	var d1 := String(D["date"])
 	if view3d.visible: toggle_3d("")
+	for f in 3: await get_tree().process_frame
+	var shown := false
+	for l in host.find_children("*", "Label", true, false):
+		if String((l as Label).text).contains(String(D.get("dateLabel", "?"))): shown = true
+	for l in topbar.find_children("*", "Label", true, false):
+		if String((l as Label).text).contains(String(D.get("dateLabel", "?"))): shown = true
+	print("FUZZ timelapse %s (%s → %s, new date shown after leaving: %s)" % ["ok" if d1 > d0 and shown else "FAIL", d0, d1, shown])
 	var arg := ""
 	for m in D.get("inbox", []):
 		for a in m.get("actions", []):

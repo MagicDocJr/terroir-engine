@@ -99,6 +99,9 @@ func _ready() -> void:
 	if "--tasktest" in args:
 		_task_test()
 		return
+	if "--timelapse" in args:
+		_timelapse_test()
+		return
 	if "--skytest" in args:
 		_sky_test("--perf" in args)
 		return
@@ -696,6 +699,139 @@ func _pick_rates() -> void:
 					row.append(str(_block(_snap(), e[0]).get("pickedPct")) + ("" if _block(_snap(), e[0]).get("picking", false) else "✓"))
 				days.append(" ".join(row))
 			print(line, " blocks ", ids, " | ", " / ".join(days))
+	get_tree().quit()
+
+
+# ------------------------------------------------------------------ time-lapse (--timelapse)
+var _tl_alerts := 0
+var _tl_times := []                    # per day: [advance, snapshot, parse, apply] µs
+var _tl_frames := PackedFloat32Array()
+
+## What the shell does for the view: advance the sim a day, stop at an Alert, hand the snapshot back.
+func _tl_answer(days: int) -> void:
+	var before := {}
+	for m in snap.get("inbox", []): before[int(m["id"])] = true
+	var t0 := Time.get_ticks_usec()
+	Sim.Advance(days, true)
+	var t1 := Time.get_ticks_usec()
+	var js: String = Sim.Snapshot()
+	var t2 := Time.get_ticks_usec()
+	snap = JSON.parse_string(js)
+	var t3 := Time.get_ticks_usec()
+	_tl_times.append([t1 - t0, t2 - t1, t3 - t2])
+	await get_tree().process_frame    # like the shell: the 3D update lands in the next frame
+	var subject := ""
+	for m in snap.get("inbox", []):
+		if m.get("stop", false) and not before.has(int(m["id"])): subject = String(m["subject"])
+	var t4 := Time.get_ticks_usec()
+	view.apply_snapshot(snap)
+	(_tl_times[-1] as Array).append(Time.get_ticks_usec() - t4)
+	if Time.get_ticks_usec() - t4 > 15000:
+		print("TIMELAPSE slow day %s: apply %.0f ms" % [snap["date"], (Time.get_ticks_usec() - t4) / 1000.0])
+	if subject != "":
+		_tl_alerts += 1
+		view.call("timelapse_alert", subject)
+
+
+var _tl_day_this_frame := false
+func _tl_run(seconds: float) -> void:
+	var t := 0.0
+	var prev_days := _tl_times.size()
+	while t < seconds:
+		await get_tree().process_frame
+		var dt := get_process_delta_time()
+		t += dt
+		_tl_frames.append(dt)
+		if dt > 0.03:
+			var vp: SubViewport = view.get("viewport")
+			var rid := vp.get_viewport_rid()
+			print("TIMELAPSE slow frame %.0f ms on %s (day applied in the previous frame: %s) · render cpu %.1f gpu %.1f ms · frame setup %.1f ms" % [dt * 1000.0, snap.get("date", ""), _tl_times.size() != prev_days,
+				RenderingServer.viewport_get_measured_render_time_cpu(rid), RenderingServer.viewport_get_measured_render_time_gpu(rid), RenderingServer.get_frame_setup_time_cpu()])
+		prev_days = _tl_times.size()
+
+
+func _timelapse_test() -> void:
+	var ok := true
+	view.advance_requested.connect(_tl_answer)
+	_look_game("mosel")
+	Sim.Advance(125, false)                 # early May
+	snap = _snap()
+	view.apply_snapshot(snap)
+	view.set_view("vineyard")
+	view.camera_preset("estate")
+	await _frames(30)
+	# each speed advances days at its rate (unless an Alert pauses it)
+	for sp in [[1, 4.0, 3, 5], [2, 3.0, 10, 30], [0, 9.0, 1, 2]]:
+		view.call("timelapse_speed", int(sp[0]))
+		var d0: String = snap["date"]
+		var n0 := int(Time.get_unix_time_from_datetime_string(d0) / 86400)
+		_tl_alerts = 0
+		view.call("timelapse_set", true)
+		await _tl_run(float(sp[1]))
+		view.call("timelapse_set", false)
+		var n1 := int(Time.get_unix_time_from_datetime_string(String(snap["date"])) / 86400)
+		var days := n1 - n0
+		var sp_ok := (days >= int(sp[2]) and days <= int(sp[3])) or _tl_alerts > 0
+		print("TIMELAPSE speed %s: %d days in %.0f s (alerts %d) %s" % [view.get("TL_SPEEDS")[int(sp[0])], days, sp[1], _tl_alerts, "ok" if sp_ok else "FAIL"])
+		ok = ok and sp_ok
+	# night during the Day speed: the hour moves
+	var h := float((view.get("vineyard") as Node3D).get("daytime"))
+	print("TIMELAPSE day speed animates the hour %s (%.1f h)" % ["ok" if h >= 0.0 else "FAIL", h])
+	ok = ok and h >= 0.0
+	await _save_shot("timelapse_day")
+	# an Alert pauses it: run Weeks until one arrives; the paused view names it and no day is skipped
+	view.call("timelapse_speed", 2)
+	_tl_alerts = 0
+	view.call("timelapse_set", true)
+	var guard := 0.0
+	while _tl_alerts == 0 and guard < 60.0:
+		await get_tree().process_frame
+		guard += get_process_delta_time()
+	var paused_ok: bool = _tl_alerts > 0 and not bool(view.get("tl_on")) and String(view.get("tl_note")) != ""
+	print("TIMELAPSE alert pauses %s (%s, on %s)" % ["ok" if paused_ok else "FAIL", view.get("tl_note"), snap["date"]])
+	ok = ok and paused_ok
+	await _save_shot("timelapse_alert")
+	# the same view with time standing still, for comparison
+	RenderingServer.viewport_set_measure_render_time((view.get("viewport") as SubViewport).get_viewport_rid(), true)
+	await _frames(5)
+	_tl_frames = PackedFloat32Array()
+	await _tl_run(4.0)
+	var bs := _tl_frames.duplicate(); bs.sort()
+	var bover := 0
+	for f in _tl_frames:
+		if f > 1.0 / 80.0: bover += 1
+	print("TIMELAPSE still view: %.1f low1, %d of %d frames over 12.5 ms" % [1.0 / bs[int(0.99 * (bs.size() - 1))], bover, bs.size()])
+	# frame times while days pass at Weeks speed
+	_tl_frames = PackedFloat32Array()
+	_tl_times = []
+	view.call("timelapse_set", true)
+	await _tl_run(4.0)
+	view.call("timelapse_set", false)
+	var srt := _tl_frames.duplicate(); srt.sort()
+	var tot := 0.0
+	for f in _tl_frames: tot += f
+	var mx := [0, 0, 0, 0]
+	var sm := [0, 0, 0, 0]
+	for tt in _tl_times:
+		for i in 4:
+			mx[i] = maxi(mx[i], int(tt[i])); sm[i] += int(tt[i])
+	print("TIMELAPSE per day (ms, mean / max): advance %.1f/%.1f, snapshot %.1f/%.1f, parse %.1f/%.1f, apply %.1f/%.1f (%d days)" % [
+		sm[0] / 1000.0 / _tl_times.size(), mx[0] / 1000.0, sm[1] / 1000.0 / _tl_times.size(), mx[1] / 1000.0, sm[2] / 1000.0 / _tl_times.size(), mx[2] / 1000.0, sm[3] / 1000.0 / _tl_times.size(), mx[3] / 1000.0, _tl_times.size()])
+	var over := 0
+	var over2 := 0
+	for f in _tl_frames:
+		if f > 1.0 / 80.0: over += 1
+		if f > 0.04: over2 += 1
+	print("TIMELAPSE frames at Weeks: %.1f fps avg, %.1f low1, worst %.0f ms, %d of %d frames over 12.5 ms, %d over 40 ms (days %d)" % [_tl_frames.size() / tot, 1.0 / srt[int(0.99 * (srt.size() - 1))], srt[srt.size() - 1] * 1000.0, over, _tl_frames.size(), over2, _tl_times.size()])
+	# leaving the view stops it
+	view.call("timelapse_set", true)
+	view.visible = false
+	await _frames(3)
+	var leave_ok: bool = not bool(view.get("tl_on"))
+	view.visible = true
+	print("TIMELAPSE leaving stops %s" % ("ok" if leave_ok else "FAIL"))
+	ok = ok and leave_ok
+	print("TIMELAPSE %s" % ("ok" if ok else "FAIL"))
 	get_tree().quit()
 
 

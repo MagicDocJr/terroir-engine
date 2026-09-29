@@ -15,6 +15,7 @@ fermentation all come from `Sim.Snapshot()`.
 | `set_view(kind: String)` | `"vineyard"`, `"cellar"` or `"hall"`: teleports the walker to that place in the one world. `"drone"`: a free-flying camera above the Estate (the walker waits where it was). |
 | `signal exit_requested` | Tab, or Esc while the mouse is not captured. |
 | `signal task_chosen(id, value, timing)` | The player did a staff task in its close-up; the shell sends `task <id> do <value> <timing>`. |
+| `signal advance_requested(days)` / `timelapse_set(on)` / `timelapse_speed(i)` / `timelapse_alert(subject)` | The time-lapse: the view asks for a day; the shell advances the sim (stopping at an Alert), hands the snapshot back with `apply_snapshot` in the next frame, and reports an Alert with `timelapse_alert`, which pauses it. |
 | `focus_task(id)` | Puts the walker in front of that task's demonstration vine (or its Lot's tank). |
 | `show_hud` | Small date/Block/weather overlay plus the key hint line (default on). |
 | `sound_volume_db`, `sound_on` | Master volume of the view's sound (dB, 0 = as mixed) and on/off. M toggles it. |
@@ -23,7 +24,7 @@ fermentation all come from `Sim.Snapshot()`.
 
 Input is read only while the node is visible. Click to capture the mouse, then walk with WASD (or the arrow
 keys). Shift runs. 1/2/3 jump to the vineyard, cellar or hall, 4 switches to the drone (and back), M turns the
-sound on or off, and Tab goes back. **Tasks:** near a task's marker the HUD shows "E …"; E opens the close-up (the mouse is
+sound on or off, Space runs the time-lapse, and Tab goes back. **Tasks:** near a task's marker the HUD shows "E …"; E opens the close-up (the mouse is
 freed and WASD no longer walks): click a part or an option in the side panel, Enter confirms (a short animation, then `task_chosen`),
 Esc goes back without deciding, and Tab leaves the view (no decision). Once confirmed the choice stands: Esc is ignored during the
 animation, and Tab or closing the view sends it at once. Test: `scripts/tasktest.sh` (real key and mouse events: E, WASD, a click on
@@ -47,6 +48,27 @@ view is hidden.
 | `tasks3d.gd` | Staff tasks: a stake with a ribbon and label at each open task's demonstration vine (the real vine nearest the headland on the Block's middle row) or above its Lot's tank; the close-up parts (Guyot canes, Cordon arms with two-bud spurs or Einzelpfahl bows, with the Block's bud counts; lobed leaves on the morning / afternoon side, berry bunches, cellar tools), picking (collision layer 20; pruning picks the cane whose axis passes nearest the mouse ray, since the fanned canes' boxes overlap) and the confirm animations. |
 | `winery_style.gd` | The Winery look catalogue: elements, options, blurbs, each Region's default and `resolve()`. Shared with the Winery screen's "Winery look" panel (`ui/winery_look_panel.gd`). |
 | `view3d_test.gd` | Test harness: screenshots, FPS, the walk test and the LOD probe. |
+
+## Time-lapse and the sky
+
+- **Keys:** Space plays or pauses; `[` and `]` change the speed: **Day** (one day ≈ 8 s with the whole sun cycle, the
+  night compressed to 1 s), **Days** (a day per second, afternoon light), **Weeks** (7 days per second). The strip at
+  the top shows the speed and date, or the Alert that paused it (Tab then opens it in the Inbox). Leaving the view
+  pauses it; the 2D screens rebuild once with the new date.
+- **Smoothness** (measured on Mosel Blauschiefer in June, display on): per day ≈ 0.2 ms sim step + 1 ms snapshot +
+  0.8 ms parse (one frame) and ≈ 2.5 ms 3D update (the next frame). Stage changes swap vine meshes a few per frame,
+  every stage's meshes are prepared in the background after the world loads, task markers rebuild only when tasks
+  change, and one hidden marker keeps the text set-up alive (the first label cost 65 ms). Weeks speed: low-1 %
+  78–100 fps, worst frame 24–27 ms, none over 40 ms; the still view on the same camera: low-1 % 120–144 fps.
+- **Sky** (`shaders/sky.gdshader`): single-scattering Rayleigh + Mie atmosphere from the true sun (`_solar`: the
+  Plot's latitude, day of year and solar hour), horizon whitening for multiple scattering, a cloud dome (fbm + warp)
+  whose cover follows the day's clear-sky fraction (the snapshot's `weather.today.clear`, FAO-56), rain clouds darker,
+  drift animated in the shader (a per-frame uniform change rebuilt the radiance map every frame: −20 fps), stars and
+  a faint Milky Way at night. `vineyard.gd`: `daytime` / `set_daytime(h)` / `default_hour(doy)`; the moon (a cool
+  weak directional) takes over below −4°; ambient and exposure lift the night to a readable blue dark; the winery's
+  office windows and door lamp light up after dusk. Test: `--skytest` (3 Regions × dawn to night, cloud / rain / fog,
+  the yard at night; `--perf`, `--diag`) and `--timelapse` (speeds, the hour animating, pause on an Alert, frame
+  times, leaving stops it); the shell path in `scripts/fuzz.sh` ("FUZZ timelapse").
 
 ## Ground cover, working gear and near trees (look only)
 

@@ -224,6 +224,45 @@ func _block_mesh(owner: Dictionary, training: String, g: int, seed: int, lod: in
 	return m
 
 
+## Every growth stage's vine meshes, prepared one per frame after the world is built: a stage change during the
+## time-lapse then swaps meshes that already exist (loading a stage's models took 20–60 ms in one frame).
+var warm_queue := []
+func _queue_warm() -> void:
+	warm_queue.clear()
+	for blk in blocks:
+		for e in blk["mm"]:
+			for g in 5:
+				warm_queue.append([blk, String(blk["training"]), g, int(e["seed"]), [0, 1, 2, 2, 3][int(e["lod"])]])
+	for e in neighbour_mm:
+		for g in 5:
+			warm_queue.append([neighbour_owner, neighbour_training, g, int(e["seed"]), 3])
+
+
+## Stage changes swap meshes over the next frames (≤ 2 ms per frame): swapping every vine group at once made the
+## engine re-derive thousands of bounds in one 49 ms frame. While the world is first built the swap is immediate.
+var swap_queue := []
+func _swap(mmi: MultiMeshInstance3D, mesh: Mesh) -> void:
+	if not blend_weather:
+		mmi.multimesh.mesh = mesh
+		return
+	swap_queue.append([mmi, mesh])
+
+
+func _swap_step() -> void:
+	var t0 := Time.get_ticks_usec()
+	while not swap_queue.is_empty() and Time.get_ticks_usec() - t0 < 2000:
+		var w: Array = swap_queue.pop_front()
+		if is_instance_valid(w[0]):
+			(w[0] as MultiMeshInstance3D).multimesh.mesh = w[1]
+
+
+func _warm_step() -> void:
+	var t0 := Time.get_ticks_usec()
+	while not warm_queue.is_empty() and Time.get_ticks_usec() - t0 < 3000:
+		var w: Array = warm_queue.pop_back()
+		_block_mesh(w[0], w[1], w[2], w[3], w[4])
+
+
 func _owner_materials(owner: Dictionary) -> void:
 	owner["leaf_mat"] = _mat("vine_leaf").duplicate()
 	owner["berry_mat"] = _mat("vine_berry").duplicate()
@@ -464,6 +503,7 @@ func _build_world() -> void:
 	_build_scatter()
 	_build_groundcover()
 	_build_neighbours()
+	_queue_warm()
 	_build_near_trees()
 	_build_trees()
 	if river.x < INF:
@@ -992,7 +1032,7 @@ func _dress_blocks() -> void:
 			blk["g"] = g
 			for e in blk["mm"]:
 				var lod: int = e["lod"]
-				(e["mmi"] as MultiMeshInstance3D).multimesh.mesh = _block_mesh(blk, blk["training"], g, e["seed"], [0, 1, 2, 2, 3][lod])
+				_swap(e["mmi"], _block_mesh(blk, blk["training"], g, e["seed"], [0, 1, 2, 2, 3][lod]))
 		var st := String(b.get("stage", ""))
 		var red: bool = b.get("red", false)
 		var must: Dictionary = b.get("must", {}) if b.get("must") is Dictionary else {}
@@ -1599,7 +1639,7 @@ func _dress_neighbours() -> void:
 		var mmi: MultiMeshInstance3D = e["mmi"]
 		if e["g"] != g:
 			e["g"] = g
-			mmi.multimesh.mesh = _block_mesh(neighbour_owner, neighbour_training, g, e["seed"], 3)
+			_swap(mmi, _block_mesh(neighbour_owner, neighbour_training, g, e["seed"], 3))
 	# neighbours follow the first Block's season (their own health is not simulated)
 	for p in ["leaf_state", "leaf_state2"]:
 		(neighbour_owner["leaf_mat"] as ShaderMaterial).set_shader_parameter(p, (blocks[0]["leaf_mat"] as ShaderMaterial).get_shader_parameter(p))
@@ -1923,6 +1963,10 @@ func _build_mist_layer() -> void:
 
 
 func _process(_delta: float) -> void:
+	if not swap_queue.is_empty():
+		_swap_step()
+	elif not warm_queue.is_empty():
+		_warm_step()
 	# the time-lapse blends the weather from one day to the next (~0.6 s); cloud drift runs in the sky shader (TIME)
 	var changed := false
 	if not sky_target.is_empty():
