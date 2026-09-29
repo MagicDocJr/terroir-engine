@@ -23,6 +23,7 @@ Things deliberately left out of the MVP, to deep-dive once the core loop is lock
 ## Winery
 - Build and equip the Winery yourself (tank count, cooling capacity, press type), with in-game guidance on what to buy and why
 - Custom-crush option (rent space at a shared facility)
+- ~~A cosy, customisable winery look~~ — done 2026-09-29 (spec `docs/superpowers/specs/2026-09-29-cozy-winery-design.md`; cosmetic only). Follow-ups: a separate tasting room interior, day/night lighting (the lanterns and window glow are made for dusk), player-placed furniture, more options per element (e.g. a stone vault for the cellar, painted steel for the trusses), and a look for the office.
 
 ## Depth
 - Fuller legal rulebooks per Region (the MVP rulebooks are simplified, and must be built so they can be extended)
