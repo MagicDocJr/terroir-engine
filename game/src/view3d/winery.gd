@@ -69,6 +69,7 @@ func build() -> void:
 	_environments()
 	_build_exterior()
 	_build_yard()
+	_build_working_props()
 	_build_hall()
 	_build_cellar()
 	_build_stair_lights()
@@ -605,6 +606,24 @@ func _build_yard() -> void:
 			(tractors[k] as Node3D).visible = false
 
 
+## The estate's working gear, always there (look only): harvest baskets by the sorting table, compost bags under the
+## lean-to, a garden hose on the east gable, a clay pot by the office door and a hand truck by the crate stack.
+var working_props: Node3D
+func _build_working_props() -> void:
+	working_props = Node3D.new()
+	working_props.name = "WorkingProps"
+	add_child(working_props)
+	var g := working_props
+	_look_prop(g, "wicker_basket_01", Vector3(6.25, 0.0, 9.55), 0.3)
+	_look_prop(g, "wicker_basket_01", Vector3(6.3, 0.0, 10.0), 1.9)
+	_look_prop(g, "wicker_basket_02", Vector3(2.55, 0.0, 9.6), 0.8)
+	_look_prop(g, "compost_bags", Vector3(10.6, 0.0, 9.9), -0.35)
+	_look_prop(g, "garden_hose_wall_mounted_01", Vector3(12.36, 0.0, -5.9), PI / 2.0)
+	_look_prop(g, "planter_pot_clay", Vector3(12.75, 0.0, 4.8))
+	_look_prop(g, "hand_truck", Vector3(8.5, 0.0, -5.25), -0.35)
+	_solid(g, [[Vector3(10.6, 0.3, 9.9), Vector3(1.85, 0.6, 0.95), -0.35], [Vector3(8.5, 0.7, -5.25), Vector3(0.6, 1.4, 0.7), -0.35]])
+
+
 ## The parked tractor in the yard is hidden while it is out in the vineyard (workers.gd).
 func set_parked_tractor(on: bool) -> void:
 	var want := String(Y.get("tractors", {}).get(region, "tractor_standard"))
@@ -1072,6 +1091,16 @@ func _build_cellar_candles(g: Node3D) -> void:
 		_flame(g, at + Vector3(0.0, 0.12, 0.0), 0.01)
 	for x in [-8.0, -2.0, 4.0, 9.5]:
 		_glow(g, Vector3(x, 1.7, 0.0), CANDLE, 0.45, 5.5, true)
+	# a bottle display shelf against the far end wall, a row of bottles on each level
+	var shelf := Vector3(10.7, 0.0, 0.0)
+	_look_prop(g, "wooden_display_shelves_01", shelf)       # as modelled its width already runs along z (the end wall)
+	var kinds := ["wine_bottles_01_bordeaux", "wine_bottles_01_alsace", "wine_bottles_01_burgundy"]
+	var k := 0
+	for level in [0.42, 0.81, 1.2]:                  # the three rows of cubbies above the drawers
+		for dz in [-0.36, 0.0, 0.36]:
+			_prop(g, "props/wine_bottles_01/wine_bottles_01.gltf", Transform3D(Basis(Vector3.UP, 0.3 * k), shelf + Vector3(0.0, level, dz)), kinds[k % 3])
+			k += 1
+	_solid(g, [[shelf + Vector3(0.0, 0.78, 0.0), Vector3(0.4, 1.56, 1.1)]])
 
 
 # ------------------------------------------------------------------ collision & occlusion

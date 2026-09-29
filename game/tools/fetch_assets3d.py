@@ -45,7 +45,15 @@ PROPS = ["hanging_industrial_lamp", "industrial_caged_sconce", "plastic_crate_01
          # winery look: lights, tasting corner, lounge, plants, outside and cellar details
          "lantern_chandelier_01", "dining_table", "gallinera_chair", "WoodenTable_02", "wine_bottles_01", "wine_barrel_01", "Lantern_01",
          "Sofa_01", "ArmChair_01", "WoodenTable_01", "potted_plant_02", "planter_box_01",
-         "painted_wooden_bench", "wooden_lantern_01"]
+         "painted_wooden_bench", "wooden_lantern_01",
+         # a lived-in yard and cellar
+         "wicker_basket_01", "wicker_basket_02", "hand_truck", "wooden_display_shelves_01", "planter_pot_clay",
+         "garden_hose_wall_mounted_01", "compost_bags"]
+# ground-cover scans: sources for blender/build_groundcover.py, which splits them into variants and decimates them
+# (the scans are 6k–1.7M triangles) into models/gc_*.glb
+GROUNDCOVER = ["dandelion_01", "celandine_01", "fern_02", "dry_branches_medium_01"]
+# tree scans (46–85 MB each, ~2–5M triangles): sources for blender/build_trees3d.py (thinned, decimated near-tree models)
+TREES = ["island_tree_01", "island_tree_02", "island_tree_03"]
 
 
 def get(url, path):
@@ -75,7 +83,7 @@ def main():
         for key, name in [("Diffuse", "diff"), ("nor_gl", "nor_gl"), ("Rough", "rough"), ("AO", "ao")]:
             if key in d:
                 get(d[key]["2k"]["jpg"]["url"], f"{ROOT}/textures/{tex}/{name}.jpg")
-    for model in PROPS:
+    for model in PROPS + GROUNDCOVER + TREES:
         base = f"{ROOT}/props/{model}"
         if os.path.exists(f"{base}/{model}.gltf"):
             continue
@@ -86,7 +94,7 @@ def main():
     with open(f"{ROOT}/CREDITS.txt", "w") as fh:
         fh.write("All textures, skies and props: Poly Haven (polyhaven.com), CC0.\n"
                  + "\n".join(f"hdri/{k}.hdr: {a}" for k, (a, _) in SKIES.items()) + "\n"
-                 + "\n".join(f"textures/{t}" for t in TEXTURES) + "\n" + "\n".join(f"props/{p}" for p in PROPS) + "\n")
+                 + "\n".join(f"textures/{t}" for t in TEXTURES) + "\n" + "\n".join(f"props/{p}" for p in PROPS + GROUNDCOVER + TREES) + "\n")
     print("fetch done:", ROOT)
 
 

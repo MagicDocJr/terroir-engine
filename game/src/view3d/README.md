@@ -48,6 +48,21 @@ view is hidden.
 | `winery_style.gd` | The Winery look catalogue: elements, options, blurbs, each Region's default and `resolve()`. Shared with the Winery screen's "Winery look" panel (`ui/winery_look_panel.gd`). |
 | `view3d_test.gd` | Test harness: screenshots, FPS, the walk test and the LOD probe. |
 
+## Ground cover, working gear and near trees (look only)
+
+- **Ground cover** (`vineyard.gd _build_groundcover`): dandelion, lesser celandine, fern and dry branches in clumps of 3–8
+  on the verges within 6 m of the Plot and on the headlands between Blocks (never between the rows, on the track, in
+  the yard or where neighbours are planted). Mix per Region: Mosel dandelion, celandine, fern, a few branches; Côte d'Or
+  dandelion, celandine, branches; Napa dry branches and a few dandelions. Flowers show only in season (dandelion day
+  90–285, celandine day 55–150; look only). Sources are Poly Haven CC0 scans, split into variants and decimated to ≤ 800
+  triangles by `tools/blender/build_groundcover.py` (`sync_assets3d.sh groundcover`) into `models/gc_*.glb`. 26 m
+  visibility range, no shadows; the scanned leaves are made matte (they read silvery in the sun).
+- **Working gear** (`winery.gd _build_working_props`, always there): wicker harvest baskets by the sorting table,
+  compost bags under the lean-to, a garden hose on the east gable, a clay pot by the office door, a hand truck by the
+  crate stack. The candlelit cellar also gets a bottle display shelf at the far end.
+- **Near trees**: see "Trees" below.
+- Test: `scripts/worldtest.sh` (checks + `game/shots/3d_world_*.png`; `--checks` skips the screenshots).
+
 ## The Winery look (cosmetic)
 
 Spec: `docs/superpowers/specs/2026-09-29-cozy-winery-design.md`. The player changes it on the Winery screen; each Region has a

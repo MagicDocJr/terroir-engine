@@ -88,12 +88,19 @@ var snap := {}
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
+	# a script error stops a harness coroutine without quitting: never hang the calling script
+	get_tree().create_timer(1500.0, true, false, true).timeout.connect(func():
+		print("HARNESS TIMEOUT: quitting after 25 min")
+		get_tree().quit(1))
 	view = View3D.instantiate()
 	add_child(view)
 	if not "--sound" in OS.get_cmdline_user_args():
 		view.set("sound_on", false)          # the mix still runs (and is logged); the bus is muted
 	if "--tasktest" in args:
 		_task_test()
+		return
+	if "--worldtest" in args:
+		_world_test()
 		return
 	if "--winerylook" in args:
 		_winery_look("--perf" in args)
@@ -686,6 +693,95 @@ func _pick_rates() -> void:
 					row.append(str(_block(_snap(), e[0]).get("pickedPct")) + ("" if _block(_snap(), e[0]).get("picking", false) else "✓"))
 				days.append(" ".join(row))
 			print(line, " blocks ", ids, " | ", " / ".join(days))
+	get_tree().quit()
+
+
+# ------------------------------------------------------------------ a more immersive world (--worldtest [--checks])
+func _gc_count(vy: Node3D, plant: String, visible_only: bool) -> int:
+	var n := 0
+	for mmi in (vy.get("groundcover") as Dictionary).get(plant, []):
+		if not visible_only or (mmi as Node3D).visible:
+			n += (mmi as MultiMeshInstance3D).multimesh.instance_count
+	return n
+
+
+func _verge_cam(vy: Node3D, tag: String) -> void:
+	# stand on the verge along the Plot's side edge, looking along it and down at the plants
+	var x0: float = vy.get("band_x0")
+	var x1: float = vy.get("band_x1")
+	var hz: float = vy.get("hz")
+	var eye := Vector3(x0 + (x1 - x0) * 0.35, 0.0, hz + 2.5)
+	eye.y = float(vy.call("ground_height", eye.x, eye.z)) + 1.6
+	var tgt := Vector3(eye.x + 4.0, 0.0, hz + 3.0)
+	tgt.y = float(vy.call("ground_height", tgt.x, tgt.z)) + 0.2
+	view.set_view("vineyard")
+	view.set_camera(eye, tgt)
+	await _frames(120)
+	await _save_shot("world_%s" % tag)
+	# a close look at the dandelion nearest that spot
+	var best := Vector3.INF
+	for mmi in (vy.get("groundcover") as Dictionary).get("dandelion", []):
+		var m: MultiMeshInstance3D = mmi
+		for i in m.multimesh.instance_count:
+			var p: Vector3 = m.global_transform * m.multimesh.get_instance_transform(i).origin
+			if p.distance_to(eye) < best.distance_to(eye):
+				best = p
+	if best != Vector3.INF:
+		print("WORLDTEST nearest dandelion %.1f m from the verge eye" % best.distance_to(eye))
+		view.set_camera(best + Vector3(0.9, 0.7, 0.9), best)
+		await _frames(60)
+		await _save_shot("world_%s_close" % tag)
+
+
+func _world_test() -> void:
+	var ok := true
+	var vy: Node3D = view.get("vineyard")
+	for region in ["mosel", "cote-dor", "napa"]:
+		_look_game(region)                         # starts in January
+		snap = _snap()
+		view.apply_snapshot(snap)
+		await _frames(5)
+		var total := 0
+		for plant in (vy.get("groundcover") as Dictionary):
+			total += _gc_count(vy, plant, false)
+		var winter_flowers := _gc_count(vy, "dandelion", true) + _gc_count(vy, "celandine", true)
+		Sim.Advance(125, false)                    # early May
+		snap = _snap()
+		view.apply_snapshot(snap)
+		await _frames(5)
+		var may_flowers := _gc_count(vy, "dandelion", true)
+		var gc_ok := total >= 400 and winter_flowers == 0 and may_flowers > 0
+		if region == "mosel":
+			gc_ok = gc_ok and _gc_count(vy, "fern", true) > 0          # ferns stay green all year
+		print("WORLDTEST groundcover_%s %s (plants %d, flowers in Jan %d, dandelions in May %d)" % [region, "ok" if gc_ok else "FAIL", total, winter_flowers, may_flowers])
+		ok = ok and gc_ok
+		if not "--checks" in OS.get_cmdline_user_args():
+			await _verge_cam(vy, "verge_%s" % region)
+	# the working gear in the yard and the cellar's bottle shelf (Côte d'Or: candlelit cellar by default)
+	_look_game("cote-dor")
+	snap = _snap()
+	view.apply_snapshot(snap)
+	var wy: Node3D = view.get("winery")
+	var wp: Node3D = wy.get("working_props")
+	var props_ok: bool = wp != null and wp.get_child_count() >= 8
+	print("WORLDTEST working_props %s (%d nodes)" % ["ok" if props_ok else "FAIL", wp.get_child_count() if wp else 0])
+	ok = ok and props_ok
+	if not "--checks" in OS.get_cmdline_user_args():
+		for cam in ["sorting", "yard_leanto", "door"]:
+			view.set_view("vineyard")
+			view.camera_preset(cam)
+			await _frames(120)
+			await _save_shot("world_yard_%s" % cam)
+		view.set_view("hall")
+		view.set_camera(wy.to_global(Vector3(10.6, 1.6, -2.6)), wy.to_global(Vector3(8.5, 0.6, -5.2)))
+		await _frames(120)
+		await _save_shot("world_hall_handtruck")
+		var cel: Node3D = wy.get("cellar")
+		view.set_view("cellar")
+		view.set_camera(cel.to_global(Vector3(7.8, 1.6, 0.4)), cel.to_global(Vector3(10.7, 0.8, 0.0)))
+		await _frames(150)
+		await _save_shot("world_cellar_shelf")
+	print("WORLDTEST %s" % ("ok" if ok else "FAIL"))
 	get_tree().quit()
 
 

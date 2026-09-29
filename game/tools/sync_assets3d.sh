@@ -6,6 +6,8 @@
 #   game/tools/sync_assets3d.sh fetch      # only the downloads (skips files that already exist)
 #   game/tools/sync_assets3d.sh vineyard [misc|einzelpfahl|guyot|cordon]   # only the vineyard models
 #   game/tools/sync_assets3d.sh winery     # only the winery models + winery.json
+#   game/tools/sync_assets3d.sh groundcover  # only the decimated ground-cover plants (gc_*.glb)
+#   game/tools/sync_assets3d.sh trees      # only the near trees (tree3d_*_lod*.glb, thinned scans)
 #   game/tools/sync_assets3d.sh audio      # only the ambience/one-shot WAVs + audio.json + CREDITS.md
 #
 # Needs: python3 (WSL), Windows Blender 5.2 LTS (headless). Everything downloaded is CC0 (Poly Haven;
@@ -29,6 +31,12 @@ if [[ "$STEP" == "all" || "$STEP" == "fetch" ]]; then
 fi
 if [[ "$STEP" == "all" || "$STEP" == "vineyard" ]]; then
   blender_run build_vineyard.py "$DEST/models" "${2:-}"
+fi
+if [[ "$STEP" == "all" || "$STEP" == "groundcover" ]]; then
+  blender_run build_groundcover.py "$DEST/models" "$(wslpath -w "$DEST/props")"
+fi
+if [[ "$STEP" == "all" || "$STEP" == "trees" ]]; then
+  blender_run build_trees3d.py "$DEST/models" "$(wslpath -w "$DEST/props")"
 fi
 if [[ "$STEP" == "all" || "$STEP" == "winery" ]]; then
   blender_run build_winery.py "$DEST/models"

@@ -36,7 +36,7 @@ const ELEMENTS := [
 		{"value": "on", "label": "Cosy", "blurb": "A bench, lanterns by the doors and a warm glow in the windows."}]},
 	{"key": "cellar", "label": "Cellar", "options": [
 		{"value": "off", "label": "Plain", "blurb": "The cellar's own lamps only."},
-		{"value": "on", "label": "Candlelit", "blurb": "Candles and lanterns along the barrel racks."}]},
+		{"value": "on", "label": "Candlelit", "blurb": "Candles and lanterns along the barrel racks, a shelf of bottles at the end."}]},
 ]
 
 const DEFAULTS := {

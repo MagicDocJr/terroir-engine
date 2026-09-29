@@ -481,6 +481,7 @@ func _build_world() -> void:
 	_build_vines()
 	var t3 := Time.get_ticks_msec()
 	_build_scatter()
+	_build_groundcover()
 	_build_neighbours()
 	_build_trees()
 	if river.x < INF:
@@ -1086,6 +1087,10 @@ func _dress_season(doy: int) -> void:
 	var g := mats.get("grass") as StandardMaterial3D
 	if g:
 		g.albedo_color = Color(tint.x * 1.1, tint.y * 1.05, tint.z * 1.4)
+	for plant in groundcover:                       # spring flowers only in their season (look only)
+		var win: Vector2i = GC_SEASON.get(plant, Vector2i(0, 366))
+		for mmi in groundcover[plant]:
+			(mmi as Node3D).visible = doy >= win.x and doy <= win.y
 	var fm: ShaderMaterial = mats.get("terrain_far")
 	if fm and blocks.size() > 0:
 		var canopy: float = [0.0, 0.1, 0.45, 0.8, 1.0][maxi(0, int(blocks[0]["g"]))]
@@ -1243,7 +1248,8 @@ func _build_river() -> void:
 
 
 # =============================================================================================== scatter
-func _add_chunked(items: Array, mesh: Mesh, vis_end: float, shadow: bool, mat: Material = null) -> void:
+func _add_chunked(items: Array, mesh: Mesh, vis_end: float, shadow: bool, mat: Material = null) -> Array:
+	var out := []
 	var chunks := {}
 	for it in items:
 		var o: Vector3 = (it as Transform3D).origin
@@ -1271,6 +1277,8 @@ func _add_chunked(items: Array, mesh: Mesh, vis_end: float, shadow: bool, mat: M
 			mmi.material_override = mat
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		world.add_child(mmi)
+		out.append(mmi)
+	return out
 
 
 func _build_scatter() -> void:
@@ -1343,6 +1351,89 @@ func _build_scatter() -> void:
 			continue
 		tufts.append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(0.18, 0.42)), Vector3(x, H(x, z) - 0.02, z)))
 	_add_chunked(tufts, gm, 34.0, false)
+
+
+# Ground cover on the verges and the headlands between Blocks (look only): Poly Haven CC0 scans split into variants and
+# decimated by blender/build_groundcover.py. Plants grow in clumps; the flowers show only in spring and summer.
+const GC_PLANTS := {
+	"mosel": {"dandelion": 3.0, "celandine": 2.0, "fern": 0.8, "dry_branches": 0.4},
+	"cote-dor": {"dandelion": 3.0, "celandine": 1.2, "dry_branches": 0.5},
+	"napa": {"dandelion": 0.8, "dry_branches": 1.2},
+}
+const GC_SEASON := {"dandelion": Vector2i(90, 285), "celandine": Vector2i(55, 150)}   # day of year shown (look only)
+const GC_CLUMPS := 700           # within GC_RING of the Plot, where the walker goes
+const GC_RING := 6.0
+const GC_SCALE := {"dandelion": Vector2(1.3, 1.7)}   # the scan is a small rosette; flowering ones stand taller
+var groundcover := {}             # plant -> [MultiMeshInstance3D]
+
+
+func _build_groundcover() -> void:
+	groundcover.clear()
+	var weights: Dictionary = GC_PLANTS.get(region, GC_PLANTS["cote-dor"])
+	var variants := {}
+	var total := 0.0
+	for plant in weights:
+		var rel := "models/gc_%s.glb" % plant
+		if not A.exists(rel):
+			continue
+		variants[plant] = A.glb_meshes(rel)
+		total += float(weights[plant])
+		for m in (variants[plant] as Dictionary).values():   # scanned leaves read silvery in the sun: matte them
+			for i in (m as Mesh).get_surface_count():
+				var sm := (m as Mesh).surface_get_material(i) as StandardMaterial3D
+				if sm:
+					sm.roughness = 1.0
+					sm.metallic_specular = 0.25
+					sm.roughness_texture = null
+	if variants.is_empty():
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 31
+	var per := {}                  # "plant/variant" -> [Transform3D]
+	var clumps := 0
+	var tries := 0
+	while clumps < GC_CLUMPS and tries < GC_CLUMPS * 40:
+		tries += 1
+		var x := rng.randf_range(band_x0 - GC_RING, band_x1 + GC_RING)
+		var z := rng.randf_range(-hz - GC_RING, hz + GC_RING)
+		var inside := x > band_x0 and x < band_x1 and absf(z) < hz - 1.0
+		if inside and not _block_at(x).is_empty():
+			continue                                     # not between the rows
+		var g := 0.9 if inside else _grass_mask_outside(x, z)
+		if g < 0.6 or (not inside and _neighbour_planted(x, z)):
+			continue
+		if gravel_rect.grow(1.0).has_point(Vector2(x, z)) or bld_rect.grow(2.0).has_point(Vector2(x, z)) or keepout.grow(1.0).has_point(Vector2(x, z)):
+			continue
+		if track_dist(x, z) < 1.4 or (river.x < INF and z > river.x - 6.0 and z < river.y + 2.0):
+			continue
+		# pick a plant by weight, then a clump of 2–6 of its variants
+		var r := rng.randf() * total
+		var plant := ""
+		for k in variants:
+			r -= float(weights[k])
+			if r <= 0.0:
+				plant = k
+				break
+		if plant == "":
+			plant = variants.keys()[0]
+		var names: Array = (variants[plant] as Dictionary).keys()
+		clumps += 1
+		for i in rng.randi_range(3, 8):
+			var px := x + rng.randf_range(-0.7, 0.7)
+			var pz := z + rng.randf_range(-0.7, 0.7)
+			var vname: String = names[rng.randi() % names.size()]
+			var sr: Vector2 = GC_SCALE.get(plant, Vector2(0.8, 1.2))
+			var sc := rng.randf_range(sr.x, sr.y)
+			var key := "%s/%s" % [plant, vname]
+			if not per.has(key):
+				per[key] = []
+			per[key].append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * sc), Vector3(px, H(px, pz) - 0.01, pz)))
+	for key in per:
+		var parts := String(key).split("/")
+		var mesh: Mesh = variants[parts[0]][parts[1]]
+		if not groundcover.has(parts[0]):
+			groundcover[parts[0]] = []
+		groundcover[parts[0]].append_array(_add_chunked(per[key], mesh, 26.0, false))
 
 
 func _block_at(x: float) -> Dictionary:
