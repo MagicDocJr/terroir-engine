@@ -1,5 +1,6 @@
 # Dashboard sound effects, synthesised at start-up (no audio files, so no licensing): a soft click for buttons,
-# a two-note confirmation, a small bell for Alerts, a cork pop at bottling and a wooden knock for harvest orders.
+# a two-note confirmation, a small bell for Alerts, a cork pop at bottling and a wooden knock for harvest orders;
+# for Tasting practice a pour, a glass clink and a medal fanfare.
 # Ambient sound lives in the 3D view.
 extends Node
 
@@ -16,6 +17,9 @@ func _ready() -> void:
 	_add("cork", _cork())
 	_add("harvest", _knock())
 	_add("page", _page())
+	_add("pour", _pour())
+	_add("clink", _clink())
+	_add("medal", _medal())
 
 func play(name: String) -> void:
 	if not enabled or not players.has(name): return
@@ -106,6 +110,43 @@ func _page() -> PackedFloat32Array:
 		var t := float(i) / RATE
 		lp = lp * 0.85 + rng.randf_range(-1, 1) * 0.15
 		b[i] = lp * sin(PI * t / 0.12) * 0.35
+	return b
+
+func _pour() -> PackedFloat32Array:
+	# wine into a glass: band-limited noise with a rising "glug" resonance that fills up
+	var b := _buf(0.9)
+	var rng := RandomNumberGenerator.new(); rng.seed = 21
+	var lp := 0.0; var bp := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		lp = lp * 0.6 + rng.randf_range(-1, 1) * 0.4
+		var f := 300.0 + 500.0 * t                          # the resonance rises as the glass fills
+		bp = bp * 0.97 + lp * sin(TAU * f * t) * 0.06
+		var env := minf(1.0, t * 12.0) * minf(1.0, (0.9 - t) * 6.0)
+		b[i] = (bp * 2.2 + lp * 0.08) * env * (0.8 + 0.2 * sin(TAU * 9.0 * t))
+	return b
+
+func _clink() -> PackedFloat32Array:
+	# two glasses touching: high inharmonic partials, long ring
+	var b := _buf(1.1)
+	for i in b.size():
+		var t := float(i) / RATE
+		var env := minf(1.0, t * 3000.0)
+		b[i] = (sin(TAU * 2637.0 * t) * exp(-t * 4.0) + 0.6 * sin(TAU * 3951.0 * t) * exp(-t * 6.0) + 0.3 * sin(TAU * 5274.0 * t) * exp(-t * 9.0)) * env * 0.16
+	return b
+
+func _medal() -> PackedFloat32Array:
+	# a short rising arpeggio (C–E–G–C) with a bright tail
+	var b := _buf(1.0)
+	var notes := [523.25, 659.25, 783.99, 1046.5]
+	for n in notes.size():
+		var t0 := 0.11 * n
+		for i in b.size():
+			var t := float(i) / RATE - t0
+			if t < 0: continue
+			var f: float = notes[n]
+			var env := minf(1.0, t * 300.0) * exp(-t * (5.0 if n < 3 else 2.5))
+			b[i] += (sin(TAU * f * t) + 0.3 * sin(TAU * 2.0 * f * t) + 0.12 * sin(TAU * 3.0 * f * t)) * env * 0.17
 	return b
 
 func _load_settings() -> void:

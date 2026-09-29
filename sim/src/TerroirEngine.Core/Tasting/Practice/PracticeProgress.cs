@@ -7,7 +7,8 @@ namespace TerroirEngine.Tasting.Practice;
 /// <summary>Progression for Tasting practice (tasting-practice design §6b), computed from the player's study record — a JSON
 /// document the game stores as user://tasting_record.json and passes back unchanged. Every point is earned by a marked answer:
 /// 10 XP per full mark (5 for half), a bonus for a better medal and for the Glass of the day. The record is tolerant: missing,
-/// malformed or unknown fields are defaulted or kept, never fatal.</summary>
+/// malformed or unknown fields are defaulted or kept, never fatal. Rank thresholds are paced for months of study: a Flight at the
+/// Fair earns roughly 250 XP at half marks.</summary>
 public static class PracticeProgress
 {
     public const int Version = 1, HistoryLength = 20, XpPerMark = 10, HintXp = 5, DailyBonus = 25;
@@ -15,10 +16,10 @@ public static class PracticeProgress
     public static readonly (string Name, int Xp, string Line)[] Ranks =
     {
         ("Novice taster", 0, "Learning the systematic approach, one glass at a time."),
-        ("Cellar hand", 150, "You can describe what is in the glass."),
-        ("Taster", 500, "You judge structure and quality with confidence. Blind Flights are open to you."),
-        ("Senior taster", 1200, "You reason from the glass back to the vineyard and the vintage."),
-        ("Fair judge", 2500, "Your verdicts would hold up on any panel."),
+        ("Cellar hand", 300, "You can describe what is in the glass."),
+        ("Taster", 1500, "You judge structure and quality with confidence. Blind Flights are open to you."),
+        ("Senior taster", 5000, "You reason from the glass back to the vineyard and the vintage."),
+        ("Fair judge", 12000, "Your verdicts would hold up on any panel."),
     };
     public const int BlindRank = 2;
     private static readonly string[] MedalOrder = { "bronze", "silver", "gold" };

@@ -118,9 +118,9 @@ public class MarkingTests
         var rec = new JsonObject();
         Assert.Equal("Novice taster", PracticeProgress.Summary(rec)["rank"]!.GetValue<string>());
         var items = new JsonArray(Enumerable.Range(0, 20).Select(_ => (JsonNode)new JsonObject { ["skill"] = "body", ["score"] = 1 }).ToArray());
-        for (int i = 0; i < 3; i++) rec = PracticeProgress.Apply(rec, new JsonObject { ["kind"] = "practice", ["date"] = "2026-09-29", ["items"] = items.DeepClone() });
+        for (int i = 0; i < 8; i++) rec = PracticeProgress.Apply(rec, new JsonObject { ["kind"] = "practice", ["date"] = "2026-09-29", ["items"] = items.DeepClone() });
         var s = PracticeProgress.Summary(rec);
-        Assert.Equal(600, s["xp"]!.GetValue<int>());
+        Assert.Equal(1600, s["xp"]!.GetValue<int>());
         Assert.Equal("Taster", s["rank"]!.GetValue<string>());
         Assert.True(s["blindUnlocked"]!.GetValue<bool>());
     }

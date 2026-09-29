@@ -22,11 +22,15 @@ const SCREENS := {
 	"wines": ["Wines", "res://src/ui/screens/wines.gd", ""],
 	"glossary": ["Glossary", "res://src/ui/screens/glossary.gd", ""],
 	"report": ["Vintage report", "res://src/ui/screens/report.gd", ""],
+	"practice": ["Tasting practice", "res://src/ui/screens/practice.gd", ""],
+	"fair": ["Wine Fair", "res://src/ui/screens/fair.gd", ""],
+	"cellarbook": ["Cellar book", "res://src/ui/screens/cellar_book.gd", ""],
 }
-const NAV := ["inbox", "estate", "plot", "weather", "programmes", "ripeness", "winery", "blending", "wines", "glossary"]
+const NAV := ["inbox", "estate", "plot", "weather", "programmes", "ripeness", "winery", "blending", "wines", "glossary", "practice"]
 const NAV_GLYPH := {"inbox": "▤", "estate": "◆", "plot": "▦", "weather": "☁", "programmes": "≡", "ripeness": "◔",
-	"winery": "▥", "blending": "⋈", "wines": "✦", "glossary": "?"}
+	"winery": "▥", "blending": "⋈", "wines": "✦", "glossary": "?", "practice": "◇"}
 const PREGAME := ["title", "region", "plots", "planting"]
+const TASTING := ["practice", "fair", "cellarbook"]   # open with or without a game; their state lives in `state`, so never cached
 
 var D: Dictionary = {}          # latest snapshot
 var CAT: Dictionary = {}        # setup catalog (Regions, Plots, options)
@@ -72,7 +76,9 @@ func _ready() -> void:
 	statusbar = PanelContainer.new(); root_box.add_child(statusbar)
 	_make_toast()
 	sfx = load("res://src/ui/sfx.gd").new(); add_child(sfx)
-	if capture: sfx.enabled = false
+	if capture:
+		sfx.enabled = false
+		Sim.SetRecordPath("user://tasting_record_test.json")   # harness and fuzz runs never touch the player's study record
 	get_tree().node_added.connect(_on_node_added)
 	play_timer = Timer.new(); play_timer.wait_time = 0.25; play_timer.timeout.connect(_play_tick); add_child(play_timer)
 	if "--sfxcheck" in args:
@@ -83,6 +89,8 @@ func _ready() -> void:
 	if "--perf" in args: capture = true; _perf.call_deferred(); return
 	if "--pregame" in args: capture = true; _pregame_shots.call_deferred(); return
 	if "--avatars" in args: capture = true; _avatar_sheet.call_deferred(); return
+	if "--practice" in args:
+		capture = true; Sim.SetRecordPath("user://tasting_record_test.json"); _practice_test.call_deferred(); return
 	if "--fuzz" in args: capture = true; _run_fuzz.call_deferred()
 	elif capture: _run_capture.call_deferred()
 	else: show_screen("title")
@@ -201,16 +209,16 @@ func start_game(setup_json: Dictionary) -> void:
 # ------------------------------------------------------------------ navigation
 func show_screen(id: String) -> void:
 	if not SCREENS.has(id): id = "inbox"
-	if not Sim.HasGame() and not (id in PREGAME): id = "title"
+	if not Sim.HasGame() and not (id in PREGAME) and not (id in TASTING): id = "title"
 	if id != current and sfx: sfx.play("page")
 	# re-rendering the same screen (after a choice) keeps the scroll position instead of jumping to the top
 	var cur_e: Dictionary = _screen_cache.get(current, {})
 	var keep_scroll := -1
 	if id == current and not cur_e.is_empty() and is_instance_valid(cur_e["node"]): keep_scroll = _scroll_pos(cur_e["node"])
-	var pre: bool = id in PREGAME
+	var pre: bool = id in PREGAME or (id in TASTING and not Sim.HasGame())
 	# switching tabs reuses a screen built for the same game state (fast); a same-screen call always rebuilds it
 	var cached: Dictionary = _screen_cache.get(id, {})
-	var reuse: bool = id != current and not pre and not cached.is_empty() and is_instance_valid(cached["node"]) \
+	var reuse: bool = id != current and not pre and not (id in TASTING) and not cached.is_empty() and is_instance_valid(cached["node"]) \
 		and int(cached["ver"]) == _chrome_ver and String(cached["ret"]) == String(state.get("return_to", ""))
 	current = id
 	for k in _screen_cache.keys():
@@ -287,7 +295,7 @@ func _restore_scroll(n: Node, pos: int) -> void:
 func _unhandled_input(e: InputEvent) -> void:
 	if capture or not (e is InputEventKey and e.pressed and not e.echo): return
 	if view3d != null and view3d.visible: return
-	if current in PREGAME: return
+	if current in PREGAME or not Sim.HasGame(): return
 	var k: int = e.physical_keycode
 	if e.ctrl_pressed and k == KEY_S:
 		Sim.SaveGame("manual"); notify("Game saved."); return
@@ -753,6 +761,8 @@ func _run_fuzz() -> void:
 		if id == "plots": setup["region"] = "cote-dor"
 		if id == "planting": setup["plot"] = "cotedor-village"
 		await _fuzz_screen(id)
+	for id in TASTING: await _fuzz_screen(id)            # Tasting practice from the title screen (no game)
+	load("res://src/ui/tasting_ui.gd").reset(self)
 	setup = {}; setup["region"] = "cote-dor"; setup["plot"] = "cotedor-village"
 	show_screen("planting"); await get_tree().process_frame
 	await start_game(load("res://src/ui/screens/pregame.gd").setup_json(self))
@@ -760,6 +770,8 @@ func _run_fuzz() -> void:
 		if stop_at > 0: Sim.Advance(stop_at, false); D = JSON.parse_string(Sim.Snapshot()); _build_chrome()
 		if stop_at == 0: await _fuzz_task3d()     # before the buttons decide the first pruning tasks
 		for id in NAV: await _fuzz_screen(id)
+		if stop_at == 0:
+			for id in ["fair", "cellarbook"]: await _fuzz_screen(id)   # inside a game: later stands locked (ADR 0002)
 		print("FUZZ round done at ", D["date"])
 	# time controls and keys
 	for k in [KEY_SPACE, KEY_ENTER, KEY_2, KEY_0]:
@@ -841,6 +853,112 @@ func _fuzz_task3d() -> void:
 	for t in D.get("tasks", []):
 		if str(int(t["id"])) in ids and String(t["status"]) == "Open": left += 1
 	print("FUZZ taskcrew %s (%d of the message's tasks still open)" % ["ok" if left == 0 else "FAIL", left])
+
+# ------------------------------------------------------------------ Tasting practice harness (--practice)
+## Pours, answers and marks in Tasting practice and at a Wine Fair stand through the real screens, leaves mid-pour and comes
+## back, checks that a second Pour press does not pour twice, and that the study record file is written.
+func _wait_view(view: String, owner: String, timeout := 30.0) -> bool:
+	var t0 := Time.get_ticks_msec()
+	while String(state.get("tp_view", "")) != view:
+		if Time.get_ticks_msec() - t0 > timeout * 1000.0: return false
+		if current != owner: show_screen(owner)
+		await get_tree().create_timer(0.1).timeout
+	return true
+
+func _fill_from_sheet(gi: int, right_every := 1) -> void:
+	# answers taken from the Wine's own sheet (every right_every-th item; the rest one step off or wrong)
+	var S: Dictionary = state["tp_session"]
+	var G: Dictionary = S["glasses"][gi]
+	var W: Dictionary = G["wine"]; var sh: Dictionary = W["sheet"]
+	var pal := {}
+	for p in sh["palate"]: pal[String(p["attribute"])] = String(p["level"]).split(",")[0]
+	var actual := {"clarity": sh["appearance"]["clarity"], "colourIntensity": sh["appearance"]["intensity"], "colour": sh["appearance"]["colour"],
+		"noseIntensity": sh["nose"]["intensity"], "development": sh["nose"]["development"], "sweetness": pal.get("Sweetness", ""), "acidity": pal.get("Acidity", ""),
+		"tannin": pal.get("Tannin", ""), "alcohol": pal.get("Alcohol", ""), "body": pal.get("Body", ""), "flavourIntensity": sh["palate"].filter(func(x): return x["attribute"] == "Flavour intensity")[0]["level"] if true else "",
+		"finish": sh["palate"].filter(func(x): return x["attribute"] == "Finish")[0]["level"], "quality": sh["quality"], "readiness": sh["readiness"],
+		"variety": W["context"]["variety"], "region": W["context"]["regionName"], "climate": "moderate"}
+	var a: Dictionary = state["tp_answers"]["wines"][gi]
+	var i := 0
+	for k in G["keys"]:
+		var key := String(k)
+		if i % right_every == 0:
+			if key == "aromas":
+				var fams := []
+				for ar in sh["aromas"]: if not (String(ar["family"]) in fams): fams.append(String(ar["family"]))
+				a["aromas"] = fams
+			elif key.begins_with("blic."):
+				var crit := key.substr(5)
+				for b in sh["blic"]: if String(b["criterion"]) == crit: a["blic"] = a.get("blic", {}); a["blic"][crit] = b["met"]
+			elif actual.has(key): a[key] = String(actual[key])
+		i += 1
+
+func _practice_test() -> void:
+	var T = load("res://src/ui/tasting_ui.gd")
+	var ok := true
+	show_screen("practice"); await _shot("practice_01_lobby")
+	# a Cause-to-glass glass; a second press while pouring must not start another pour
+	T.start_pour(self, {"kind": "practice", "exercise": "cause", "seed": 3}, "practice")
+	var job := int(state.get("tp_job", 0))
+	T.start_pour(self, {"kind": "practice", "exercise": "cause", "seed": 4}, "practice")
+	if int(state.get("tp_job", 0)) != job: ok = false; print("PRACTICE FAIL double pour")
+	await _shot("practice_02_pouring")
+	# leave mid-pour and come back: the same pour arrives
+	show_screen("title")
+	await get_tree().create_timer(0.3).timeout
+	if not await _wait_view("answer", "practice"): ok = false; print("PRACTICE FAIL no glass after leaving mid-pour")
+	if int(state.get("tp_job", 0)) != job: ok = false; print("PRACTICE FAIL job changed")
+	show_screen("practice"); await _shot("practice_03_cause")
+	_fill_from_sheet(0, 2)
+	show_screen("practice"); await _shot("practice_04_cause_answered")
+	T.mark(self, "practice")
+	await _shot("practice_05_reveal")
+	var R: Dictionary = state.get("tp_result", {})
+	print("PRACTICE cause marks ", R.get("total"), "/", R.get("max"), " xp +", R.get("xpGained"))
+	var rec_ok := FileAccess.file_exists(Sim.RecordFile())
+	var S1 = JSON.parse_string(Sim.PracticeSummary())
+	if not rec_ok or int(S1.get("xp", 0)) <= 0: ok = false; print("PRACTICE FAIL record not written ", Sim.RecordFile())
+	# the other exercises, one glass each, answered from the sheet
+	for ex in ["conclusions", "identify", "sheet"]:
+		T.reset(self)
+		T.start_pour(self, {"kind": "practice", "exercise": ex, "seed": 5}, "practice")
+		if not await _wait_view("answer", "practice"): ok = false; print("PRACTICE FAIL ", ex); continue
+		_fill_from_sheet(0, 1)
+		show_screen("practice"); await _shot("practice_06_%s" % ex)
+		T.mark(self, "practice")
+		var r: Dictionary = state.get("tp_result", {})
+		print("PRACTICE ", ex, " marks ", r.get("total"), "/", r.get("max"))
+	# the Glass of the day
+	T.reset(self)
+	T.start_pour(self, {"kind": "daily"}, "practice")
+	if await _wait_view("answer", "practice"):
+		T.mark(self, "practice")
+		var S2 = JSON.parse_string(Sim.PracticeSummary())
+		if not S2.get("dailyDone", false): ok = false; print("PRACTICE FAIL daily not recorded")
+	else: ok = false; print("PRACTICE FAIL daily")
+	T.reset(self)
+	# the Wine Fair: the 2016 frost stand
+	show_screen("fair"); await _shot("practice_10_fair")
+	T.start_pour(self, {"kind": "stand", "stand": "frost-2016", "seed": 2}, "fair")
+	if not await _wait_view("answer", "fair"): ok = false; print("PRACTICE FAIL stand")
+	else:
+		var S: Dictionary = state["tp_session"]
+		for gi in S["glasses"].size(): _fill_from_sheet(gi, 2)
+		show_screen("fair"); await _shot("practice_11_stand")
+		state["tp_glass"] = S["glasses"].size()
+		for q in S["quiz"]: state["tp_answers"]["quiz"][String(q["topic"])] = "Glass 2"
+		show_screen("fair"); await _shot("practice_12_quiz")
+		T.mark(self, "fair")
+		var r: Dictionary = state.get("tp_result", {})
+		print("PRACTICE stand ", r.get("percent"), " % medal ", r.get("medal"), " new cards ", r.get("newCards"))
+		await _shot("practice_13_stand_reveal")
+		await _shot_scrolled_to_end("practice_14_stand_reveal_end")
+		if r.get("newCards", []).size() != 3: ok = false; print("PRACTICE FAIL cards")
+	T.reset(self)
+	show_screen("fair"); await _shot("practice_15_fair_after")
+	show_screen("cellarbook"); await _shot("practice_16_cellar_book")
+	show_screen("title"); await _shot("practice_17_title")
+	print("PRACTICE DONE ok=", ok)
+	get_tree().quit()
 
 # ------------------------------------------------------------------ avatar contact sheet (visual check)
 func _avatar_sheet() -> void:
