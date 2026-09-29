@@ -65,7 +65,7 @@ Found while building or reviewing; not urgent, but not to be forgotten. Remove a
 - An `assets3d/` folder fetched before the Winery look lacks its props and textures: the 3D view then shows grey walls, empty prop groups and floating candle glows with only a console warning. Rerun `game/tools/fetch_assets3d.py`; consider a HUD hint or adding one new asset to `assets3d.gd available()`.
 - The Windows build is unsigned: SmartScreen warns on first start, and a PC with Application Control may block it.
 - Windows `dotnet` cannot build the game (Application Control blocks Godot's source generators); build through WSL (`scripts/build-game.sh`).
-- The tasting review page for the WSET L3 reviewer is still empty: https://claude.ai/artifact/PqqJ2CGJXf6qUj3Wvtm9HD
+- The tasting review page for the WSET L3 reviewer: the first page (claude.ai artifact) no longer exists (found 2026-09-29); make a new one when that work starts.
 
 ## Ideas (not decided)
 - January message: a Senior Vineyard manager adds a per-Block breakdown and a bud-load suggestion per Block.
