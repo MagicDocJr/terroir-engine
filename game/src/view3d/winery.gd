@@ -624,6 +624,36 @@ func _build_working_props() -> void:
 	_solid(g, [[Vector3(10.6, 0.3, 9.9), Vector3(1.85, 0.6, 0.95), -0.35], [Vector3(8.5, 0.7, -5.25), Vector3(0.6, 1.4, 0.7), -0.35]])
 
 
+## Night (0 day … 1 full night, from the sun's elevation): the office windows glow and the lamp by the doors comes on.
+var night := 0.0
+var door_lamp: OmniLight3D
+func set_night(f: float) -> void:
+	if absf(f - night) < 0.01:
+		return
+	night = f
+	_update_windows()
+	if door_lamp == null and not Y.is_empty():
+		var lp: Dictionary = Y["lamp"]
+		var p: Array = lp["pos"]
+		var fw: Array = lp["facing"]
+		door_lamp = _omni(self, Vector3(p[0], p[1], p[2]) + Vector3(fw[0], fw[1], fw[2]) * 0.2, Color(1.0, 0.8, 0.55), 1.4, 9.0, false)
+		door_lamp.distance_fade_begin = 80.0
+	if door_lamp:
+		door_lamp.visible = night > 0.05
+		door_lamp.light_energy = 1.4 * night
+
+
+func _update_windows() -> void:
+	if not mats.has("window_dark"):
+		return
+	var wd: StandardMaterial3D = mats["window_dark"]
+	var cosy := String(style.get("outside", "")) == "on"
+	var glow := maxf(0.3 if cosy else 0.0, 1.6 * night)     # someone is always in the office after dark
+	wd.emission_enabled = glow > 0.0
+	wd.emission = Color(1.0, 0.75, 0.5)
+	wd.emission_energy_multiplier = glow
+
+
 ## The parked tractor in the yard is hidden while it is out in the vineyard (workers.gd).
 func set_parked_tractor(on: bool) -> void:
 	var want := String(Y.get("tractors", {}).get(region, "tractor_standard"))
@@ -885,11 +915,7 @@ func apply_style(s: Dictionary) -> bool:
 	_show("plants", String(s.get("plants", "")) == "on")
 	_show("outside", String(s.get("outside", "")) == "on")
 	_show("cellar_candles", String(s.get("cellar", "")) == "on")
-	if mats.has("window_dark"):                  # the office windows glow warm from inside
-		var wd: StandardMaterial3D = mats["window_dark"]
-		wd.emission_enabled = String(s.get("outside", "")) == "on"
-		wd.emission = Color(1.0, 0.75, 0.5)
-		wd.emission_energy_multiplier = 0.3
+	_update_windows()
 	if surfaces and baked:
 		bake_gi()
 		return true

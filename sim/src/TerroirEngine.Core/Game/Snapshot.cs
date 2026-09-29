@@ -274,7 +274,7 @@ public static class Snapshot
         {
             ["station"] = $"{g.Region.Name} · Block A microclimate",
             ["historical"] = g.Weather.IsHistorical(g.Date),
-            ["today"] = new JsonObject { ["date"] = Dates.Short(today.Date), ["tmin"] = R(today.Tmin), ["tmax"] = R(today.Tmax), ["rain"] = R(today.Precip), ["rh"] = R(today.RhMean, 0), ["wind"] = R(today.WindKmh, 0), ["icon"] = today.Precip >= 1 ? "rain" : today.RhMean > 90 ? "fog" : today.SwRad > 14 ? "sun" : "cloud" },
+            ["today"] = new JsonObject { ["date"] = Dates.Short(today.Date), ["tmin"] = R(today.Tmin), ["tmax"] = R(today.Tmax), ["rain"] = R(today.Precip), ["rh"] = R(today.RhMean, 0), ["wind"] = R(today.WindKmh, 0), ["clear"] = R(clim.ClearFraction(today), 2), ["icon"] = today.Precip >= 1 ? "rain" : today.RhMean > 90 ? "fog" : today.SwRad > 14 ? "sun" : "cloud" },
             ["weekly"] = weekly,
             ["months"] = months,
             ["risk"] = Arr(g.RiskSeries.TakeLast(120).Select(r => (JsonNode)new JsonObject { ["date"] = Dates.Short(r.Date), ["downy"] = R(r.Downy, 0), ["powdery"] = R(r.Powdery, 0), ["botrytis"] = R(r.Botrytis, 0) })),

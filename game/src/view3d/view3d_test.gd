@@ -99,6 +99,9 @@ func _ready() -> void:
 	if "--tasktest" in args:
 		_task_test()
 		return
+	if "--skytest" in args:
+		_sky_test("--perf" in args)
+		return
 	if "--worldtest" in args:
 		_world_test()
 		return
@@ -693,6 +696,109 @@ func _pick_rates() -> void:
 					row.append(str(_block(_snap(), e[0]).get("pickedPct")) + ("" if _block(_snap(), e[0]).get("picking", false) else "✓"))
 				days.append(" ".join(row))
 			print(line, " blocks ", ids, " | ", " / ".join(days))
+	get_tree().quit()
+
+
+# ------------------------------------------------------------------ sky and light by the hour (--skytest [--perf])
+func _force_weather(icon: String, clear: float, rain: float) -> void:
+	var s2: Dictionary = snap.duplicate(true)
+	s2["weather"]["today"]["icon"] = icon
+	s2["weather"]["today"]["clear"] = clear
+	s2["weather"]["today"]["rain"] = rain
+	view.apply_snapshot(s2)
+
+
+func _measure(label: String) -> void:
+	await _frames(60)
+	var t := 0.0
+	var n := 0
+	var dts := PackedFloat32Array()
+	while n < 240:
+		await get_tree().process_frame
+		var dt := get_process_delta_time()
+		t += dt; n += 1; dts.append(dt)
+	dts.sort()
+	print("SKYDIAG %s: %.1f fps avg, %.1f low1, %d draw calls, %.2f M prims" % [label, n / t, 1.0 / dts[int(0.99 * (dts.size() - 1))],
+		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME), RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME) / 1e6])
+
+
+func _sky_diag() -> void:
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	Engine.max_fps = 0
+	var vy: Node3D = view.get("vineyard")
+	_look_game("cote-dor")
+	Sim.Advance(160, false)
+	snap = _snap()
+	view.apply_snapshot(snap)
+	view.set_view("vineyard")
+	view.camera_preset("estate")
+	vy.call("set_daytime", 13.0)
+	await _measure("normal")
+	vy.set("wind_vec", Vector2.ZERO)
+	await _measure("no cloud drift")
+	var env: Environment = vy.get("env")
+	env.sky.process_mode = Sky.PROCESS_MODE_QUALITY
+	await _measure("sky radiance QUALITY (static)")
+	for e in vy.get("near_trees"):
+		for lod in ["lod0", "lod1"]:
+			for mi in e[lod]: (mi as Node3D).visible = false
+	await _measure("near trees hidden")
+	for mmis in (vy.get("groundcover") as Dictionary).values():
+		for m in mmis: (m as Node3D).visible = false
+	await _measure("ground cover hidden")
+	env.background_mode = Environment.BG_COLOR
+	await _measure("sky background off")
+	get_tree().quit()
+
+
+func _sky_test(perf_mode: bool) -> void:
+	if "--diag" in OS.get_cmdline_user_args():
+		await _sky_diag()
+		return
+	var vy: Node3D = view.get("vineyard")
+	if perf_mode:
+		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+		Engine.max_fps = 0
+	for region in ["mosel", "cote-dor", "napa"]:
+		_look_game(region)
+		Sim.Advance(160, false)                   # early June: long days, canopy out
+		snap = _snap()
+		view.apply_snapshot(snap)
+		view.set_view("vineyard")
+		view.camera_preset("estate")
+		await _frames(30)
+		for h in [4.8, 9.0, 13.0, 19.3, 20.2, 23.5]:          # solar time: dawn, morning, noon, sunset, blue hour, night
+			_force_weather("sun", 0.85, 0.0)
+			vy.call("set_daytime", h)
+			await _frames(90)
+			await _save_shot("sky_%s_%s" % [region, str(h).replace(".", "_")])
+			if perf_mode and (h == 13.0 or h == 20.2):
+				await _frames(60)
+				var t := 0.0
+				var n := 0
+				var worst := 0.0
+				var dts := PackedFloat32Array()
+				while n < 300:
+					await get_tree().process_frame
+					var dt := get_process_delta_time()
+					t += dt; n += 1; dts.append(dt)
+				dts.sort()
+				print("SKYTEST perf %s %sh: %.1f fps avg, %.1f low1" % [region, h, n / t, 1.0 / dts[int(0.99 * (dts.size() - 1))]])
+		if region == "mosel":
+			for w in [["cloud", 0.35, 0.0], ["rain", 0.1, 9.0], ["fog", 0.4, 0.0]]:
+				_force_weather(String(w[0]), float(w[1]), float(w[2]))
+				vy.call("set_daytime", 14.0)
+				await _frames(120)
+				await _save_shot("sky_mosel_%s" % w[0])
+			# the winery at night from the yard
+			_force_weather("sun", 0.85, 0.0)
+			vy.call("set_daytime", 22.0)
+			view.set_view("vineyard")
+			view.camera_preset("yard")
+			await _frames(120)
+			await _save_shot("sky_mosel_yard_night")
+			view.camera_preset("estate")
+	print("SKYTEST ok")
 	get_tree().quit()
 
 

@@ -74,8 +74,18 @@ var rain_hf: GPUParticlesCollisionHeightField3D
 var mist_mat: ShaderMaterial
 var mist_node: MeshInstance3D
 var weather := {}                 # for the ambience: rain 0..1, wind km/h, mist, cloud, day of year
-var sky_cache := {}
-var current_sky := ""
+var daytime := -1.0               # hours; < 0 = the afternoon rule (default_hour)
+var sky_target := {}              # the day's cloud, darkness and haze the sky blends towards
+var sky_now := {}
+var blend_weather := false        # the time-lapse blends the weather from day to day; otherwise it snaps
+var wind_vec := Vector2.ZERO      # cloud drift
+var cloud_uv := Vector2.ZERO
+var day_doy := 172
+var weather_cloud := 0.3
+var weather_mist := 0.0
+var weather_rain := 0.0
+var sun_elev := 30.0              # degrees, for the winery's night lights and the HUD
+signal light_changed(sun_elev: float)
 var hud := ""
 
 
@@ -257,7 +267,8 @@ func _setup_environment() -> void:
 	sky_mat.set_shader_parameter("radiance_clamp", 3.0)
 	var sky := Sky.new()
 	sky.sky_material = sky_mat
-	sky.radiance_size = Sky.RADIANCE_SIZE_512
+	sky.radiance_size = Sky.RADIANCE_SIZE_256
+	sky.process_mode = Sky.PROCESS_MODE_INCREMENTAL   # the radiance follows the moving sun over a few frames
 	env = Environment.new()
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
@@ -301,36 +312,6 @@ func _setup_sun() -> void:
 	sun.shadow_normal_bias = 1.2
 	sun.shadow_blur = 1.0
 	sun.light_volumetric_fog_energy = 1.6
-
-
-func _sky_entry(rel: String) -> Array:
-	if sky_cache.has(rel):
-		return sky_cache[rel]
-	var img := Image.load_from_file(A.path(rel))
-	var best := 0.0
-	var bu := -1.0
-	if img:
-		for y in range(0, img.get_height() / 2, 4):
-			for x in range(0, img.get_width(), 4):
-				var c := img.get_pixel(x, y)
-				var l := c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722
-				if l > best:
-					best = l
-					bu = (x + 0.5) / img.get_width()
-	else:
-		img = Image.create(8, 4, false, Image.FORMAT_RGBF)
-		img.fill(Color(0.5, 0.6, 0.8))
-	if best < 20.0:
-		bu = -1.0                               # overcast: no baked sun to line up
-	var e := [ImageTexture.create_from_image(img), bu]
-	sky_cache[rel] = e
-	return e
-
-
-func _sky_rot(entry: Array, sdir: Vector3) -> float:
-	if float(entry[1]) < 0.0:
-		return 0.0
-	return atan2(sdir.x, -sdir.z) - (float(entry[1]) * TAU - PI)
 
 
 # =============================================================================================== terrain
@@ -1721,46 +1702,46 @@ func _solar(doy: int, hour: float) -> Vector2:
 	return Vector2(rad_to_deg(el), rad_to_deg(az))
 
 
+## The hour the static view shows: afternoon light, a little earlier in winter so the sun stays above the hills.
+func default_hour(doy: int) -> float:
+	var summer := 0.5 - 0.5 * cos(TAU * (doy - 10) / 365.0)
+	var hour := 15.0 + 1.5 * summer
+	while _solar(doy, hour).x < 9.0 and hour > 12.5:
+		hour -= 0.5
+	return hour
+
+
+## Time of day in hours (the time-lapse animates it); < 0 = the afternoon rule of default_hour. Cheap: light only.
+func set_daytime(h: float) -> void:
+	daytime = h
+	_apply_light()
+
+
 func _apply_weather() -> void:
 	var doy := _doy(String(D.get("date", "2000-06-01")))
 	var today: Dictionary = D.get("weather", {}).get("today", {})
 	var icon := String(today.get("icon", "sun"))
 	var rain_mm := _num(today, "rain")
 	var wind := _num(today, "wind", 10.0)
-	# afternoon light: a little earlier in winter so the sun stays above the hills
-	var summer := 0.5 - 0.5 * cos(TAU * (doy - 10) / 365.0)
-	var hour := 15.0 + 1.5 * summer
-	var sp := _solar(doy, hour)
-	while sp.x < 9.0 and hour > 12.5:
-		hour -= 0.5
-		sp = _solar(doy, hour)
-	var cloud: float = {"sun": 0.08, "cloud": 0.7, "rain": 1.0, "fog": 0.55}.get(icon, 0.3)
+	# cloud cover from the day's measured radiation (clear-sky fraction, FAO-56), then the icon's character
+	var clear := _num(today, "clear", {"sun": 0.85, "cloud": 0.35, "rain": 0.15, "fog": 0.4}.get(icon, 0.6))
+	var cloud := clampf(1.05 - clear, 0.05, 1.0)
+	if icon == "rain":
+		cloud = maxf(cloud, 0.9)
 	var rain := clampf(rain_mm / 12.0, 0.25, 1.0) if icon == "rain" else 0.0
 	var wet := 1.0 if icon == "rain" else (0.35 if icon == "fog" else 0.0)
 	var mist := 1.0 if icon == "fog" else 0.0
-	var sky: String = {"sun": "hdri/clear.hdr", "cloud": "hdri/overcast.hdr", "rain": "hdri/overcast.hdr", "fog": "hdri/misty.hdr"}.get(icon, "hdri/clear.hdr")
-	if icon == "sun" and sp.x < 16.0:
-		sky = "hdri/dusk.hdr"
-	var d := _sun_world(sp.x, sp.y)
-	sun.look_at_from_position(Vector3.ZERO, -d, Vector3.UP)
-	var low := 1.0 - smoothstep(4.0, 28.0, sp.x)
-	sun.light_color = Color(1.0, 0.9, 0.78).lerp(Color(1.0, 0.62, 0.36), low * 0.75)
-	sun.light_energy = 2.4 * (1.0 - 0.86 * cloud) * (1.0 - 0.15 * low)
-	sun.shadow_opacity = 1.0 - 0.7 * cloud
-	if sky != current_sky:
-		current_sky = sky
-		sky_mat.set_shader_parameter("pano_a", _sky_entry(sky)[0])
-		sky_mat.set_shader_parameter("blend", 0.0)
-	sky_mat.set_shader_parameter("rot_a", _sky_rot(_sky_entry(sky), d))
-	var sky_e := lerpf(1.1, 0.75, cloud) * lerpf(1.0, 0.85, low)
-	sky_mat.set_shader_parameter("energy_a", sky_e)
-	env.ambient_light_energy = lerpf(0.8, 1.0, cloud)
-	env.tonemap_exposure = lerpf(1.0, 1.12, cloud)
-	env.fog_density = lerpf(0.00013, 0.0011, maxf(mist, rain * 0.5))
-	env.fog_light_color = Color(0.70, 0.76, 0.86).lerp(Color(0.74, 0.76, 0.79), cloud).lerp(Color(1.0, 0.72, 0.52), low * (1.0 - cloud) * 0.7)
-	env.fog_sun_scatter = lerpf(0.08, 0.35, low) * (1.0 - cloud)
-	env.fog_aerial_perspective = lerpf(0.55, 0.15, cloud)
-	env.fog_sky_affect = lerpf(0.0, 0.5, cloud)
+	sky_target = {"cloud": cloud, "dark": clampf((rain_mm - 1.0) / 8.0, 0.0, 0.8) if icon == "rain" else 0.1 * cloud, "haze": maxf(mist * 0.8, rain * 0.3)}
+	if sky_now.is_empty() or not blend_weather:
+		sky_now = sky_target.duplicate()
+	wind_vec = Vector2(cos(float(doy) * 1.7), sin(float(doy) * 1.7)) * clampf(wind / 14.0, 0.3, 3.0)
+	cloud_uv = Vector2(float(doy) * 3.7, float(doy) * 1.3)          # each day its own clouds
+	sky_mat.set_shader_parameter("cloud_drift", wind_vec * 0.004)
+	day_doy = doy
+	weather_cloud = cloud
+	weather_mist = mist
+	weather_rain = rain
+	_apply_light()
 	var valley := river_y + 22.0 if river.x < INF else -hz * sv - 40.0
 	env.fog_height = valley
 	env.fog_height_density = 0.3 * mist
@@ -1774,7 +1755,6 @@ func _apply_weather() -> void:
 	env.volumetric_fog_ambient_inject = lerpf(0.25, 0.1, cloud)
 	mist_mat.set_shader_parameter("amount", mist if river.x < INF else 0.0)
 	mist_node.position = Vector3(0, valley, river.x if river.x < INF else 300.0)
-	mist_mat.set_shader_parameter("lit_color", Vector3(1.0, 0.95, 0.9).lerp(Vector3(1.0, 0.82, 0.7), low))
 	rain_level = rain
 	_apply_rain_visibility()
 	rain_node.amount_ratio = maxf(rain, 0.01)
@@ -1796,6 +1776,48 @@ func _apply_weather() -> void:
 			st.set_meta("base_r", st.roughness)
 		st.roughness = lerpf(float(st.get_meta("base_r")), 0.12, wet)
 	hud = "%s · %.0f–%.0f °C · %s" % [icon.capitalize(), _num(today, "tmin"), _num(today, "tmax"), ("%.1f mm" % rain_mm) if rain_mm > 0.05 else "dry"]
+
+
+## Sun (or moon), sky, ambient, exposure and fog for the current hour and the day's weather (look only).
+func _apply_light() -> void:
+	var hour := daytime if daytime >= 0.0 else default_hour(day_doy)
+	var sp := _solar(day_doy, hour)
+	sun_elev = sp.x
+	var d := _sun_world(sp.x, sp.y)
+	var cloud: float = sky_now.get("cloud", weather_cloud)
+	var low := 1.0 - smoothstep(2.0, 28.0, sp.x)
+	var day := smoothstep(-5.0, 3.0, sp.x)
+	var night := 1.0 - smoothstep(-14.0, -3.0, sp.x)
+	# key light: the sun by day, a cool moon (opposite azimuth, 35° up) by night; they swap while both are dim
+	if sp.x > -4.0:
+		sun.look_at_from_position(Vector3.ZERO, -d, Vector3.UP)
+		sun.light_color = Color(1.0, 0.92, 0.82).lerp(Color(1.0, 0.55, 0.28), low * 0.85)
+		sun.light_energy = 2.4 * (1.0 - 0.86 * cloud) * day * (1.0 - 0.25 * low)
+	else:
+		var m := _sun_world(35.0, fmod(sp.y + 180.0, 360.0))
+		sun.look_at_from_position(Vector3.ZERO, -m, Vector3.UP)
+		sun.light_color = Color(0.62, 0.70, 0.95)
+		sun.light_energy = 0.28 * (1.0 - 0.75 * cloud) * night
+	sun.shadow_opacity = 1.0 - 0.7 * cloud
+	# sky
+	sky_mat.set_shader_parameter("sun_dir", d)
+	sky_mat.set_shader_parameter("sun_disc_col", Vector3(1.0, 0.93, 0.8).lerp(Vector3(1.0, 0.5, 0.2), low))
+	sky_mat.set_shader_parameter("night", night)
+	sky_mat.set_shader_parameter("cloud_cover", cloud)
+	sky_mat.set_shader_parameter("cloud_dark", sky_now.get("dark", 0.0))
+	sky_mat.set_shader_parameter("haze", sky_now.get("haze", 0.0))
+	sky_mat.set_shader_parameter("cloud_offset", cloud_uv)
+	# ambient and exposure: the sky lights the scene; nights are brought up to a readable blue dark
+	env.ambient_light_energy = lerpf(0.8, 1.0, cloud) * lerpf(1.0, 3.0, night)
+	env.tonemap_exposure = lerpf(1.0, 1.12, cloud) * lerpf(1.0, 3.6, night)
+	env.fog_light_color = Color(0.70, 0.76, 0.86).lerp(Color(0.74, 0.76, 0.79), cloud).lerp(Color(1.0, 0.64, 0.42), low * day * (1.0 - cloud) * 0.8).lerp(Color(0.10, 0.13, 0.22), night)
+	env.fog_sun_scatter = lerpf(0.08, 0.45, low) * (1.0 - cloud) * day
+	env.fog_aerial_perspective = lerpf(0.55, 0.15, cloud)
+	env.fog_sky_affect = lerpf(0.0, 0.5, cloud)
+	env.fog_density = lerpf(0.00013, 0.0011, maxf(weather_mist, weather_rain * 0.5))
+	if mist_mat:
+		mist_mat.set_shader_parameter("lit_color", Vector3(1.0, 0.95, 0.9).lerp(Vector3(1.0, 0.82, 0.7), low).lerp(Vector3(0.25, 0.3, 0.42), night))
+	light_changed.emit(sun_elev)
 
 
 func _build_rain() -> void:
@@ -1901,6 +1923,17 @@ func _build_mist_layer() -> void:
 
 
 func _process(_delta: float) -> void:
+	# the time-lapse blends the weather from one day to the next (~0.6 s); cloud drift runs in the sky shader (TIME)
+	var changed := false
+	if not sky_target.is_empty():
+		for k in sky_target:
+			var cur: float = sky_now.get(k, sky_target[k])
+			var nv := move_toward(cur, float(sky_target[k]), _delta / 0.6)
+			if nv != cur:
+				changed = true
+			sky_now[k] = nv
+	if changed:
+		_apply_light()
 	if rain_node and cam:
 		rain_node.global_position = cam.global_position + Vector3(0, 18, 0)
 		var h := cam.global_position.y - H(cam.global_position.x, cam.global_position.z) > 30.0

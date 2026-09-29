@@ -169,6 +169,11 @@ func _update_hint() -> void:
 		"on" if sound_on else "off", ("   —   " + where) if where != "" else ""]
 
 
+func _on_light_changed(elev: float) -> void:
+	if winery and winery.has_method("set_night"):
+		winery.call("set_night", 1.0 - smoothstep(-6.0, 0.0, elev))
+
+
 # ------------------------------------------------------------------ contract
 func apply_snapshot(snap: Dictionary) -> void:
 	D = snap
@@ -178,6 +183,8 @@ func apply_snapshot(snap: Dictionary) -> void:
 	winery.call("build")
 	var region := String(snap.get("region", {}).get("id", "mosel"))
 	winery.call("set_region", region)
+	if not vineyard.is_connected("light_changed", _on_light_changed):
+		vineyard.connect("light_changed", _on_light_changed)
 	var moved := false
 	if String(vineyard.get("plot_key")) != placed_key:
 		placed_key = String(vineyard.get("plot_key"))
