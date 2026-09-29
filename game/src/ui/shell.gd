@@ -310,6 +310,7 @@ func _unhandled_input(e: InputEvent) -> void:
 # ------------------------------------------------------------------ 3D
 ## kind "" (Tab or the 3D button) resumes where you left the 3D view; a named place ("vineyard", "hall", "cellar") goes there.
 func toggle_3d(kind := "") -> void:
+	if playing: toggle_play()          # 2D continuous play and the 3D time-lapse must not run together
 	var first := view3d == null
 	if view3d == null:
 		if not ResourceLoader.exists("res://src/view3d/view3d.tscn"):
@@ -319,6 +320,7 @@ func toggle_3d(kind := "") -> void:
 		if view3d.has_signal("exit_requested"): view3d.exit_requested.connect(func(): _hide_3d())
 		if view3d.has_signal("task_chosen"): view3d.task_chosen.connect(_on_task_chosen)
 		if view3d.has_signal("advance_requested"): view3d.advance_requested.connect(_on_advance_requested)
+		if view3d.has_signal("timelapse_toggled"): view3d.timelapse_toggled.connect(_on_timelapse_toggled)
 		view3d.visible = false
 	if view3d.visible: _hide_3d(); return
 	root_box.visible = false
@@ -356,30 +358,55 @@ func _hide_3d() -> void:
 		stale_2d = false
 		Sim.SaveGame("autosave")
 		_build_chrome()
-		show_screen("inbox" if tl_alert_id >= 0 else current)
+		show_screen("report" if tl_report else ("inbox" if tl_alert_id >= 0 else current))
 		tl_alert_id = -1
+		tl_report = false
 
 ## The 3D time-lapse asks for a day: the sim advances (stopping at an Alert) without rebuilding the hidden 2D screens.
+## Everything the 2D screens need is decided here, before the frame boundary, so a Tab in between loses nothing.
 var stale_2d := false
 var tl_alert_id := -1              # the Alert that paused the time-lapse: Tab opens it in the Inbox
+var tl_report := false             # a Vintage was fully bottled during the time-lapse: Tab opens its report
+var tl_days := 0
 func _on_advance_requested(days: int) -> void:
 	if busy or not Sim.HasGame(): return
 	busy = true
 	var before := _alert_ids()
 	Sim.Advance(days, true)
 	D = JSON.parse_string(Sim.Snapshot())
-	await get_tree().process_frame   # the sim step and the 3D update land in different frames (time-lapse smoothness)
-	busy = false
 	stale_2d = true
+	tl_days += days
 	var subject := ""
 	for m in D.get("inbox", []):
 		if m.get("stop", false) and not before.has(int(m["id"])):
 			subject = String(m["subject"]); tl_alert_id = int(m["id"]); state["inbox_sel"] = tl_alert_id
+	# the first time a Vintage is fully bottled its report opens (as advance() does); the flag lives in the save
+	var fl: Array = D.get("flags", [])
+	for bv in D.get("bottledVintages", []):
+		var key := "report_%d" % int(bv)
+		if not fl.has(key):
+			Sim.Command("flag", key, "", "", "", "")
+			D = JSON.parse_string(Sim.Snapshot())
+			state["report_vintage"] = int(bv)
+			tl_report = true
+			if subject == "": subject = "The %d Vintage report is ready" % int(bv)
+	if subject != "" or tl_days % 7 == 0:
+		Sim.SaveGame("autosave")
+	await get_tree().process_frame   # the sim step and the 3D update land in different frames (time-lapse smoothness)
+	busy = false
+	if view3d == null or not view3d.visible:
+		return                        # the view closed in between: _hide_3d already rebuilt the 2D screens
 	view3d.apply_snapshot(D)
 	if subject != "":
 		if sfx: sfx.play("alert")
 		view3d.timelapse_alert(subject)
-		Sim.SaveGame("autosave")
+
+func _on_timelapse_toggled(on: bool) -> void:
+	if not on and stale_2d: Sim.SaveGame("autosave")
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and Sim.HasGame() and stale_2d:
+		Sim.SaveGame("autosave")      # days passed in the 3D time-lapse since the last save
 
 # ------------------------------------------------------------------ chrome
 func _build_chrome() -> void:
@@ -782,6 +809,26 @@ func _fuzz_task3d() -> void:
 	for l in topbar.find_children("*", "Label", true, false):
 		if String((l as Label).text).contains(String(D.get("dateLabel", "?"))): shown = true
 	print("FUZZ timelapse %s (%s → %s, new date shown after leaving: %s)" % ["ok" if d1 > d0 and shown else "FAIL", d0, d1, shown])
+	# 2D play stops when the 3D view opens; the time-lapse runs until an Alert; leaving opens the Inbox on it
+	toggle_play()
+	toggle_3d("")
+	var play_ok := not playing
+	for f in 20: await get_tree().process_frame
+	view3d.call("timelapse_speed", 2)
+	view3d.call("timelapse_set", true)
+	var waited := 0.0
+	while String(view3d.get("tl_note")) == "" and waited < 60.0:
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	var note := String(view3d.get("tl_note"))
+	var sel := int(state.get("inbox_sel", -1))
+	toggle_3d("")
+	for f in 3: await get_tree().process_frame
+	var inbox_ok := current in ["inbox", "report"] and note != ""
+	var sel_ok := false
+	for m in D.get("inbox", []):
+		if int(m["id"]) == sel and m.get("stop", false): sel_ok = true
+	print("FUZZ timelapse_alert %s (play stopped %s, paused on '%s', screen %s, alert selected %s)" % ["ok" if play_ok and inbox_ok and (sel_ok or current == "report") else "FAIL", play_ok, note, current, sel_ok])
 	var arg := ""
 	for m in D.get("inbox", []):
 		for a in m.get("actions", []):

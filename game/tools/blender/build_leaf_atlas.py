@@ -1,7 +1,7 @@
 # Variety leaf atlas for the vine leaves (vineyard.gd, shaders/leaf.gdshader). Run headless via ../sync_assets3d.sh leaves:
 #   blender -b --factory-startup -P build_leaf_atlas.py -- <models_dir>
 # A 2x2 atlas, one cell per Variety (0 Riesling, 1 Chardonnay, 2 Pinot Noir, 3 Cabernet Sauvignon), in leaf UV space:
-# petiole at (0.5, 0), blade centre (0.5, 0.5), tip towards v = 1.
+# the petiole point at about (0.5, 0.33) (PETIOLE_PT; common.py LEAF_CARD_V0), blade centre (0.5, 0.5), tip towards v = 1.
 #   leaf_atlas.png  RGB = albedo multiplier (veins lighter, mottling), A = coverage (the leaf's silhouette)
 #   leaf_normal.png RG  = tangent-space normal x, y (blistering, raised veins; z rebuilt in the shader), B = vein mask
 # The outlines follow the ampelographic descriptions of the mature leaf in the French official variety catalogue

@@ -77,6 +77,7 @@ var tp_confirm: Button
 # time-lapse (time-lapse and visuals design §2): the view asks for days, the shell advances the sim and hands the
 # snapshot back; an Alert pauses it
 signal advance_requested(days: int)
+signal timelapse_toggled(on: bool)
 const TL_SPEEDS := ["Day", "Days", "Weeks"]
 var tl_on := false
 var tl_speed := 1
@@ -197,6 +198,8 @@ func _update_hint() -> void:
 func timelapse_set(on: bool) -> void:
 	if missing or placed_key == "":
 		return
+	if on != tl_on:
+		timelapse_toggled.emit(on)
 	tl_on = on
 	tl_acc = 0.0
 	vineyard.set("blend_weather", on)
@@ -230,8 +233,10 @@ func _update_tl_label() -> void:
 	if tl_label == null:
 		return
 	var date := String(D.get("dateLabel", D.get("date", "")))
+	var today: Dictionary = D.get("weather", {}).get("today", {})
+	var wx := "%s %.0f–%.0f °C" % [String(today.get("icon", "")).capitalize(), float(today.get("tmin", 0)), float(today.get("tmax", 0))] if not today.is_empty() else ""
 	if tl_on:
-		tl_label.text = "⏵ %s  ·  %s  ·  Space pause  ·  [ ] speed" % [TL_SPEEDS[tl_speed], date]
+		tl_label.text = "⏵ %s  ·  %s  ·  %s  ·  Space pause  ·  [ ] speed" % [TL_SPEEDS[tl_speed], date, wx]
 	elif tl_note != "":
 		tl_label.text = "❚❚ Paused: %s  ·  Tab to read it  ·  Space continue" % tl_note
 	else:
@@ -264,6 +269,8 @@ func _timelapse_step(delta: float) -> void:
 
 
 func _request_day() -> void:
+	if closeup_id >= 0:
+		return                        # no new day while a close-up is open (it waits for the choice)
 	tl_waiting = true
 	tl_wait_t = 0.0
 	advance_requested.emit(1)       # the shell advances the sim now and hands the day back next frame (apply_snapshot)
@@ -303,7 +310,10 @@ func apply_snapshot(snap: Dictionary) -> void:
 	if tasks3d.get("vy") == null:
 		tasks3d.call("setup", vineyard, winery)
 	if closeup_id >= 0:
-		_leave_closeup()
+		if closeup_busy:
+			call_deferred("_finish_confirm")     # a confirmed choice is sent, never dropped
+		else:
+			_leave_closeup()
 	tasks3d.call("apply", snap)
 	_update_tl_label()
 	player.set("bounds", vineyard.call("walk_rect"))
@@ -417,7 +427,7 @@ func _update_zone(force := false) -> void:
 
 func _configure_sound() -> void:
 	var w: Dictionary = (vineyard.get("weather") as Dictionary).duplicate()
-	w["day"] = true                 # the view always shows the afternoon light (vineyard._apply_weather)
+	w["day"] = float(vineyard.get("sun_elev")) > -4.0   # birds and the neighbours' work only by day (time-lapse nights)
 	var river: Vector2 = vineyard.get("river")
 	var ry: float = vineyard.get("river_y")
 	var b0: float = vineyard.get("band_x0")
@@ -720,6 +730,8 @@ func _interact() -> bool:
 	if drone or closeup_id >= 0 or missing:
 		return false
 	var task: Dictionary = tasks3d.call("nearest", player.global_position, TASK_REACH)
+	if not task.is_empty() and tl_on:
+		timelapse_set(false)          # doing a task pauses the time-lapse (a new day would close the close-up)
 	if task.is_empty():
 		return false
 	var cam: Array = tasks3d.call("open_closeup", task)

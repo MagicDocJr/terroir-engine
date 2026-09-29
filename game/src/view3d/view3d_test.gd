@@ -720,6 +720,7 @@ func _tl_answer(days: int) -> void:
 	snap = JSON.parse_string(js)
 	var t3 := Time.get_ticks_usec()
 	_tl_times.append([t1 - t0, t2 - t1, t3 - t2])
+	_tl_dates.append(String(snap["date"]))
 	await get_tree().process_frame    # like the shell: the 3D update lands in the next frame
 	var subject := ""
 	for m in snap.get("inbox", []):
@@ -751,9 +752,34 @@ func _tl_run(seconds: float) -> void:
 		prev_days = _tl_times.size()
 
 
+var _tl_dates := []
 func _timelapse_test() -> void:
 	var ok := true
 	view.advance_requested.connect(_tl_answer)
+	view.task_chosen.connect(func(id, value, timing): _chosen.append([id, value, timing]))
+	# a close-up during the time-lapse pauses it and keeps a confirmed choice (January: the pruning tasks are open)
+	_look_game("mosel")
+	snap = _snap()
+	view.apply_snapshot(snap)
+	view.set_view("vineyard")
+	await _frames(30)
+	var pt := _open_task("Prune")
+	view.call("timelapse_speed", 2)
+	view.call("timelapse_set", true)
+	view.focus_task(int(pt["id"]))
+	await _frames(5)
+	var opened: bool = view.call("_interact")
+	await _tl_run(1.5)
+	var cu_ok: bool = opened and int(view.get("closeup_id")) == int(pt["id"]) and not bool(view.get("tl_on"))
+	view.call("_choose", "Low")
+	_chosen.clear()
+	view.call("_confirm")
+	view.call("timelapse_set", true)          # the player resumes during the confirm animation
+	await get_tree().create_timer(1.6).timeout
+	view.call("timelapse_set", false)
+	cu_ok = cu_ok and _chosen.size() == 1 and int(_chosen[0][0]) == int(pt["id"])
+	print("TIMELAPSE closeup_pauses_and_keeps_choice %s (opened %s, chosen %s)" % ["ok" if cu_ok else "FAIL", opened, str(_chosen)])
+	ok = ok and cu_ok
 	_look_game("mosel")
 	Sim.Advance(125, false)                 # early May
 	snap = _snap()
@@ -761,6 +787,7 @@ func _timelapse_test() -> void:
 	view.set_view("vineyard")
 	view.camera_preset("estate")
 	await _frames(30)
+	_tl_dates = []
 	# each speed advances days at its rate (unless an Alert pauses it)
 	for sp in [[1, 4.0, 3, 5], [2, 3.0, 10, 30], [0, 9.0, 1, 2]]:
 		view.call("timelapse_speed", int(sp[0]))
@@ -775,6 +802,16 @@ func _timelapse_test() -> void:
 		var sp_ok := (days >= int(sp[2]) and days <= int(sp[3])) or _tl_alerts > 0
 		print("TIMELAPSE speed %s: %d days in %.0f s (alerts %d) %s" % [view.get("TL_SPEEDS")[int(sp[0])], days, sp[1], _tl_alerts, "ok" if sp_ok else "FAIL"])
 		ok = ok and sp_ok
+	# frame times at Day speed (the sun moves every frame)
+	view.call("timelapse_speed", 0)
+	_tl_frames = PackedFloat32Array()
+	view.call("timelapse_set", true)
+	await _tl_run(6.0)
+	view.call("timelapse_set", false)
+	var ds := _tl_frames.duplicate(); ds.sort()
+	var dtot := 0.0
+	for f in _tl_frames: dtot += f
+	print("TIMELAPSE frames at Day: %.1f fps avg, %.1f low1, worst %.0f ms" % [_tl_frames.size() / dtot, 1.0 / ds[int(0.99 * (ds.size() - 1))], ds[ds.size() - 1] * 1000.0])
 	# night during the Day speed: the hour moves
 	var h := float((view.get("vineyard") as Node3D).get("daytime"))
 	print("TIMELAPSE day speed animates the hour %s (%.1f h)" % ["ok" if h >= 0.0 else "FAIL", h])
@@ -789,6 +826,15 @@ func _timelapse_test() -> void:
 		await get_tree().process_frame
 		guard += get_process_delta_time()
 	var paused_ok: bool = _tl_alerts > 0 and not bool(view.get("tl_on")) and String(view.get("tl_note")) != ""
+	# no day skipped or doubled: every snapshot the view got is the day after the previous one
+	var seq_ok := true
+	for i in range(1, _tl_dates.size()):
+		var d0 := int(Time.get_unix_time_from_datetime_string(String(_tl_dates[i - 1])) / 86400)
+		var d1 := int(Time.get_unix_time_from_datetime_string(String(_tl_dates[i])) / 86400)
+		if d1 - d0 != 1 and _tl_dates[i - 1] != _tl_dates[i]:
+			seq_ok = false
+	print("TIMELAPSE days_consecutive %s (%d days seen)" % ["ok" if seq_ok else "FAIL", _tl_dates.size()])
+	paused_ok = paused_ok and seq_ok
 	print("TIMELAPSE alert pauses %s (%s, on %s)" % ["ok" if paused_ok else "FAIL", view.get("tl_note"), snap["date"]])
 	ok = ok and paused_ok
 	await _save_shot("timelapse_alert")
@@ -824,6 +870,20 @@ func _timelapse_test() -> void:
 		if f > 1.0 / 80.0: over += 1
 		if f > 0.04: over2 += 1
 	print("TIMELAPSE frames at Weeks: %.1f fps avg, %.1f low1, worst %.0f ms, %d of %d frames over 12.5 ms, %d over 40 ms (days %d)" % [_tl_frames.size() / tot, 1.0 / srt[int(0.99 * (srt.size() - 1))], srt[srt.size() - 1] * 1000.0, over, _tl_frames.size(), over2, _tl_times.size()])
+	if "--diag" in OS.get_cmdline_user_args():
+		for mode in ["no weather blend", "no sky uniforms", "no hall env sync"]:
+			var vy2: Node3D = view.get("vineyard")
+			_tl_frames = PackedFloat32Array()
+			view.call("timelapse_set", true)
+			if mode == "no weather blend": vy2.set("blend_weather", false)
+			if mode == "no sky uniforms": vy2.set("sky_mat", ShaderMaterial.new())
+			await _tl_run(4.0)
+			view.call("timelapse_set", false)
+			var ss := _tl_frames.duplicate(); ss.sort()
+			var ov := 0
+			for f in _tl_frames:
+				if f > 1.0 / 80.0: ov += 1
+			print("TIMELAPSE diag %s: %.1f low1, %d of %d over 12.5 ms" % [mode, 1.0 / ss[int(0.99 * (ss.size() - 1))], ov, ss.size()])
 	# leaving the view stops it
 	view.call("timelapse_set", true)
 	view.visible = false
@@ -976,10 +1036,45 @@ func _verge_cam(vy: Node3D, tag: String) -> void:
 		await _save_shot("world_%s_close" % tag)
 
 
+func _walk_trace(vy: Node3D, region: String) -> void:
+	# a run along the Plot's lower edge at 6 m/s (grass chunks built on the move), then a teleport to the far end
+	var x0: float = vy.get("band_x0"); var x1: float = vy.get("band_x1"); var hz: float = vy.get("hz")
+	var z := -hz * 0.5
+	var dts := PackedFloat32Array()
+	var x := x0 + 2.0
+	while x < x1 - 2.0 and dts.size() < 2000:
+		var eye := Vector3(x, 0, z)
+		eye.y = float(vy.call("ground_height", x, z)) + 1.6
+		view.set_camera(eye, eye + Vector3(6.0, -0.8, 1.0))
+		await get_tree().process_frame
+		var dt := get_process_delta_time()
+		dts.append(dt)
+		x += 6.0 * dt
+	var far := Vector3(x0 + 3.0, 0, hz * 0.5)
+	far.y = float(vy.call("ground_height", far.x, far.z)) + 1.6
+	view.set_camera(far, far + Vector3(6.0, -0.8, 1.0))
+	for i in 120:
+		await get_tree().process_frame
+		dts.append(get_process_delta_time())
+	var srt := dts.duplicate(); srt.sort()
+	var over := 0
+	for d in dts:
+		if d > 1.0 / 80.0: over += 1
+	print("WORLDTEST perf %s walking+teleport: %.1f low1, worst %.0f ms, %d of %d frames over 12.5 ms" % [region, 1.0 / srt[int(0.99 * (srt.size() - 1))], srt[srt.size() - 1] * 1000.0, over, dts.size()])
+
+
 func _world_perf(vy: Node3D) -> void:
 	# the new plants on vs off on the vineyard walk camera and the verge (same frame, same weather)
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = 0
+	for region in ["mosel", "cote-dor", "napa"]:
+		_look_game(region)
+		Sim.Advance(150, false)
+		snap = _snap()
+		view.apply_snapshot(snap)
+		view.set_view("vineyard")
+		await _frames(120)
+		await _walk_trace(vy, region)
 	for region in ["mosel", "cote-dor", "napa"]:
 		_look_game(region)
 		Sim.Advance(150, false)                    # June: trees in leaf, flowers out
@@ -1505,6 +1600,34 @@ func _task_test() -> void:
 		for l in s.get("lots", []):
 			if String(l["id"]) == String(ct["lot"]): return int(l["choices"].get("Cap management", -1)) == 1
 		return false) and ok
+	# a Lot ahead of the task's Lot goes into barrel: its tank screen moves, and so must the task's marker
+	var s2: Dictionary = snap.duplicate(true)
+	var cap2 := {}
+	for t in s2.get("tasks", []):
+		if String(t["kind"]) == "CapManagement" and String(t["status"]) == "Open": cap2 = t
+	if cap2.is_empty():
+		for t in s2.get("tasks", []):
+			if String(t["kind"]) == "CapManagement": t["status"] = "Open"; cap2 = t; break
+	var moved_ok := false
+	if not cap2.is_empty():
+		var t3n: Node3D = view.get("tasks3d")
+		var wy: Node3D = view.get("winery")
+		view.apply_snapshot(s2)
+		var before: Vector3 = (t3n.get("markers")[int(cap2["id"])]["spot"] as Array)[0] if t3n.get("markers").has(int(cap2["id"])) else Vector3.INF
+		for l in s2.get("lots", []):
+			if String(l["id"]) != String(cap2["lot"]) and String(l.get("phase", "")) != "Blended":
+				l["choices"]["Vessel"] = 1; l["phase"] = "Ageing"
+				break
+		view.apply_snapshot(s2)
+		var tank: Node3D = wy.call("tank_for_lot", String(cap2["lot"]))
+		var mk: Dictionary = t3n.get("markers").get(int(cap2["id"]), {})
+		var after: Vector3 = (mk.get("spot", [Vector3.INF]) as Array)[0]
+		var want: Vector3 = t3n.to_local(tank.global_transform * Vector3(0, 3.54, 0)) if tank else Vector3.INF
+		moved_ok = before != after and after.distance_to(want) < 0.01
+		print("TASKTEST marker_follows_tank %s (before %s, after %s, tank top %s)" % ["ok" if moved_ok else "FAIL", before, after, want])
+	else:
+		print("TASKTEST marker_follows_tank FAIL (no cap task)")
+	ok = ok and moved_ok
 	# pruning close-ups on the other training systems (Cordon spurs, Einzelpfahl bows): screenshots for review
 	for plot in ["napa-bench", "mosel-terrassen"]:
 		Sim.NewGame(JSON.stringify({"plotId": plot, "plantingYear": 2014, "seed": 5, "estateName": "Task Test"}))

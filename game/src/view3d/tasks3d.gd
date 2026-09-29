@@ -18,7 +18,7 @@ const THIN_DROP := {"0": [], "1": [2, 7], "2": [1, 3, 6, 8]}   # which of the te
 var vy: Node3D                       # vineyard.gd
 var wy: Node3D                       # winery.gd
 var markers := {}                    # task id -> {node, spot: [vine, stand, marker], task}
-var markers_key := ""                # the open tasks the markers were built for
+var markers_plot := ""               # the world the markers were built in
 var parts: Node3D                    # the close-up's clickable parts (null when none)
 var pickables: Array = []            # [{body, value, meshes: [MeshInstance3D], mat: StandardMaterial3D}]
 var extras: Array = []               # close-up meshes animated on confirm: {mesh, value, role}
@@ -39,30 +39,36 @@ func setup(vineyard: Node3D, winery: Node3D) -> void:
 
 # ------------------------------------------------------------------ markers
 func apply(D: Dictionary) -> void:
-	# rebuild only when the open tasks change (the time-lapse applies a snapshot every day)
-	var key := ""
-	for task in D.get("tasks", []):
-		if String(task.get("status", "")) == "Open":
-			key += "%d:%s;" % [int(task["id"]), task.get("lot", "")]
-	if key == markers_key:
-		for task in D.get("tasks", []):          # keep the task data fresh (days left, plan) for the close-up
-			if markers.has(int(task.get("id", -1))):
-				markers[int(task["id"])]["task"] = task
-		return
-	markers_key = key
-	# only the markers that changed: remove closed tasks, add new ones, keep the rest
+	# markers change only where they must (the time-lapse applies a snapshot every day): a new world clears them;
+	# closed tasks lose theirs; a hall task whose Lot moved to another tank moves; tasks without a place retry
+	var pk := String(vy.get("plot_key")) if vy else ""
+	if pk != markers_plot:
+		markers_plot = pk
+		for id in markers:
+			(markers[id]["node"] as Node3D).queue_free()
+		markers.clear()
 	var open_ids := {}
 	for task in D.get("tasks", []):
 		if String(task.get("status", "")) == "Open":
 			open_ids[int(task["id"])] = task
 	for id in markers.keys():
-		if not open_ids.has(id) or String((markers[id]["task"] as Dictionary).get("lot", "")) != String((open_ids[id] as Dictionary).get("lot", "")):
+		if not open_ids.has(id):
 			(markers[id]["node"] as Node3D).queue_free()
 			markers.erase(id)
 	for id in open_ids:
 		var task: Dictionary = open_ids[id]
 		if markers.has(id):
 			markers[id]["task"] = task
+			if String(task.get("where", "")) != "hall":
+				continue
+			var now := demo_spot(task)                   # cheap: a tank lookup
+			if not now.is_empty() and (now[0] as Vector3).is_equal_approx(markers[id]["spot"][0]):
+				continue
+			(markers[id]["node"] as Node3D).queue_free()
+			markers.erase(id)
+			if now.is_empty():
+				continue
+			markers[id] = {"node": _marker(task, now), "spot": now, "task": task}
 			continue
 		var spot := demo_spot(task)
 		if spot.is_empty():
@@ -91,7 +97,7 @@ func _warm_spots() -> void:
 	elif warm_label == null and not glyphs_warm:
 		# a marker's first label cost one 65 ms frame (text set-up on first use, released when no label is left):
 		# one marker lives permanently far below the ground
-		warm_label = _marker({"kind": "LeafRemoval", "title": "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz", "block": "0123456789", "due": "·:,.-()éèàüöäß"}, [Vector3.ZERO, Vector3.ZERO, Vector3(0, -40, 0)])
+		warm_label = _marker({"kind": "LeafRemoval", "title": "ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz", "block": "0123456789", "due": "·:,.-()éèàüöäß"}, [Vector3.ZERO, Vector3.ZERO, Vector3(0, -1000, 0)])   # far below any terrain
 		warm_frames = 6
 	elif warm_label != null and not glyphs_warm:
 		warm_frames -= 1

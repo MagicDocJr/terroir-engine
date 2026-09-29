@@ -65,7 +65,7 @@ void fragment() {
 	vec4 det = texture(leaf_atlas, cuv);
 	vec3 nt = texture(leaf_normal, cuv).rgb;
 	// the silhouette: alpha test, a little lower threshold far away so thin mipped lobes don't vanish
-	float mip = log2(max(length(fwidth(UV * 1024.0)), 1.0));
+	float mip = log2(max(length(fwidth(UV * 512.0)), 1.0));   // each atlas cell is 512 px
 	ALPHA = det.a;
 	ALPHA_SCISSOR_THRESHOLD = mix(0.5, 0.25, clamp(mip / 5.0, 0.0, 1.0));
 	vec3 detail = det.rgb * 1.3;

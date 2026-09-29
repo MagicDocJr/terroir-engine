@@ -43,7 +43,7 @@ void fragment() {
 	else if (pick < berry_state.y + berry_state.z + berry_state.w) { col = vec3(0.24, 0.14, 0.05); rgh = 0.7; }                     // sunburn: brown, shrivelling
 	else if (pick < berry_state.y + berry_state.z + berry_state.w + berry_state2.y) { col = vec3(0.17, 0.09, 0.07); rgh = 0.8; }    // noble rot: brown-violet
 	// bloom: the waxy coat of ripening berries scatters light, strongest at grazing angles (blue-grey on red grapes,
-	// a paler dust on white ones); rain washes part of it off (look only)
+	// a paler dust on white ones); a film of rain water makes wet berries look glossy and hides it (look only)
 	float fres = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.0);
 	float bloom = t * (berry_state2.z > 0.5 ? 0.55 : 0.3) * (1.0 - 0.6 * wetness) * (0.35 + 0.65 * fres);
 	vec3 bloom_col = berry_state2.z > 0.5 ? vec3(0.34, 0.36, 0.44) : vec3(0.62, 0.62, 0.5);

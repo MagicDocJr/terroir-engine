@@ -96,7 +96,7 @@ the field, a WSET-level curiosity that the 3D view lets you see:
 | Riesling | circular, five or seven lobes, deep U-shaped lateral sinuses, petiole-sinus lobes overlapping, medium teeth, slightly goffered | five clearly separated lobes, closed petiole sinus |
 | Chardonnay | circular, entire or with five lobes, slightly open petiole sinus whose edge is often formed by the bare veins, short straight-sided teeth | an almost entire blade with shallow notches and an open U-shaped petiole sinus |
 | Pinot Noir | dark green, entire or three to five lobes, petiole sinus slightly open or closed, short teeth, strongly blistered and twisted | a rounder, darker, heavily blistered blade with shallow lobes |
-| Cabernet Sauvignon | circular, seven to nine lobes (five cut deep), club- or U-shaped lateral sinuses, petiole-sinus lobes slightly overlapping, convex teeth, blistered | deep lobes, and the overlapping upper sinuses leave the "punched" holes the variety is known for |
+| Cabernet Sauvignon | circular, seven or nine lobes, club- or U-shaped lateral sinuses, petiole-sinus lobes slightly overlapping, convex teeth, blistered | deeply cut lobes with club-shaped sinuses; the game draws the upper sinuses closed over near the rim, leaving a hole (**game's drawing**: the "hole-punched" look is often described for this variety, but the cited catalogue entry does not describe it) |
 
 Popular summaries sometimes call the Riesling leaf "more or less entire"; the game follows the official catalogue.
 **Game simplification:** one idealised leaf per Variety; real leaves vary on a vine, with vigour and between clones,

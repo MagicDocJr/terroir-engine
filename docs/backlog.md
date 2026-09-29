@@ -5,7 +5,6 @@ Things deliberately left out of the MVP, to deep-dive once the core loop is lock
 ## Shortlist: what to build next (agreed with the owner 2026-09-29; check here first when asked "what's next")
 - **Famous-vintage challenges**: replay the 2016 Burgundy frost as an authored scenario (the sim already reproduces it); the hot 2003 needs a yearly Côte de Beaune flowering/véraison series first (see Simulation and science).
 - **More work types in 3D**: shoot thinning, bâtonnage, a barrel sample with the thief, tasting berries for harvest timing, tying down; they build on the Tasks system.
-- **3D time-lapse**: watch the days pass in the vineyard at 1×/2×/4× (seasons, trees leafing out, flowers coming and going).
 - Also open: the tasting-review page for the WSET L3 reviewer (see Build and review).
 
 ## First expansion (top priority after MVP)
@@ -13,7 +12,7 @@ Things deliberately left out of the MVP, to deep-dive once the core loop is lock
 
 ## Gameplay
 - ~~Staff tasks in 3D (prune, pull leaves, green-harvest, work the cap)~~ — done 2026-09-28 (spec `docs/superpowers/specs/2026-09-28-tasks-in-3d-design.md`). Follow-ups: more task kinds (debudding / shoot thinning, tying down, bâtonnage, topping up barrels, tasting berries, digging a soil pit, a barrel sample with the thief), doing the work yourself saving wages, harvesting in 3D, skill differences between player and crew.
-- 3D time-lapse with a speed control (watching the days pass is where 1×/2×/4× belongs)
+- ~~3D time-lapse with a speed control~~ — done 2026-09-29 (spec `docs/superpowers/specs/2026-09-29-timelapse-and-visuals-design.md`: Space and `[ ]` in the 3D view; physically based sky, day and night, variety leaves, bloom, grass, gusts). Follow-ups: continuous leaf growth between growth-stage meshes, moon phases, snow, player-placed lights; the shared gusts for the ground cover and near trees (they still sway on their own or not at all); the leaf-removal close-up drawing the Variety's own leaf; the hall's fog and aerial settings follow the outside only once a day (frozen through a Day-speed night); wind direction from real data if a source is added.
 - Famous-vintage challenges (e.g. Burgundy 2021 frost, the hot 2003) as authored replay
 - Barrel-sample tasting notes during ageing, and a Senior's occasional "clever idea" messages
 - Tractors and machinery driven by the player
@@ -29,7 +28,7 @@ Things deliberately left out of the MVP, to deep-dive once the core loop is lock
 ## Winery
 - Build and equip the Winery yourself (tank count, cooling capacity, press type), with in-game guidance on what to buy and why
 - Custom-crush option (rent space at a shared facility)
-- ~~A cosy, customisable winery look~~ — done 2026-09-29 (spec `docs/superpowers/specs/2026-09-29-cozy-winery-design.md`; cosmetic only). Follow-ups: a separate tasting room interior, day/night lighting (the lanterns and window glow are made for dusk), player-placed furniture, more options per element (e.g. a stone vault for the cellar, painted steel for the trusses), and a look for the office.
+- ~~A cosy, customisable winery look~~ — done 2026-09-29 (spec `docs/superpowers/specs/2026-09-29-cozy-winery-design.md`; cosmetic only). Follow-ups: a separate tasting room interior, the Winery-look lanterns lighting up at night (day/night came with the time-lapse; the office windows and door lamp already do), player-placed furniture, more options per element (e.g. a stone vault for the cellar, painted steel for the trusses), and a look for the office.
 
 ## Depth
 - Fuller legal rulebooks per Region (the MVP rulebooks are simplified, and must be built so they can be extended)
@@ -76,6 +75,7 @@ Found while building or reviewing; not urgent, but not to be forgotten. Remove a
 - Plot screen shows each Block's carry-over (fruitfulness, reserves) with a tooltip.
 - 3D pruning close-up for a bilateral Cordon: show both arms of the real vine with the spurs split between them, and Einzelpfahl's two bows as a heart.
 - Leaf-removal close-up: after a "later, at véraison" choice, the tagged leaves could come off in the world when the crew does it at véraison.
+- ~~Autumn colour on the near trees~~ — done 2026-09-29.
 - Near trees: a proper European species for the Mosel and Côte d'Or (walnut, cherry, oak) and a real olive or valley oak for Napa when a CC0 scan exists (Poly Haven has none today); the thinned canopies are open rather than dense.
-- Ground cover: a meadow grass scan light enough to scatter (Poly Haven's are 0.2–1.6M triangles), and autumn colour on the near trees before leaf fall.
+- Ground cover: a meadow grass scan light enough to scatter (Poly Haven's are 0.2–1.6M triangles), (autumn colour on the near trees: done).
 - A WSET-style vintage chart (one rating per Vintage) once several Vintages have been played.

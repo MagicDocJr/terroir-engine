@@ -85,7 +85,9 @@ view is hidden.
   built as the camera approaches (two per frame, a 9 × 9 chunk window) and freed behind it; where the ground is
   grassed (alleys of grassed rows, headlands, verges; not under the vines, on tracks, the yard or bare stake-trained
   slate); tinted by the season (`grass_tint` global, like the terrain) and shrinking away by 23 m; no shadows.
-- **Wind:** `wind_dir` (from the day's wind) and travelling gusts shared by the leaves and the grass.
+- **Wind:** travelling gusts shared by the leaves and the grass; their strength follows the day's wind speed, their
+  direction (`wind_dir`) is a per-day pattern (**game simplification**: the weather data carry no wind direction).
+  The moon is a weak, cool light opposite the sun at 35° (**game simplification**: no lunar orbit or phases).
 - **Near trees** turn yellow-brown in the five weeks before leaf fall (deciduous kinds).
 - **Meshes without GPU read-back:** vine meshes are built from the importer's CPU arrays (`A.glb_surfaces`); duplicating
   uploaded ArrayMeshes read the GPU back (~9 ms each) and made the background preparation stutter.

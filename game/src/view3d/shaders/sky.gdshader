@@ -49,11 +49,9 @@ vec2 ray_sphere(vec3 ro, vec3 rd, float r) {
 }
 
 // single-scattered sky radiance along rd for the sun in direction sd
-vec3 atmosphere(vec3 rd, vec3 sd) {
+vec3 atmosphere_n(vec3 rd, vec3 sd, int N, int NL) {
 	vec3 ro = vec3(0.0, R_E + 2.0, 0.0);
 	float t1 = ray_sphere(ro, rd, R_A).y;
-	const int N = 8;
-	const int NL = 4;
 	float seg = t1 / float(N);
 	float odR = 0.0, odM = 0.0;
 	vec3 sumR = vec3(0.0), sumM = vec3(0.0);
@@ -85,6 +83,25 @@ vec3 atmosphere(vec3 rd, vec3 sd) {
 	float pR = 3.0 / (16.0 * PI) * (1.0 + mu * mu);
 	float pM = 3.0 / (8.0 * PI) * ((1.0 - G_M * G_M) * (1.0 + mu * mu)) / ((2.0 + G_M * G_M) * pow(1.0 + G_M * G_M - 2.0 * G_M * mu, 1.5));
 	return sun_intensity * (sumR * BETA_R * pR + sumM * BETA_M * pM);
+}
+
+vec3 atmosphere(vec3 rd, vec3 sd) {
+	return atmosphere_n(rd, sd, 8, 4);
+}
+
+// The radiance map (ambient light and reflections) only needs the sky's low frequencies: fewer samples, and the
+// clouds as an overall greying and darkening. Re-rendering the full sky there made each weather change cost a
+// 10–20 ms frame in the time-lapse.
+vec3 radiance_sky(vec3 rd) {
+	vec3 d = rd;
+	d.y = max(d.y, 0.035);
+	d = normalize(d);
+	vec3 col = atmosphere_n(d, sun_dir, 4, 2);
+	float hz = pow(1.0 - d.y, 10.0) * smoothstep(-0.05, 0.25, sun_dir.y);
+	col = mix(col, vec3(dot(col, vec3(0.3, 0.59, 0.11))) * vec3(0.93, 0.97, 1.05) * 1.15, hz * 0.75);
+	float grey = dot(col, vec3(0.3, 0.59, 0.11));
+	col = mix(col, vec3(grey) * mix(1.25, 0.55, cloud_dark), cloud_cover * 0.8 * smoothstep(-0.1, 0.2, rd.y));
+	return col + night_col * night;
 }
 
 vec4 sky_and_clouds(vec3 rd) {
@@ -131,7 +148,7 @@ vec4 sky_and_clouds(vec3 rd) {
 
 void sky() {
 	if (AT_CUBEMAP_PASS) {
-		COLOR = min(sky_and_clouds(EYEDIR).rgb, vec3(radiance_clamp));
+		COLOR = min(radiance_sky(EYEDIR), vec3(radiance_clamp));
 	} else if (AT_HALF_RES_PASS) {
 		vec4 c = sky_and_clouds(EYEDIR);
 		COLOR = c.rgb;
@@ -140,7 +157,7 @@ void sky() {
 		vec3 col = HALF_RES_COLOR.rgb;
 		float cloud = HALF_RES_COLOR.a;
 		vec3 rd = EYEDIR;
-		// sun disc (limb-darkened), hidden by clouds and by the horizon
+		// sun disc (a soft-edged disc), hidden by clouds and by the horizon
 		float mu = dot(rd, sun_dir);
 		float disc = smoothstep(0.99996, 0.99999, mu);
 		col += sun_disc_col * disc * 60.0 * (1.0 - cloud) * step(0.0, rd.y) * (1.0 - night);

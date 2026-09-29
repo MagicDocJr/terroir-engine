@@ -65,7 +65,7 @@ static func meshes(n: Node, out: Array = []) -> Array:
 	return out
 
 
-## The surfaces of every mesh in a GLB, keyed by node name, as CPU arrays: [[arrays, material name], …] (cached).
+## The surfaces of every mesh in a GLB, keyed by node name, as CPU arrays: [[arrays, material name, material], …] (cached).
 ## Read from the importer's meshes before anything is uploaded, so building new meshes from them never reads the
 ## GPU back (duplicating an uploaded ArrayMesh stalled ~9 ms per mesh).
 static var _glb_arr := {}
@@ -84,7 +84,7 @@ static func glb_surfaces(rel: String) -> Dictionary:
 			var surfs := []
 			for i in im.get_surface_count():
 				var m := im.get_surface_material(i)
-				surfs.append([im.get_surface_arrays(i), String(m.resource_name) if m else ""])
+				surfs.append([im.get_surface_arrays(i), String(m.resource_name) if m else "", m])   # the GLB's own material for unnamed ones
 			out[String(node.resource_name)] = surfs
 	else:
 		push_warning("view3d: gltf load failed: " + rel)

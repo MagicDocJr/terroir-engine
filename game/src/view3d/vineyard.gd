@@ -19,7 +19,7 @@ const VCHUNK_NEAR := 3.0      # vine cells for the near LODs (visibility ranges 
 const VCHUNK_FAR := 18.0      # vine cells for the far LOD
 const LOD0_END := 3.0
 const LOD1_END := 13.0
-const HYBRID_LOD0 := true     # near vines: LOD0 bunches on LOD1 leaves/wood (see _hybrid)
+const HYBRID_LOD0 := true     # near vines: LOD0 bunches on LOD1 leaves/wood (see _vine_surfaces)
 const SHADOW_END := 38.0      # beyond this the far LOD stops casting shadows
 const OUT_SHADOW := 70.0      # sun shadow distance outdoors
 const PZ0 := -2600.0          # profile start (z) and step
@@ -85,6 +85,7 @@ var day_doy := 172
 var weather_cloud := 0.3
 var weather_mist := 0.0
 var weather_rain := 0.0
+var sky_pushed := {}              # the sky uniforms last sent (see _apply_light)
 var sun_elev := 30.0              # degrees, for the winery's night lights and the HUD
 signal light_changed(sun_elev: float)
 var hud := ""
@@ -221,7 +222,7 @@ func _block_mesh(owner: Dictionary, training: String, g: int, seed: int, lod: in
 	for sf in _vine_surfaces(training, g, seed, lod):
 		m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, sf[0])
 		var nm := String(sf[1])
-		var mat: Material = owner["leaf_mat"] if nm == "vine_leaf" else (owner["berry_mat"] if nm == "vine_berry" else _mat(nm))
+		var mat: Material = owner["leaf_mat"] if nm == "vine_leaf" else (owner["berry_mat"] if nm == "vine_berry" else (_mat(nm) if nm != "" else sf[2]))
 		m.surface_set_material(m.get_surface_count() - 1, mat)
 	cache[key] = m
 	return m
@@ -254,9 +255,11 @@ func _queue_warm() -> void:
 var swap_queue := []
 func _swap(mmi: MultiMeshInstance3D, mesh: Mesh) -> void:
 	if not blend_weather:
+		if not swap_queue.is_empty():                     # rare: an immediate swap must not be undone by a queued older one
+			swap_queue = swap_queue.filter(func(w): return w[0] != mmi)
 		mmi.multimesh.mesh = mesh
 		return
-	swap_queue.append([mmi, mesh])
+	swap_queue.append([mmi, mesh])                        # first in, first out: the newest mesh lands last
 
 
 func _swap_step() -> void:
@@ -506,6 +509,7 @@ func _build_world() -> void:
 	_build_scatter()
 	_build_groundcover()
 	grass_chunks.clear()                    # the old chunks went with the old world node
+	grass_job = {}
 	grass_centre = Vector2i(99999, 99999)
 	_build_neighbours()
 	_queue_warm()
@@ -570,6 +574,8 @@ func _layout_blocks() -> void:
 			"training": TRAINING_FILE.get(tr, "guyot"), "vsp": tr != "Einzelpfahl", "density": _num(b, "density", 5000.0), "rows": String(b.get("rows", "")),
 			"stones": _num(b.get("soilProfile", {}), "stones", 20.0), "mm": [], "g": -1})
 		_owner_materials(blocks[-1])
+		if not LEAF_CELL.has(String(b.get("variety", ""))):
+			push_warning("view3d: no leaf drawing for Variety '%s'; using Riesling's" % b.get("variety", ""))
 		(blocks[-1]["leaf_mat"] as ShaderMaterial).set_shader_parameter("variety_cell", int(LEAF_CELL.get(String(b.get("variety", "")), 0)))
 		x += w + gap
 	# per-x slope offsets, smoothed across the paths and faded out beside the band
@@ -1598,6 +1604,7 @@ var grass_chunks := {}                  # Vector2i -> MultiMeshInstance3D (or nu
 var grass_mesh: ArrayMesh
 var grass_mat: ShaderMaterial
 var grass_centre := Vector2i(99999, 99999)
+var grass_job := {}                     # the chunk being built: {k, rng, i, n, xfs}
 
 
 func _grass_blades() -> ArrayMesh:
@@ -1666,47 +1673,74 @@ func _grass_step() -> void:
 		grass_mat.shader = load(SH + "grass_blade.gdshader")
 		grass_mesh.surface_set_material(0, grass_mat)
 	var p := cam.global_position
-	if p.y - H(p.x, p.z) > 25.0:            # drone height: no blades
+	var above := p.y - H(p.x, p.z)
+	if above > 25.0 or above < -0.5:        # drone height, or underground in the cellar: no blades to build
 		return
 	var c := Vector2i(floori(p.x / GRASS_CHUNK), floori(p.z / GRASS_CHUNK))
 	if c != grass_centre:
 		grass_centre = c
 		for k in grass_chunks.keys():
 			if absi(k.x - c.x) > GRASS_RING + 1 or absi(k.y - c.y) > GRASS_RING + 1:
-				if grass_chunks[k] != null:
+				if grass_chunks[k] is Node:
 					(grass_chunks[k] as Node).queue_free()
 				grass_chunks.erase(k)
-	var built := 0
+		if not grass_job.is_empty() and (absi(grass_job["k"].x - c.x) > GRASS_RING or absi(grass_job["k"].y - c.y) > GRASS_RING):
+			grass_chunks.erase(grass_job["k"])
+			grass_job = {}
+	# build the nearest missing chunk a slice at a time (≤ 1.2 ms a frame): chunks cost ~1–3 ms each in GDScript
+	var t0 := Time.get_ticks_usec()
+	while Time.get_ticks_usec() - t0 < 1200:
+		if grass_job.is_empty():
+			var k := _next_grass_chunk(c)
+			if k == Vector2i(99999, 99999):
+				return
+			var rng := RandomNumberGenerator.new()
+			rng.seed = hash(k)
+			grass_job = {"k": k, "rng": rng, "i": 0, "n": int(GRASS_CHUNK * GRASS_CHUNK * GRASS_PER_M2), "xfs": []}
+			grass_chunks[k] = false          # reserved: being built
+		_grass_job_slice(t0)
+
+
+func _next_grass_chunk(c: Vector2i) -> Vector2i:
 	for r in GRASS_RING + 1:                # nearest rings first
 		for dz in range(-r, r + 1):
 			for dx in range(-r, r + 1):
 				if maxi(absi(dx), absi(dz)) != r:
 					continue
 				var k := Vector2i(c.x + dx, c.y + dz)
-				if grass_chunks.has(k):
-					continue
-				grass_chunks[k] = _grass_chunk(k)
-				built += 1
-				if built >= 2:
-					return
+				if not grass_chunks.has(k):
+					return k
+	return Vector2i(99999, 99999)
 
 
-func _grass_chunk(k: Vector2i) -> MultiMeshInstance3D:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = hash(k)
+func _grass_job_slice(t0: int) -> void:
+	var j := grass_job
+	var k: Vector2i = j["k"]
+	var rng: RandomNumberGenerator = j["rng"]
 	var x0 := k.x * GRASS_CHUNK
 	var z0 := k.y * GRASS_CHUNK
-	var xfs := []
-	var n := int(GRASS_CHUNK * GRASS_CHUNK * GRASS_PER_M2)
-	for i in n:
+	var xfs: Array = j["xfs"]
+	while int(j["i"]) < int(j["n"]):
+		j["i"] = int(j["i"]) + 1
 		var x := x0 + rng.randf() * GRASS_CHUNK
 		var z := z0 + rng.randf() * GRASS_CHUNK
-		if rng.randf() > _grass_density(x, z):
-			continue
+		var keep := rng.randf()
 		var s := rng.randf_range(0.7, 1.3)
-		xfs.append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s, s * rng.randf_range(0.8, 1.2), s)), Vector3(x, H(x, z) - 0.01, z)))
+		var yaw := rng.randf() * TAU
+		var sy := rng.randf_range(0.8, 1.2)
+		if keep <= _grass_density(x, z):
+			xfs.append(Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3(s, s * sy, s)), Vector3(x, H(x, z) - 0.01, z)))
+		if (int(j["i"]) & 31) == 0 and Time.get_ticks_usec() - t0 >= 1200:
+			return
+	grass_chunks[k] = _grass_chunk_node(k, xfs)
+	grass_job = {}
+
+
+func _grass_chunk_node(k: Vector2i, xfs: Array) -> Variant:
 	if xfs.is_empty():
 		return null
+	var x0 := k.x * GRASS_CHUNK
+	var z0 := k.y * GRASS_CHUNK
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.mesh = grass_mesh
@@ -1936,7 +1970,8 @@ func _apply_weather() -> void:
 	if sky_now.is_empty() or not blend_weather:
 		sky_now = sky_target.duplicate()
 	wind_vec = Vector2(cos(float(doy) * 1.7), sin(float(doy) * 1.7)) * clampf(wind / 14.0, 0.3, 3.0)
-	cloud_uv = Vector2(float(doy) * 3.7, float(doy) * 1.3)          # each day its own clouds
+	if not blend_weather:
+		cloud_uv = Vector2(float(doy) * 3.7, float(doy) * 1.3)      # each day its own clouds (the time-lapse keeps drifting them)
 	RenderingServer.global_shader_parameter_set("wind_dir", wind_vec.normalized() if wind_vec.length() > 0.01 else Vector2(0.8, 0.6))
 	sky_mat.set_shader_parameter("cloud_drift", wind_vec * 0.004)
 	day_doy = doy
@@ -1988,11 +2023,12 @@ func _apply_light() -> void:
 	var d := _sun_world(sp.x, sp.y)
 	var cloud: float = sky_now.get("cloud", weather_cloud)
 	var low := 1.0 - smoothstep(2.0, 28.0, sp.x)
-	var day := smoothstep(-5.0, 3.0, sp.x)
+	var day := smoothstep(-1.0, 4.0, sp.x)             # no light from below the horizon
 	var night := 1.0 - smoothstep(-14.0, -3.0, sp.x)
 	# key light: the sun by day, a cool moon (opposite azimuth, 35° up) by night; they swap while both are dim
 	if sp.x > -4.0:
-		sun.look_at_from_position(Vector3.ZERO, -d, Vector3.UP)
+		var dl := _sun_world(maxf(sp.x, 1.0), sp.y)     # the light itself never comes from under the horizon
+		sun.look_at_from_position(Vector3.ZERO, -dl, Vector3.UP)
 		sun.light_color = Color(1.0, 0.92, 0.82).lerp(Color(1.0, 0.55, 0.28), low * 0.85)
 		sun.light_energy = 2.4 * (1.0 - 0.86 * cloud) * day * (1.0 - 0.25 * low)
 	else:
@@ -2001,14 +2037,24 @@ func _apply_light() -> void:
 		sun.light_color = Color(0.62, 0.70, 0.95)
 		sun.light_energy = 0.28 * (1.0 - 0.75 * cloud) * night
 	sun.shadow_opacity = 1.0 - 0.7 * cloud
-	# sky
-	sky_mat.set_shader_parameter("sun_dir", d)
-	sky_mat.set_shader_parameter("sun_disc_col", Vector3(1.0, 0.93, 0.8).lerp(Vector3(1.0, 0.5, 0.2), low))
-	sky_mat.set_shader_parameter("night", night)
-	sky_mat.set_shader_parameter("cloud_cover", cloud)
-	sky_mat.set_shader_parameter("cloud_dark", sky_now.get("dark", 0.0))
-	sky_mat.set_shader_parameter("haze", sky_now.get("haze", 0.0))
-	sky_mat.set_shader_parameter("cloud_offset", cloud_uv)
+	# sky: every change makes the engine re-render its radiance map (ambient and reflections), so the sky is only
+	# updated when it visibly changed, and at most every 6 frames while it blends (updating it every frame of a
+	# weather blend cost the time-lapse 20 fps on the day frames)
+	var dark: float = sky_now.get("dark", 0.0)
+	var haze: float = sky_now.get("haze", 0.0)
+	var frame := Engine.get_process_frames()
+	var big := sky_pushed.is_empty() or (sky_pushed["d"] as Vector3).angle_to(d) > deg_to_rad(3.0) or absf(float(sky_pushed["c"]) - cloud) > 0.25
+	var small := not sky_pushed.is_empty() and ((sky_pushed["d"] as Vector3).angle_to(d) > deg_to_rad(0.25) or absf(float(sky_pushed["c"]) - cloud) > 0.02 \
+		or absf(float(sky_pushed["k"]) - dark) > 0.02 or absf(float(sky_pushed["h"]) - haze) > 0.02 or absf(float(sky_pushed["n"]) - night) > 0.01)
+	if big or (small and frame - int(sky_pushed.get("f", 0)) >= 6) or not blend_weather:
+		sky_pushed = {"d": d, "c": cloud, "k": dark, "h": haze, "n": night, "f": frame}
+		sky_mat.set_shader_parameter("sun_dir", d)
+		sky_mat.set_shader_parameter("sun_disc_col", Vector3(1.0, 0.93, 0.8).lerp(Vector3(1.0, 0.5, 0.2), low))
+		sky_mat.set_shader_parameter("night", night)
+		sky_mat.set_shader_parameter("cloud_cover", cloud)
+		sky_mat.set_shader_parameter("cloud_dark", dark)
+		sky_mat.set_shader_parameter("haze", haze)
+		sky_mat.set_shader_parameter("cloud_offset", cloud_uv)
 	# ambient and exposure: the sky lights the scene; nights are brought up to a readable blue dark
 	env.ambient_light_energy = lerpf(0.8, 1.0, cloud) * lerpf(1.0, 3.0, night)
 	env.tonemap_exposure = lerpf(1.0, 1.12, cloud) * lerpf(1.0, 3.6, night)
