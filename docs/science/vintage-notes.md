@@ -1,6 +1,6 @@
 # Real vintage notes (for the Mentor and staff)
 
-Short, cited notes on notable vintages from 1990 to 2025. The Mentor and advisors use them as **"real vintage notes"** (spec §3.4).
+Short, cited notes on notable vintages from 1990 to 2025. The Mentor and advisors use them as **"real vintage notes"** (spec §3.4), and Tasting practice shows them in reveals and the Cellar book. The sourced rows are mirrored in `data/vintage_notes.json` (keep the two in step).
 
 **No-future-knowledge rule (ADR 0002, spec §5.4):**
 - A note may only be shown **after that vintage's harvest has happened on the Timeline**, e.g. as the Mentor looking back ("In 2003 we picked in August…"), or at the start of the next year.
@@ -34,9 +34,9 @@ Format: **year: what happened** [source]. A note marked `UNVERIFIED` must not be
 
 | Year | Note | Source |
 |---|---|---|
-| 2011 | Unusual rain until mid-June delayed bloom and disrupted fruit set (shatter in places). A cool, Bordeaux-like vintage. | [NVV-VINTAGES] (secondary summary) |
+| 2011 | Unusual rain until mid-June delayed bloom and disrupted fruit set (shatter in places). A cool, Bordeaux-like vintage. | [NVV-2011] |
 | 2014 | **South Napa earthquake, M6.0, 24 August 2014, 3:20 a.m.** Stacked barrels (over a quarter-ton each) toppled in many wineries; an estimated 5,000–6,000 barrels of wine were lost. | [USGS-2014], [PEER-2014] |
-| 2017 | Warm to hot season with extreme heat around Labor Day (up to ~120 °F reported), so picking came slightly early. Most fruit was in before the **wildfires started on 8 October**. Later lots were monitored for smoke taint. | [NVV-VINTAGES] (secondary summary) |
+| 2017 | Warm to hot season with extreme heat around Labor Day (up to ~120 °F reported), so picking came slightly early. Most fruit was in before the **wildfires started on 8 October**. Later lots were monitored for smoke taint. | [NVR-2017] |
 | 2020 | **Glass Fire:** fully contained 20 October 2020, after burning more than 67,000 acres and destroying 1,555 structures in Napa County. Smoke taint was a defining factor for late-harvested fruit. The start date (late September) is `UNVERIFIED`. | [WIKI-GLASSFIRE] |
 | 2022 | **Labor Day heat wave:** five days of triple-digit heat in early September, followed by mid-September rain. Many varieties ripened at once, compressing the harvest; strict selection was needed. | [WINEINSTITUTE-2022], [NVV-2022] |
 | 1990, 1997, 2013, 2019 | `UNVERIFIED`. Candidates (widely rated great years). Source them before use. | — |
@@ -54,7 +54,8 @@ Format: **year: what happened** [source]. A note marked `UNVERIFIED` must not be
 - [COATES-2016] Clive Coates MW, "2016 Vintage": http://www.clive-coates.com/news/2016-vintage
 - [INSIDEBURGUNDY-2021] Jasper Morris, Inside Burgundy, "2021 in Burgundy: An Introduction to the 2021 Vintage": https://insideburgundy.com/overview/2021-in-burgundy-an-introduction-to-the-2021-vintage/
 - [EURONEWS-2021] Euronews (24 Sep 2021), Burgundy harvest report: https://www.euronews.com/2021/09/24/burgundy-harvest-confirms-millesimus-horribilis-as-winemakers-say-there-really-isn-t-much-
-- [NVV-VINTAGES] Napa Valley Vintners, vintage reports: https://napavintners.com/napa_valley/vintage_charts.asp (the 2011 and 2017 details came via search summaries; verify against the page before in-game use)
+- [NVV-2011] Napa Valley Vintners, "Report on Harvest 2011" (verified 2026-09-29 via its indexed text; the PDF itself no longer loads): https://napavintners.com/downloads/2011-Napa-Valley-Harvest-Report.pdf
+- [NVR-2017] Napa Valley Register, "Promising Napa Valley vintage turns tragic as fires continue" (verified 2026-09-29; heat around Labor Day, about 90 % of the tonnage in by 8 October): https://napavalleyregister.com/community/star/news/local/promising-napa-valley-vintage-turns-tragic-as-fires-continue/article_a12dd97c-ce58-511f-a2c1-82358fbf1624.html
 - [USGS-2014] USGS, "M6.0 South Napa, California Earthquake – August 24, 2014": https://www.usgs.gov/programs/earthquake-hazards/science/m60-south-napa-california-earthquake-august-24-2014
 - [PEER-2014] PEER, South Napa earthquake reconnaissance report (barrel losses): https://peer.berkeley.edu/sites/default/files/spa-2014-napa-report.pdf
 - [WIKI-GLASSFIRE] "Glass Fire", Wikipedia: https://en.wikipedia.org/wiki/Glass_Fire

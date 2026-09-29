@@ -1,0 +1,61 @@
+{
+  "about": "Wine Fair stands (tasting-practice design §5). Hosts and producers are invented (game simplification). 'pick': 'cool-warm' chooses the vintages with the fewest and the most growing-degree days in the weather record. 'tier' 0 stands are open from the start; medals open the higher tiers.",
+  "stands": [
+    {
+      "id": "burgundy-2003-2005", "tier": 0, "title": "Burgundy 2003 · 2004 · 2005",
+      "blurb": "One Côte d'Or village site, three summers in a row: the 2003 heatwave and the two years after it.",
+      "host": { "name": "Claire Garnier", "producer": "Domaine Garnier", "greeting": "Three summers, one slope. Taste how the weather wrote each of them." },
+      "plot": "cotedor-village", "block": "A", "variety": "Pinot Noir", "style": "classic", "vintages": [2003, 2004, 2005],
+      "quiz": ["summer", "picked-first", "acid", "season-cool"]
+    },
+    {
+      "id": "frost-2016", "tier": 0, "title": "The 2016 frost",
+      "blurb": "The same vines in 2015, 2016 and 2017. One spring brought the worst frost the Côte d'Or had seen since 1985.",
+      "host": { "name": "Luc Dumont-Rivière", "producer": "Domaine Dumont-Rivière", "greeting": "Same vines, same cellar, three springs. One of them we will never forget." },
+      "plot": "cotedor-village", "block": "A", "variety": "Pinot Noir", "style": "classic", "vintages": [2015, 2016, 2017],
+      "quiz": ["frost", "yield", "summer", "picked-first"]
+    },
+    {
+      "id": "mosel-ladder", "tier": 0, "title": "The Mosel ripeness ladder",
+      "blurb": "One slope, one vintage (2018), three pickings: Kabinett, Spätlese and Auslese. Which glass is which?",
+      "host": { "name": "Katrin Brandt", "producer": "Weingut Brandt", "greeting": "We walked this slope three times that autumn. Which glass waited longest for the sun?" },
+      "plot": "mosel-seitental", "variety": "Riesling", "vintage": 2018, "styles": ["spatlese", "auslese", "kabinett"],
+      "quiz": ["ripest", "sweetest", "picked-first", "least-ripe"]
+    },
+    {
+      "id": "mosel-cool-warm", "tier": 1, "title": "Mosel: a cool year and a warm year",
+      "blurb": "Dry Riesling from the coolest and the warmest growing season in the weather record since 1995: {cool} and {warm}.",
+      "host": { "name": "Jonas Kessler", "producer": "Weingut Kessler", "greeting": "The coldest and the warmest summers our record holds. Can you tell them apart?" },
+      "plot": "mosel-seitental", "variety": "Riesling", "style": "dry", "pick": "cool-warm",
+      "quiz": ["season", "acid", "picked-first", "ripest"]
+    },
+    {
+      "id": "chardonnay-steel-oak", "tier": 1, "title": "Chardonnay: steel or oak",
+      "blurb": "The same Côte d'Or site and vintage (2018), three cellar choices: stainless steel, old barrels and new oak.",
+      "host": { "name": "Élise Fontaine", "producer": "Domaine Fontaine", "greeting": "Same grapes, three cellars. The wood tells its own story." },
+      "plot": "cotedor-village", "block": "D", "variety": "Chardonnay", "vintage": 2018, "styles": ["new-oak", "steel", "old-oak"],
+      "quiz": ["new-oak", "steel", "old-oak"]
+    },
+    {
+      "id": "napa-cool-hot", "tier": 1, "title": "Napa Cabernet: a cool year and a hot year",
+      "blurb": "Cabernet Sauvignon from the coolest and the hottest growing season in the weather record since 1995: {cool} and {warm}.",
+      "host": { "name": "Ana Morales", "producer": "Morales Cellars", "greeting": "In Napa the sun always shows up. The question is how much." },
+      "plot": "napa-bench", "variety": "Cabernet Sauvignon", "style": "classic", "pick": "cool-warm",
+      "quiz": ["season", "summer", "picked-first", "acid"]
+    },
+    {
+      "id": "mosel-2003", "tier": 2, "title": "Mosel 2002 · 2003 · 2004",
+      "blurb": "Dry Riesling from one slope: the 2003 heatwave between two cooler years.",
+      "host": { "name": "Peter Lenz", "producer": "Weingut Lenz", "greeting": "One of these summers we still talk about. Can you find it in the glass?" },
+      "plot": "mosel-seitental", "variety": "Riesling", "style": "dry", "vintages": [2002, 2003, 2004],
+      "quiz": ["summer", "acid-low", "picked-first", "season"]
+    },
+    {
+      "id": "whites-2021", "tier": 2, "title": "Côte d'Or whites 2017 · 2018 · 2021",
+      "blurb": "Chardonnay from one site in three years. One April brought three nights of hard frost.",
+      "host": { "name": "Marc Moreau-Bernard", "producer": "Domaine Moreau-Bernard", "greeting": "Three springs on the same slope. One of them we spent awake in the rows." },
+      "plot": "cotedor-village", "block": "D", "variety": "Chardonnay", "style": "old-oak", "vintages": [2017, 2018, 2021],
+      "quiz": ["frost", "yield", "acid", "summer"]
+    }
+  ]
+}

@@ -126,6 +126,36 @@ _Avoid_: Label, appellation, quality level
 The structured assessment of a Wine (appearance, nose, palate, conclusions). Every descriptor on it is linked to the decision or condition that caused it.
 _Avoid_: Tasting note, review, evaluation
 
+### Tasting practice
+
+**Tasting practice**:
+The study mode where the simulation pours Wines from real vintages for the player to assess, with or without an Estate.
+_Avoid_: Quiz mode, training, tasting game
+
+**Wine Fair**:
+The part of Tasting practice with themed Stands, each pouring a Flight.
+_Avoid_: Tasting event, expo
+
+**Stand**:
+One theme at the Wine Fair, hosted by an invented producer (e.g. "The 2016 frost").
+_Avoid_: Booth, level, challenge
+
+**Flight**:
+The Wines a Stand pours side by side.
+_Avoid_: Set, line-up, round
+
+**Your Tasting sheet**:
+The player's own assessment in the Tasting sheet's structure, marked against the Wine's Tasting sheet.
+_Avoid_: Tasting note, guess, answer sheet
+
+**Vintage card**:
+A card in the Cellar book for a vintage tasted at a Stand: its weather in numbers and, where sourced, what really happened.
+_Avoid_: Badge, collectible
+
+**Taster rank**:
+The player's progression in Tasting practice (Novice taster to Fair judge), earned only by marked answers.
+_Avoid_: Level, score
+
 ### Play modes
 
 The engine always simulates at full depth. The mode only changes what the player is shown and how certain it is.

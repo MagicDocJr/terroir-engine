@@ -1,0 +1,40 @@
+{
+  "about": "Real vintage notes shown in Tasting practice reveals and the Cellar book. Mirrors docs/science/vintage-notes.md: only rows with sources are shown; 'unverified' rows are kept here for completeness and never loaded. Paraphrased, not copied.",
+  "sources": {
+    "RIESLING-2003": { "title": "riesling.de, Jahrgang 2003 (secondary)", "url": "https://www.riesling.de/de/news/wein/jahrgang-2003-vollig-uberschatzt-/6_293.html" },
+    "WEINKENNER-2010": { "title": "weinkenner.de, Problematischer 2010er Jahrgang", "url": "https://www.weinkenner.de/problematischer-2010er-jahrgang-entsaeuern-auf-breiter-front/" },
+    "NIKOS-2010": { "title": "Gourmetwelten, Der Jahrgang 2010 im VDP", "url": "https://www.nikos-weinwelten.de/beitrag/wein_der_jahrgang_2010_im_vdp/" },
+    "DWI-2018": { "title": "Deutsches Weininstitut, Der Weinjahrgang 2018", "url": "https://www.deutscheweine.de/aktuelles/meldungen/details/news/detail/News/der-weinjahrgang-2018-in-den-anbaugebieten/" },
+    "DWI-2021": { "title": "Falstaff reporting the Deutsches Weininstitut, Weinjahrgang 2021", "url": "https://www.falstaff.com/de/news/fazit-so-war-der-weinjahrgang-2021-in-den-deutschen-anbaugebieten" },
+    "LETROIS": { "title": "Le Trois, Vendanges historiquement précoces en Bourgogne (secondary)", "url": "https://letrois.info/economie-social/vendanges-historiquement-precoces-en-bourgogne/" },
+    "DECANTER-2016": { "title": "Decanter, Burgundy 2016 harvest report", "url": "https://www.decanter.com/wine/wine-regions/burgundy-wine/burgundy-2016-harvest-report-337451/" },
+    "COATES-2016": { "title": "Clive Coates MW, 2016 Vintage", "url": "http://www.clive-coates.com/news/2016-vintage" },
+    "INSIDEBURGUNDY-2021": { "title": "Jasper Morris, Inside Burgundy, the 2021 vintage", "url": "https://insideburgundy.com/overview/2021-in-burgundy-an-introduction-to-the-2021-vintage/" },
+    "EURONEWS-2021": { "title": "Euronews, Burgundy harvest report (24 Sep 2021)", "url": "https://www.euronews.com/2021/09/24/burgundy-harvest-confirms-millesimus-horribilis-as-winemakers-say-there-really-isn-t-much-" },
+    "NVV-2011": { "title": "Napa Valley Vintners, Report on Harvest 2011", "url": "https://napavintners.com/downloads/2011-Napa-Valley-Harvest-Report.pdf" },
+    "NVR-2017": { "title": "Napa Valley Register, Promising Napa Valley vintage turns tragic as fires continue", "url": "https://napavalleyregister.com/community/star/news/local/promising-napa-valley-vintage-turns-tragic-as-fires-continue/article_a12dd97c-ce58-511f-a2c1-82358fbf1624.html" },
+    "USGS-2014": { "title": "USGS, M6.0 South Napa earthquake, 24 August 2014", "url": "https://www.usgs.gov/programs/earthquake-hazards/science/m60-south-napa-california-earthquake-august-24-2014" },
+    "PEER-2014": { "title": "PEER, South Napa earthquake reconnaissance report", "url": "https://peer.berkeley.edu/sites/default/files/spa-2014-napa-report.pdf" },
+    "WIKI-GLASSFIRE": { "title": "Glass Fire, Wikipedia", "url": "https://en.wikipedia.org/wiki/Glass_Fire" },
+    "WINEINSTITUTE-2022": { "title": "Wine Institute, Californian Vintners Report High Quality for 2022 Harvest", "url": "https://wineinstitute.org/press-releases/californian-vintners-report-high-quality-for-2022-harvest/" },
+    "NVV-2022": { "title": "Napa Valley Vintners, Napa Valley's 2022 Harvest: the Tale of Two Harvests", "url": "https://napavintners.com/press/press_release_detail.asp?ID_News=3624475" }
+  },
+  "notes": [
+    { "region": "mosel", "year": 2003, "note": "A heatwave summer gave very ripe, concentrated grapes. The berries shrivelled cleanly, so many Mosel, Saar and Ruwer estates made rare Beerenauslese and Trockenbeerenauslese. Heavy, rich, intense wines.", "sources": ["RIESLING-2003"] },
+    { "region": "mosel", "year": 2010, "note": "A tiny crop, 30–50 % below normal (about 40 hL/ha at Prädikat estates), with very high acidity. Many estates deacidified. The low yields gave dense wines.", "sources": ["WEINKENNER-2010", "NIKOS-2010"] },
+    { "region": "mosel", "year": 2018, "note": "A very hot, dry summer kept mildew away almost entirely. September rain came without rot thanks to cool nights and swelled a large crop. Mosel Riesling averaged about 85 °Oe; rich aromas, moderate acidity.", "sources": ["DWI-2018"] },
+    { "region": "mosel", "year": 2021, "note": "Cool and wet; downy mildew was hard to control on waterlogged soils. South-facing top sites did best: they reached about 95 °Oe while most of the harvest came in at 70–90 °Oe.", "sources": ["DWI-2021"] },
+    { "region": "cote-dor", "year": 2003, "note": "The heatwave vintage brought a historically early harvest. Rich, opulent wines.", "sources": ["LETROIS"] },
+    { "region": "cote-dor", "year": 2016, "note": "Frost on the nights of 26–27 April, the worst in the Côte d'Or since 1985, and unlike 1985 it reached the higher slopes too. Heavy losses: one famous Gevrey domaine lost two-thirds of its crop.", "sources": ["DECANTER-2016", "COATES-2016"] },
+    { "region": "cote-dor", "year": 2021, "note": "Temperatures plunged on 5 April, then three nights of hard frost from 6 to 9 April. Côte de Beaune whites were hit hardest, with losses around 80 % reported: France's worst agricultural frost since at least 1947.", "sources": ["INSIDEBURGUNDY-2021", "EURONEWS-2021"] },
+    { "region": "napa", "year": 2011, "note": "Rain into mid-June delayed bloom and disrupted fruit set (shatter in places), then a long, cool season and a late harvest with autumn storms. Yields 10–75 % below normal; elegant wines at lower alcohol, a Bordeaux-like Napa vintage.", "sources": ["NVV-2011"] },
+    { "region": "napa", "year": 2014, "note": "The South Napa earthquake (M6.0) struck at 3:20 a.m. on 24 August 2014. Stacked barrels toppled in many wineries; an estimated 5,000–6,000 barrels of wine were lost.", "sources": ["USGS-2014", "PEER-2014"] },
+    { "region": "napa", "year": 2017, "note": "A warm to hot season with extreme heat around Labor Day pushed picking early. Most of the crop was in when the wildfires broke out on 8 October; later lots were watched for smoke taint.", "sources": ["NVR-2017"] },
+    { "region": "napa", "year": 2020, "note": "The Glass Fire burned more than 67,000 acres and destroyed 1,555 structures in Napa County before it was contained on 20 October. Smoke taint defined late-picked fruit.", "sources": ["WIKI-GLASSFIRE"] },
+    { "region": "napa", "year": 2022, "note": "A Labor Day heat wave brought five days of triple-digit heat in early September, then mid-September rain. Many varieties ripened at once, compressing the harvest; strict selection was needed.", "sources": ["WINEINSTITUTE-2022", "NVV-2022"] },
+    { "region": "mosel", "year": 2005, "note": "", "sources": [], "unverified": true },
+    { "region": "mosel", "year": 2017, "note": "", "sources": [], "unverified": true },
+    { "region": "cote-dor", "year": 2019, "note": "", "sources": [], "unverified": true },
+    { "region": "cote-dor", "year": 2020, "note": "", "sources": [], "unverified": true }
+  ]
+}

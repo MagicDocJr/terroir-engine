@@ -353,7 +353,7 @@ public static class Snapshot
         };
     }
 
-    private static JsonObject WineObj(Wine w)
+    public static JsonObject WineObj(Wine w)
     {
         var s = w.Sheet!;
         return new JsonObject
