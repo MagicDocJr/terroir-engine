@@ -111,6 +111,8 @@ static func _ensure_globals() -> void:
 	Engine.set_meta("view3d_globals", true)
 	for n in ["wetness", "rain_amount", "wind_strength"]:
 		RenderingServer.global_shader_parameter_add(n, RenderingServer.GLOBAL_VAR_TYPE_FLOAT, 1.0 if n == "wind_strength" else 0.0)
+	RenderingServer.global_shader_parameter_add("wind_dir", RenderingServer.GLOBAL_VAR_TYPE_VEC2, Vector2(0.8, 0.6))
+	RenderingServer.global_shader_parameter_add("grass_tint", RenderingServer.GLOBAL_VAR_TYPE_VEC3, Vector3(0.56, 0.84, 0.40))
 
 
 # =============================================================================================== snapshot
@@ -503,6 +505,8 @@ func _build_world() -> void:
 	var t3 := Time.get_ticks_msec()
 	_build_scatter()
 	_build_groundcover()
+	grass_chunks.clear()                    # the old chunks went with the old world node
+	grass_centre = Vector2i(99999, 99999)
 	_build_neighbours()
 	_queue_warm()
 	_build_near_trees()
@@ -1108,6 +1112,7 @@ func _dress_season(doy: int) -> void:
 		tint = tint.lerp(Vector3(0.72, 0.82, 0.42), smoothstep(200.0, 240.0, doy) * (1.0 - smoothstep(280.0, 310.0, doy)) * 0.5)
 	if sm:
 		sm.set_shader_parameter("grass_tint", tint)
+	RenderingServer.global_shader_parameter_set("grass_tint", tint)
 	var g := mats.get("grass") as StandardMaterial3D
 	if g:
 		g.albedo_color = Color(tint.x * 1.1, tint.y * 1.05, tint.z * 1.4)
@@ -1116,6 +1121,20 @@ func _dress_season(doy: int) -> void:
 		if e["deciduous"]:
 			for lod in ["lod0", "lod1"]:
 				((e[lod] as Array)[1] as Node3D).visible = leafy
+	# and turn yellow-brown in the five weeks before they drop (look only)
+	var turn := clampf((doy - (LEAF_SEASON.y - 35)) / 35.0, 0.0, 1.0)
+	for kind in NEAR_TREES.get(region, []):
+		if not bool(kind[2]):
+			continue
+		for lod in 2:
+			var ms: Array = _near_tree_meshes(int(kind[0]), lod)
+			if ms.size() < 2:
+				continue
+			var lm: Mesh = ms[1]
+			for i in lm.get_surface_count():
+				var mat := lm.surface_get_material(i) as StandardMaterial3D
+				if mat:
+					mat.albedo_color = Color(1, 1, 1).lerp(Color(1.55, 0.95, 0.35), turn)
 	for plant in groundcover:                       # spring flowers only in their season (look only)
 		var win: Vector2i = GC_SEASON.get(plant, Vector2i(0, 366))
 		for mmi in groundcover[plant]:
@@ -1569,6 +1588,145 @@ func _build_near_trees() -> void:
 			placed.append(xf.origin)
 
 
+# Grass blades near the camera (look only): 6 m chunks built as the camera approaches (at most two per frame) and freed
+# behind it, where the ground is grassed: the alleys of grassed rows, the headlands and the verges (the same rule as
+# the grass tufts), none on the tracks, the yard or the neighbours' vines. The blades shrink away by 23 m.
+const GRASS_CHUNK := 6.0
+const GRASS_RING := 4                   # chunks each side of the camera's chunk
+const GRASS_PER_M2 := 26.0
+var grass_chunks := {}                  # Vector2i -> MultiMeshInstance3D (or null where no grass grows)
+var grass_mesh: ArrayMesh
+var grass_mat: ShaderMaterial
+var grass_centre := Vector2i(99999, 99999)
+
+
+func _grass_blades() -> ArrayMesh:
+	# three tapered, curved blades in a small clump; UV.y = height along the blade, COLOR = a little hue variation
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 9
+	for b in 6:
+		var yaw := b * TAU / 6.0 + rng.randf_range(-0.4, 0.4)
+		var dir := Vector3(cos(yaw), 0, sin(yaw))
+		var side := Vector3(-dir.z, 0, dir.x)
+		var h := rng.randf_range(0.11, 0.22)
+		var lean := rng.randf_range(0.03, 0.08)
+		var off := side * rng.randf_range(-0.04, 0.04) + dir * rng.randf_range(0.0, 0.03)
+		var col := Color(rng.randf_range(0.9, 1.1), rng.randf_range(0.95, 1.05), rng.randf_range(0.85, 1.0))
+		var prev_l := Vector3.ZERO
+		var prev_r := Vector3.ZERO
+		for k in 5:
+			var t := float(k) / 4.0
+			var w := 0.008 * (1.0 - t * 0.92)
+			var c := off + Vector3(0, h * t, 0) + dir * lean * t * t
+			var l := c - side * w
+			var r := c + side * w
+			if k > 0:
+				var n := side.cross(Vector3.UP).normalized()
+				for v in [[prev_l, t - 0.25], [prev_r, t - 0.25], [r, t], [prev_l, t - 0.25], [r, t], [l, t]]:
+					st.set_normal(n.lerp(Vector3.UP, 0.6).normalized())
+					st.set_color(col)
+					st.set_uv(Vector2(0.5, float(v[1])))
+					st.add_vertex(v[0])
+			prev_l = l
+			prev_r = r
+	return st.commit()
+
+
+func _grass_density(x: float, z: float) -> float:
+	var inside := x > band_x0 and x < band_x1 and absf(z) < hz - 1.0
+	var g := _grass_mask_outside(x, z)
+	if inside:
+		var blk := _block_at(x)
+		if blk.is_empty():
+			g = 0.9
+		elif blk["vsp"]:
+			g = 0.0 if _row_offset(blk, x, z) < 0.45 else 0.6
+		else:
+			g = 0.04                            # stake-trained steep slopes are bare slate between the vines
+	elif _neighbour_planted(x, z):
+		g *= 0.3
+	if gravel_rect.grow(0.5).has_point(Vector2(x, z)) or bld_rect.grow(1.0).has_point(Vector2(x, z)):
+		return 0.0
+	var td := track_dist(x, z)
+	if td > 0.3 and td < 1.3:
+		return 0.0
+	if river.x < INF and z > river.x - 2.0 and z < river.y:
+		return 0.0
+	return g
+
+
+func _grass_step() -> void:
+	if cam == null or world == null:
+		return
+	if grass_mesh == null:
+		grass_mesh = _grass_blades()
+		grass_mat = ShaderMaterial.new()
+		grass_mat.shader = load(SH + "grass_blade.gdshader")
+		grass_mesh.surface_set_material(0, grass_mat)
+	var p := cam.global_position
+	if p.y - H(p.x, p.z) > 25.0:            # drone height: no blades
+		return
+	var c := Vector2i(floori(p.x / GRASS_CHUNK), floori(p.z / GRASS_CHUNK))
+	if c != grass_centre:
+		grass_centre = c
+		for k in grass_chunks.keys():
+			if absi(k.x - c.x) > GRASS_RING + 1 or absi(k.y - c.y) > GRASS_RING + 1:
+				if grass_chunks[k] != null:
+					(grass_chunks[k] as Node).queue_free()
+				grass_chunks.erase(k)
+	var built := 0
+	for r in GRASS_RING + 1:                # nearest rings first
+		for dz in range(-r, r + 1):
+			for dx in range(-r, r + 1):
+				if maxi(absi(dx), absi(dz)) != r:
+					continue
+				var k := Vector2i(c.x + dx, c.y + dz)
+				if grass_chunks.has(k):
+					continue
+				grass_chunks[k] = _grass_chunk(k)
+				built += 1
+				if built >= 2:
+					return
+
+
+func _grass_chunk(k: Vector2i) -> MultiMeshInstance3D:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(k)
+	var x0 := k.x * GRASS_CHUNK
+	var z0 := k.y * GRASS_CHUNK
+	var xfs := []
+	var n := int(GRASS_CHUNK * GRASS_CHUNK * GRASS_PER_M2)
+	for i in n:
+		var x := x0 + rng.randf() * GRASS_CHUNK
+		var z := z0 + rng.randf() * GRASS_CHUNK
+		if rng.randf() > _grass_density(x, z):
+			continue
+		var s := rng.randf_range(0.7, 1.3)
+		xfs.append(Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s, s * rng.randf_range(0.8, 1.2), s)), Vector3(x, H(x, z) - 0.01, z)))
+	if xfs.is_empty():
+		return null
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = grass_mesh
+	mm.instance_count = xfs.size()
+	var centre := Vector3(x0 + GRASS_CHUNK / 2.0, 0, z0 + GRASS_CHUNK / 2.0)
+	centre.y = H(centre.x, centre.z)
+	for i in xfs.size():
+		var xf: Transform3D = xfs[i]
+		xf.origin -= centre
+		mm.set_instance_transform(i, xf)
+	var mi := MultiMeshInstance3D.new()
+	mi.multimesh = mm
+	mi.position = centre
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.visibility_range_end = 26.0
+	mi.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
+	world.add_child(mi)
+	return mi
+
+
 func _block_at(x: float) -> Dictionary:
 	for blk in blocks:
 		if x >= blk["x0"] and x <= blk["x1"]:
@@ -1779,6 +1937,7 @@ func _apply_weather() -> void:
 		sky_now = sky_target.duplicate()
 	wind_vec = Vector2(cos(float(doy) * 1.7), sin(float(doy) * 1.7)) * clampf(wind / 14.0, 0.3, 3.0)
 	cloud_uv = Vector2(float(doy) * 3.7, float(doy) * 1.3)          # each day its own clouds
+	RenderingServer.global_shader_parameter_set("wind_dir", wind_vec.normalized() if wind_vec.length() > 0.01 else Vector2(0.8, 0.6))
 	sky_mat.set_shader_parameter("cloud_drift", wind_vec * 0.004)
 	day_doy = doy
 	weather_cloud = cloud
@@ -1966,6 +2125,7 @@ func _build_mist_layer() -> void:
 
 
 func _process(_delta: float) -> void:
+	_grass_step()
 	if not swap_queue.is_empty():
 		_swap_step()
 	elif not warm_queue.is_empty():

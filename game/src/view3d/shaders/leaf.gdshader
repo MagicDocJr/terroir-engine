@@ -17,6 +17,7 @@ uniform int variety_cell = 0;                  // 0 Riesling, 1 Chardonnay, 2 Pi
 uniform float normal_strength = 0.45;
 global uniform float wetness;
 global uniform float wind_strength;
+global uniform vec2 wind_dir;
 uniform vec4 leaf_state = vec4(0.0);
 uniform vec4 leaf_state2 = vec4(0.0);
 
@@ -31,6 +32,14 @@ float vnoise(vec2 p) {
 	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 
+// travelling gusts across the Block (shared with grass_blade.gdshader)
+float gust(vec2 p) {
+	float t = TIME;
+	float a = sin(dot(p, wind_dir) * 0.18 - t * 1.6) * 0.5 + 0.5;
+	float b = sin(dot(p, vec2(-wind_dir.y, wind_dir.x)) * 0.07 + t * 0.37) * 0.5 + 0.5;
+	return 0.45 + 0.55 * a * (0.6 + 0.4 * b);
+}
+
 void vertex() {
 	v_id = UV2.x;
 	v_frac = UV2.y;
@@ -41,9 +50,11 @@ void vertex() {
 	vec3 w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	float h = clamp(VERTEX.y - 0.6, 0.0, 1.5);
 	float ph = dot(w.xz, vec2(0.7, 0.4));
-	float ws = wind * wind_strength;
-	VERTEX.x += ws * h * 0.012 * sin(TIME * (1.7 + ws * 0.6) + ph);
-	VERTEX.z += ws * h * 0.008 * sin(TIME * (2.3 + ws * 0.8) + ph * 1.3);
+	float ws = wind * wind_strength * gust(w.xz) * 1.4;
+	vec3 wd = inverse(mat3(MODEL_MATRIX)) * vec3(wind_dir.x, 0.0, wind_dir.y);
+	VERTEX += wd * ws * h * 0.010 * (0.6 + 0.4 * sin(TIME * (1.7 + ws * 0.6) + ph));
+	VERTEX.x += ws * h * 0.006 * sin(TIME * (2.9 + ws * 0.6) + ph * 1.7);
+	VERTEX.z += ws * h * 0.004 * sin(TIME * (2.3 + ws * 0.8) + ph * 1.3);
 	VERTEX += NORMAL * ws * 0.004 * sin(TIME * 6.0 + ph * 5.0);
 	// severe water stress: blades hang (tip drops relative to the petiole)
 	VERTEX.y -= leaf_state2.x * UV.y * UV.y * 0.05;

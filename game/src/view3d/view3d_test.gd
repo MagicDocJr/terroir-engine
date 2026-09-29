@@ -1083,6 +1083,30 @@ func _world_test() -> void:
 			view.set_camera(far, p + Vector3(0, 3.0, 0))
 			await _frames(120)
 			await _save_shot("world_trees_%s_far" % region)
+	# deciduous near trees turn yellow-brown in October, before they drop
+	_look_game("mosel")
+	Sim.Advance(283, false)                          # ≈ 10 October
+	snap = _snap()
+	view.apply_snapshot(snap)
+	await _frames(3)
+	var tint := Color.WHITE
+	var ms: Array = vy.call("_near_tree_meshes", 4, 0)
+	if ms.size() > 1:
+		var m := (ms[1] as Mesh).surface_get_material(0) as StandardMaterial3D
+		if m: tint = m.albedo_color
+	var autumn_ok := tint.b < 0.8 and tint.r > 1.1
+	print("WORLDTEST autumn_trees %s (leaf tint %s on %s)" % ["ok" if autumn_ok else "FAIL", tint, snap["date"]])
+	ok = ok and autumn_ok
+	if not "--checks" in OS.get_cmdline_user_args():
+		var trees: Array = vy.get("near_trees")
+		if not trees.is_empty():
+			var p: Vector3 = trees[0]["pos"]
+			var eye := p + Vector3(12.0, 0.0, 6.0)
+			eye.y = float(vy.call("ground_height", eye.x, eye.z)) + 1.6
+			view.set_view("vineyard")
+			view.set_camera(eye, p + Vector3(0, 3.0, 0))
+			await _frames(120)
+			await _save_shot("world_trees_mosel_october")
 	# the working gear in the yard and the cellar's bottle shelf (Côte d'Or: candlelit cellar by default)
 	_look_game("cote-dor")
 	snap = _snap()
