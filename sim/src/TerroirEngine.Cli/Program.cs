@@ -157,6 +157,19 @@ if (cmd == "play")
     var json = TerroirEngine.Game.Snapshot.Json(g); Console.WriteLine($"Snapshot JSON {json.Length / 1024} KB");
 }
 
+if (cmd == "pour")
+{
+    // pour <plotId> <vintage> [block|-] [variety|-] [style|-] [seed]: one Tasting-practice pour, timed
+    string? Arg(int i) => args.Length > i && args[i] != "-" ? args[i] : null;
+    var spec = new TerroirEngine.Tasting.Practice.PourSpec(args[1], int.Parse(args[2]), Arg(3), Arg(4)?.Replace('_', ' '), Arg(5));
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+    var p = TerroirEngine.Tasting.Practice.TastingLab.Pour(data, spec, args.Length > 6 ? int.Parse(args[6]) : 1);
+    var c = p.Context;
+    Console.WriteLine($"{c.Producer} · {c.Variety} {c.Vintage} ({c.PlotName} {c.BlockId}) · style {c.StyleId} · {sw.ElapsedMilliseconds} ms");
+    Console.WriteLine($"  GDD {c.Gdd:0} · summer Tmax {c.SummerTmax} · budburst {c.Budburst} · frost {c.FrostLossPct:0} % · harvest {c.HarvestDate} {c.HarvestOe:0} °Oe TA {c.HarvestTa:0.0} pH {c.HarvestPh:0.00} · rain before harvest {c.HarvestRainMm} mm · yield {c.YieldHlHa:0} hL/ha · tasted {c.TastedOn} ({c.AgeYears} y)");
+    Console.WriteLine($"  {p.Wine.Legal!.Label} · {p.Sheet.Quality} · {string.Join(" / ", p.Sheet.Palate.Select(x => x.Attribute + " " + x.Level))}");
+}
+
 if (cmd == "yieldcheck")
 {
     // yieldcheck <plotId> <plantingYear> [vintages]: yield components per Block at harvest (hand-picked at the harvest-window sugar + 15 g/L)
