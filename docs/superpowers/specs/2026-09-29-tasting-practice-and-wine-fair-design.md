@@ -72,7 +72,8 @@ a timed exam mode; a walkable 3D fair hall; sharing results.
   vintage had the hottest summer, which lost crop to frost and when, why one Wine is lower in acidity, which Wine
   was picked first. Answers come only from simulated or recorded data.
 - **Reveal:** the Tasting sheet beside the player's, item by item, with the "because" lines and a mark per item; the
-  quiz answers with their evidence (e.g. "2003: 1 540 growing-degree days, the highest of 1995–2025 in the record").
+  quiz answers with their evidence (e.g. "2003: the most growing-degree days of 1995–2025 in the record"); and the
+  sourced real vintage note where one exists (§8).
 
 ## 6. Marking
 
@@ -98,8 +99,15 @@ a timed exam mode; a walkable 3D fair hall; sharing results.
 
 - Tasting terms are the standard systematic-approach vocabulary; the notes come from our own cited model
   (`docs/science/tasting-sheet.md`, `aroma-and-faults.md`). Nothing is copied from the WSET books.
-- Vintage facts come from the ERA5 weather record already cited in `docs/science/weather-and-soil.md`; quiz
+- Vintage facts come from the ERA5 weather record already cited in `docs/science/weather-and-climate.md`; quiz
   answers quote the numbers.
+- **Real vintage notes:** where `docs/science/vintage-notes.md` has a sourced note for a stand's vintage (e.g. Mosel
+  2003, Côte d'Or 2016 frost), the reveal shows it as "what really happened" with its source, beside the simulated
+  Wine. `UNVERIFIED` notes are never shown. A difference between the note and the simulation is shown honestly (it
+  is a calibration signal, not something to hide).
+- **No future knowledge (ADR 0002):** opened from the title screen, every vintage 1995–2025 can be poured; opened
+  from inside a game, only vintages whose harvest has already happened on that game's Timeline (later stands show as
+  locked until then).
 - Labelled game simplifications: invented producers, scripted cellar styles, the tasting-age cap, the fault rate.
 
 ## 9. Testing
