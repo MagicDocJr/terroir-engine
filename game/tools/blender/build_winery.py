@@ -26,6 +26,8 @@ C.MAT.update({
     "hall_floor":   ((1.0, 1.0, 1.0), 0.75, False),
     "hall_wall":    ((1.0, 1.0, 1.0), 0.90, False),
     "hall_steel":   ((0.22, 0.23, 0.25), 0.50, True),
+    "hall_beam":    ((0.22, 0.23, 0.25), 0.50, True),    # roof trusses: own material so a Winery look can re-skin them alone
+    "hall_ceiling": ((1.0, 1.0, 1.0), 0.90, False),      # ceiling: own material (plaster or timber look)
     "window_glass": ((0.60, 0.70, 0.75), 0.05, True),
     "grate":        ((0.30, 0.30, 0.31), 0.50, True),
     "tank_steel":   ((0.78, 0.78, 0.78), 0.25, False),
@@ -457,7 +459,7 @@ def floor_rect(acc, x0, x1, z0, z1, step=0.5):
 def build_hall():
     x0, x1, z0, z1, hh = HALL["x0"], HALL["x1"], HALL["z0"], HALL["z1"], HALL["h"]
     P = {"hall_floor": Acc(), "hall_wall": Acc(), "hall_steel": Acc(), "window_glass": Acc(), "grate": Acc(),
-         "cellar_wall": Acc(), "cellar_floor": Acc(), "rail": Acc()}
+         "cellar_wall": Acc(), "cellar_floor": Acc(), "rail": Acc(), "hall_beam": Acc(), "hall_ceiling": Acc()}
     sx0, sx1, hz0 = ST["x0"], ST["x1"], ST["hole_z0"]
     # floor (with the stairwell opening and the drain channel)
     for (a, b, c, d) in ((sx1, x1, 0.12, z1), (x0, sx1, ST["z_top"], z1), (x0, sx0, 0.12, ST["z_top"]),
@@ -475,16 +477,16 @@ def build_hall():
         rect(P["window_glass"], "z", z1 + 0.08, a, b, SWIN_Y[0], SWIN_Y[1], -1)
     rect(P["hall_wall"], "x", x0, z0, z1, 0, hh, +1)
     wall(P["hall_wall"], "x", x1, z0, z1, 0, hh, [(DOOR_Z[0], DOOR_Z[1], 0, DOOR_TOP)], -1)
-    rect(P["hall_wall"], "y", hh, x0, x1, z0, z1, -1)
+    rect(P["hall_ceiling"], "y", hh, x0, x1, z0, z1, -1)
     # roller door: housing drum above the opening and guide rails
     box(P["hall_steel"], (x1 - 0.5, DOOR_TOP, DOOR_Z[0] - 0.2), (x1, DOOR_TOP + 0.5, DOOR_Z[1] + 0.2))
     for zr in (DOOR_Z[0] - 0.1, DOOR_Z[1]):
         box(P["hall_steel"], (x1 - 0.1, 0.0, zr), (x1, DOOR_TOP, zr + 0.1))
     # steel roof trusses (I-beams) + a catwalk over the tank aisle
     for x in (-10.0, -6.0, -2.0, 2.0, 6.0, 10.0):
-        box(P["hall_steel"], (x - 0.08, 6.62, z0), (x + 0.08, 6.64, z1))
-        box(P["hall_steel"], (x - 0.08, 6.96, z0), (x + 0.08, 6.98, z1))
-        box(P["hall_steel"], (x - 0.006, 6.64, z0), (x + 0.006, 6.96, z1))
+        box(P["hall_beam"], (x - 0.08, 6.62, z0), (x + 0.08, 6.64, z1))
+        box(P["hall_beam"], (x - 0.08, 6.96, z0), (x + 0.08, 6.98, z1))
+        box(P["hall_beam"], (x - 0.006, 6.64, z0), (x + 0.006, 6.96, z1))
     cw0, cw1 = -9.0, 6.0
     box(P["grate"], (cw0, 3.72, -0.6), (cw1, 3.76, 0.6))
     for zr in (-0.6, 0.6):

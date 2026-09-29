@@ -57,7 +57,7 @@ default (★). Nothing here affects the simulation.
 |---|---|---|---|---|---|
 | walls | render · slate · limestone · brick · redwood | slate | limestone | redwood | surface override on hall.glb's `hall_wall` (triplanar in the mesh frame, so blocks keep their size) |
 | floor | concrete · stone · slate · terracotta · herringbone | slate | stone | terracotta | override on `hall_floor` |
-| ceiling | steel · oak | oak | oak | oak | oak: `dark_wood` on the whole `hall_steel` surface (trusses, but also the catwalk posts and rails, the roller-door rails and the stair nosings: one material in hall.glb) and on a ceiling plane at 6.99 m, just above the truss chords |
+| ceiling | steel · oak | oak | oak | oak | oak: `dark_wood` on hall.glb's `hall_beam` (the roof trusses) and `hall_ceiling` surfaces; the catwalk, rails and stair nosings stay steel |
 | lights | workshop · warm · chandelier | warm | chandelier | warm | the 12 spot colours/energies (kept near 3000 K so the steel tanks still read as stainless); chandelier hides the pendants and hangs a `lantern_chandelier_01` at each pendant point |
 | corner | none · table · lounge | table | table | lounge | a prop group east of the last tank pair by the south wall (`CORNER`) |
 | plants | off · on | on | on | on | pots by the roller door and the corner; planter boxes along the south wall outside |

@@ -49,9 +49,8 @@ var sign_label: Label3D
 var tractors := {}                 # node name -> Node3D (one shown, per Region)
 # the Winery look (winery_style.gd; cosmetic): hall surfaces, lights and prop groups swapped by apply_style
 var style := {}                    # the look applied now (winery_style.gd resolve)
-var hall_mesh: MeshInstance3D      # hall.glb: walls (+ ceiling), floor, steel trusses and stairs as surfaces
+var hall_mesh: MeshInstance3D      # hall.glb: walls, ceiling, floor, roof beams and the other steel as surfaces
 var hall_surf := {}                # material name -> surface index on hall_mesh
-var ceiling: MeshInstance3D        # a ceiling under the roof (the plaster or oak look)
 var hall_spots: Array[SpotLight3D] = []
 var lamp_props: Array[Node3D] = [] # the industrial pendants (hidden when the chandeliers hang)
 var groups := {}                   # prop group name -> Node3D, built on first use
@@ -308,9 +307,11 @@ func _mat(name: String) -> Material:
 			m = A.pbr("concrete_floor_worn_001", 0.33, Color(0.74, 0.75, 0.77), 0.7)
 		"hall_wall":
 			m = A.pbr("grey_plaster_02", 0.35, Color(0.80, 0.82, 0.86), 1.0)
-		"hall_steel":
+		"hall_steel", "hall_beam":
 			m = StandardMaterial3D.new(); m.albedo_color = Color(0.20, 0.23, 0.27); m.metallic = 0.6; m.roughness = 0.45
 			m.cull_mode = BaseMaterial3D.CULL_DISABLED
+		"hall_ceiling":
+			m = A.pbr("grey_plaster_02", 0.35, Color(0.80, 0.82, 0.86), 1.0)
 		"rail":
 			m = StandardMaterial3D.new(); m.albedo_color = Color(0.62, 0.63, 0.64); m.metallic = 0.85; m.roughness = 0.4
 		"grate":
@@ -632,19 +633,9 @@ func _build_hall() -> void:
 	if not hm.is_empty():
 		hall_mesh = hm[0]
 		for i in hall_mesh.mesh.get_surface_count():
-			for k in ["hall_wall", "hall_floor", "hall_steel"]:
+			for k in ["hall_wall", "hall_floor", "hall_steel", "hall_beam", "hall_ceiling"]:
 				if hall_mesh.mesh.surface_get_material(i) == mats.get(k):
 					hall_surf[k] = i
-	var dm: Dictionary = Hd["dims"]
-	ceiling = MeshInstance3D.new()
-	var cpm := PlaneMesh.new(); cpm.size = Vector2(float(dm["x1"]) - float(dm["x0"]), float(dm["z1"]) - float(dm["z0"]))
-	ceiling.mesh = cpm
-	# above the truss top chords and pendant tops (6.98) and below the hall's own ceiling (7.0): no coplanar faces
-	ceiling.transform = Transform3D(Basis(Vector3.RIGHT, PI), Vector3((float(dm["x0"]) + float(dm["x1"])) / 2.0, float(dm["h"]) - 0.01, (float(dm["z0"]) + float(dm["z1"])) / 2.0))
-	ceiling.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	ceiling.gi_mode = GeometryInstance3D.GI_MODE_STATIC
-	ceiling.material_override = _look_mat("grey_plaster_02", 0.35, Color(0.80, 0.82, 0.86))
-	add_child(ceiling)
 	var tank_mesh := _with_tangents(_prep("models/" + String(Hd["tankModel"])))
 	var info: Dictionary = Hd["tankInfo"]
 	var pnl: Dictionary = info["panel"]
@@ -859,9 +850,10 @@ func apply_style(s: Dictionary) -> bool:
 			hall_mesh.set_surface_override_material(int(hall_surf["hall_wall"]), null if w.is_empty() else _look_mat(w[0], w[1], w[2]))
 		if hall_surf.has("hall_floor"):
 			hall_mesh.set_surface_override_material(int(hall_surf["hall_floor"]), null if f.is_empty() else _look_mat(f[0], f[1], f[2]))
-		if hall_surf.has("hall_steel"):
-			hall_mesh.set_surface_override_material(int(hall_surf["hall_steel"]), _look_mat("dark_wood", 0.9, Color(0.62, 0.45, 0.32), "beam") if oak else null)
-		ceiling.material_override = _look_mat("dark_wood", 0.45, Color(0.78, 0.60, 0.44), "ceiling") if oak else _look_mat("grey_plaster_02", 0.35, Color(0.80, 0.82, 0.86))
+		if hall_surf.has("hall_beam"):
+			hall_mesh.set_surface_override_material(int(hall_surf["hall_beam"]), _look_mat("dark_wood", 0.9, Color(0.62, 0.45, 0.32), "beam") if oak else null)
+		if hall_surf.has("hall_ceiling"):
+			hall_mesh.set_surface_override_material(int(hall_surf["hall_ceiling"]), _look_mat("dark_wood", 0.45, Color(0.78, 0.60, 0.44), "ceiling") if oak else null)
 	var lights := String(s.get("lights", "workshop"))
 	for sp in hall_spots:
 		sp.light_color = (sp.get_meta("base_color") as Color) if lights == "workshop" else (WARM if lights == "warm" else CHANDELIER)
