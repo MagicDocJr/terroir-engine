@@ -33,7 +33,7 @@ Things deliberately left out of the MVP, to deep-dive once the core loop is lock
 
 ## Depth
 - Fuller legal rulebooks per Region (the MVP rulebooks are simplified, and must be built so they can be extended)
-- Full economics (loans, market prices, distribution, reputation)
+- Full economics (loans, market prices, distribution, reputation). **Not planned:** the owner decided (2026-09-29) that the game is a WSET 3/4 study tool, so economics stays a light constraint (bottled Wine sells on bottling day at its category-and-quality price). A sales design with channels, offers and reputation was drafted and set aside.
 - Detailed Programmes instead of Low/Medium/High tiers, e.g. spray product choice (contact vs systemic, organic copper/sulphur vs conventional), timing and water volume
 - Hard mode: lab samples cost money and come with sampling error, and Diploma-level detail is exposed
 - Exam-style blind tasting: the player fills in the tasting sheet and is graded against the engine's profile
