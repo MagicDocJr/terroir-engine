@@ -534,7 +534,7 @@ func notify(text: String, ok := false) -> void:
 # ------------------------------------------------------------------ capture (plays a real game; also the UI smoke test)
 ## The current screen scrolled to its end (panels below the fold, e.g. the Winery look).
 func _shot_scrolled_to_end(name: String) -> void:
-	var sc: ScrollContainer = host.find_children("*", "ScrollContainer", true, false).front() if not host.find_children("*", "ScrollContainer", true, false).is_empty() else null
+	var sc := _find_scroll(host)
 	if sc:
 		for f in 3: await get_tree().process_frame
 		sc.scroll_vertical = int(sc.get_v_scroll_bar().max_value)

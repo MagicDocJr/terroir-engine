@@ -57,17 +57,18 @@ default (★). Nothing here affects the simulation.
 |---|---|---|---|---|---|
 | walls | render · slate · limestone · brick · redwood | slate | limestone | redwood | surface override on hall.glb's `hall_wall` (triplanar in the mesh frame, so blocks keep their size) |
 | floor | concrete · stone · slate · terracotta · herringbone | slate | stone | terracotta | override on `hall_floor` |
-| ceiling | steel · oak | oak | oak | oak | oak: `dark_wood` on the `hall_steel` surface (trusses, catwalk posts, stairs) and on a ceiling plane under the roof |
-| lights | workshop · warm · chandelier | warm | chandelier | warm | the 12 spot colours/energies; chandelier hides the pendants and hangs six `lantern_chandelier_01` over the aisle, each with an unshadowed glow |
+| ceiling | steel · oak | oak | oak | oak | oak: `dark_wood` on the whole `hall_steel` surface (trusses, but also the catwalk posts and rails, the roller-door rails and the stair nosings: one material in hall.glb) and on a ceiling plane at 6.99 m, just above the truss chords |
+| lights | workshop · warm · chandelier | warm | chandelier | warm | the 12 spot colours/energies (kept near 3000 K so the steel tanks still read as stainless); chandelier hides the pendants and hangs a `lantern_chandelier_01` at each pendant point |
 | corner | none · table · lounge | table | table | lounge | a prop group east of the last tank pair by the south wall (`CORNER`) |
 | plants | off · on | on | on | on | pots by the roller door and the corner; planter boxes along the south wall outside |
 | outside | off · on | on | on | on | a bench and two lanterns at the east gable; the office windows glow |
 | cellar | off · on | on | on | on | a candlestick on every fourth top-tier barrique, lanterns at both ends, a warm glow every 6 m |
 
+Furniture, plants and the bench are solid (a StaticBody3D of boxes per group, disabled while the group is hidden).
 Prop groups are built the first time they are shown and then only hidden or shown, so switching back and forth never
 duplicates props or lights. Their glows join the room's light list, so they switch off with the room (`set_active`); none
-casts shadows. The hall GI is re-baked only when walls, floor or ceiling change. `view3d.apply_snapshot` applies the look
-before a GI bake, so the first open bakes once. Test: `scripts/winerylook.sh` (checks + `game/shots/3d_look_*.png`),
+casts shadows. The hall GI is re-baked only when walls, floor or ceiling change. `view3d.apply_snapshot` places the building and
+applies the look before any GI bake, so a first open or a Plot change bakes once. Test: `scripts/winerylook.sh` (checks + `game/shots/3d_look_*.png`),
 `scripts/winerylook.sh --perf` (hall frame rate, draw calls and primitives, regional look vs the plain one). Measured
 2026-09-29 on the hall camera: Mosel 303 → 334 draw calls, 3.72 → 4.32 M primitives; Côte d'Or 232 → 316, 3.05 → 3.52 M;
 frame rate unchanged (but the display was asleep, capping it near 11 fps: recheck with the screen on). Heavy scans are

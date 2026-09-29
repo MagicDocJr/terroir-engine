@@ -790,6 +790,30 @@ func _winery_look(perf_mode: bool) -> void:
 	var dup_ok: bool = counts[1] == counts[3] and counts[2] == counts[4]
 	print("WINERYLOOK restyle_same_node_count %s %s" % ["ok" if dup_ok else "FAIL", str(counts)])
 	ok = ok and dup_ok
+	# the ceiling plane lies above the truss top chords (no coplanar faces), and the furniture is solid only while shown
+	var hm: MeshInstance3D = wy.get("hall_mesh")
+	var steel_top := -INF
+	var si: int = int((wy.get("hall_surf") as Dictionary).get("hall_steel", -1))
+	if si >= 0:
+		for v in hm.mesh.surface_get_arrays(si)[Mesh.ARRAY_VERTEX]:
+			steel_top = maxf(steel_top, (v as Vector3).y)
+	var ceil_y: float = (wy.get("ceiling") as Node3D).position.y
+	var ceil_ok: bool = si >= 0 and ceil_y > steel_top + 0.005
+	print("WINERYLOOK ceiling_above_trusses %s (ceiling %.3f, steel top %.3f)" % ["ok" if ceil_ok else "FAIL", ceil_y, steel_top])
+	ok = ok and ceil_ok
+	var solid := func() -> bool:
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		var q := PhysicsPointQueryParameters3D.new()
+		q.position = wy.to_global(Vector3(7.7, 0.5, 5.55))          # the tasting table (winery.gd CORNER)
+		return not wy.get_world_3d().direct_space_state.intersect_point(q).is_empty()
+	_decor({"corner": "table"}); snap = _snap(); view.apply_snapshot(snap)
+	var shown_solid: bool = await solid.call()
+	_decor({"corner": "none"}); snap = _snap(); view.apply_snapshot(snap)
+	var hidden_solid: bool = await solid.call()
+	var col_ok: bool = shown_solid and not hidden_solid
+	print("WINERYLOOK furniture_collides_only_when_shown %s (shown %s, hidden %s)" % ["ok" if col_ok else "FAIL", shown_solid, hidden_solid])
+	ok = ok and col_ok
 	# each Region's own look, then two mixes
 	for region in ["mosel", "cote-dor", "napa"]:
 		_look_game(region)

@@ -176,15 +176,17 @@ func apply_snapshot(snap: Dictionary) -> void:
 		return
 	vineyard.call("apply_snapshot", snap)
 	winery.call("build")
-	winery.call("set_region", String(snap.get("region", {}).get("id", "mosel")))
-	# the Winery look, before a GI bake so the first bake already sees it (winery_style.gd; cosmetic)
-	winery.call("apply_style", WineryStyle.resolve(String(snap.get("region", {}).get("id", "")), snap.get("decor", {})))
+	var region := String(snap.get("region", {}).get("id", "mosel"))
+	winery.call("set_region", region)
 	var moved := false
 	if String(vineyard.get("plot_key")) != placed_key:
 		placed_key = String(vineyard.get("plot_key"))
 		winery.position = vineyard.call("building_origin")
-		winery.call("bake_gi")
 		moved = true
+	# the Winery look (winery_style.gd; cosmetic) before the GI bake, so one bake sees both the new place and the look
+	var baked_now: bool = winery.call("apply_style", WineryStyle.resolve(region, snap.get("decor", {})))
+	if moved and not baked_now:
+		winery.call("bake_gi")
 	winery.call("apply_snapshot", snap)
 	winery.call("sync_hall_env", vineyard.get("env"))
 	if workers.get("vy") == null:

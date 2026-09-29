@@ -56,6 +56,8 @@ Found while building or reviewing; not urgent, but not to be forgotten. Remove a
 - Two Vintages' Lots side by side in the Winery were not yet seen in a screenshot (the Lot tabs now wrap, so eight or more Lots fit).
 - Saves made before the tasks-in-3D change: the new task messages shift the Inbox message ids, so an old save can show a few messages as unread again (read marks are stored by id). Harmless; no migration written.
 - The Tasks strip's "at véraison" box takes effect with the next option click (it sends nothing by itself); consider sending the plan with the new timing when it is toggled.
+- An `assets3d/` folder fetched before the Winery look lacks its props and textures: the 3D view then shows grey walls, empty prop groups and floating candle glows with only a console warning. Rerun `game/tools/fetch_assets3d.py`; consider a HUD hint or adding one new asset to `assets3d.gd available()`.
+- The hall frame-time gate for the Winery look (within 10 %) is still to be measured with the display on (`scripts/winerylook.sh --perf`); overnight the display cap held every run near 11 fps. If slow: drop the four `potted_plant_02` (70k triangles each) and the cellar's `Lantern_01` (34k).
 - The Windows build is unsigned: SmartScreen warns on first start, and a PC with Application Control may block it.
 - Windows `dotnet` cannot build the game (Application Control blocks Godot's source generators); build through WSL (`scripts/build-game.sh`).
 - The tasting review page for the WSET L3 reviewer is still empty: https://claude.ai/artifact/PqqJ2CGJXf6qUj3Wvtm9HD

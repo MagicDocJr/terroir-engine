@@ -40,7 +40,7 @@ static func build(D: Dictionary, shell) -> Control:
 	var reset := UI.button("Reset to the regional look", false, 14)
 	reset.disabled = look == defaults
 	reset.pressed.connect(func():
-		for k in defaults: Sim.Command("decor", k, String(defaults[k]), "", "", "")
+		for k in defaults: Sim.Command("decor", k, "", "", "", "")     # "" = follow the Region's default (resolve ignores it)
 		shell.refresh()
 		shell.notify("Winery look: back to the Region's usual look.", true))
 	row.add_child(reset)
