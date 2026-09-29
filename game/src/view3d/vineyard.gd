@@ -483,6 +483,7 @@ func _build_world() -> void:
 	_build_scatter()
 	_build_groundcover()
 	_build_neighbours()
+	_build_near_trees()
 	_build_trees()
 	if river.x < INF:
 		_build_river()
@@ -1087,6 +1088,11 @@ func _dress_season(doy: int) -> void:
 	var g := mats.get("grass") as StandardMaterial3D
 	if g:
 		g.albedo_color = Color(tint.x * 1.1, tint.y * 1.05, tint.z * 1.4)
+	var leafy := doy >= LEAF_SEASON.x and doy <= LEAF_SEASON.y
+	for e in near_trees:                            # deciduous near trees stand bare in winter (look only)
+		if e["deciduous"]:
+			for lod in ["lod0", "lod1"]:
+				((e[lod] as Array)[1] as Node3D).visible = leafy
 	for plant in groundcover:                       # spring flowers only in their season (look only)
 		var win: Vector2i = GC_SEASON.get(plant, Vector2i(0, 366))
 		for mmi in groundcover[plant]:
@@ -1434,6 +1440,110 @@ func _build_groundcover() -> void:
 		if not groundcover.has(parts[0]):
 			groundcover[parts[0]] = []
 		groundcover[parts[0]].append_array(_add_chunked(per[key], mesh, 26.0, false))
+
+
+# Near trees (look only): trees and shrubs in hedgerow clusters 10–55 m from the Plot, where the far tree cards
+# (≥ 70 m) leave the view bare. Poly Haven CC0 scans thinned by blender/build_trees3d.py into a near (lod0) and a mid
+# (lod1) model; each tree has its own MeshInstance3Ds with visibility ranges, so the switch happens per tree.
+# Napa: wind-sculpted evergreen "coastal" trees (they read like the olive trees kept around Napa wineries); Mosel and
+# Côte d'Or: a slender deciduous broadleaf, bare from leaf fall to leaf-out (look only).
+const NEAR_TREES := {                # region -> [[model, scale range, deciduous], …]
+	"napa": [[1, Vector2(1.5, 2.0), false], [2, Vector2(1.2, 1.6), false], [3, Vector2(1.1, 1.5), false]],
+	"mosel": [[4, Vector2(2.2, 2.9), true]],
+	"cote-dor": [[4, Vector2(2.2, 2.9), true]],
+}
+const NEAR_TREE_LOD := 45.0
+const LEAF_SEASON := Vector2i(110, 305)   # deciduous leaves shown between these days of the year (look only)
+var near_trees := []              # [{pos, lod0: [bark, leaves], lod1: [bark, leaves], deciduous}]
+
+
+## [bark mesh, leaves mesh] of a near-tree model; leaves get alpha scissor (sorted blending flickers in a canopy).
+func _near_tree_meshes(kind: int, lod: int) -> Array:
+	var key := "near_tree_%d_%d" % [kind, lod]
+	if mats.has(key):
+		return mats[key]
+	var rel := "models/tree3d_%d_lod%d.glb" % [kind, lod]
+	if not A.exists(rel):
+		return []
+	var root := A.scene(rel)
+	var bark := ArrayMesh.new()
+	var leaves := ArrayMesh.new()
+	for mi in A.meshes(root):
+		var m: Mesh = (mi as MeshInstance3D).mesh
+		var is_leaf := String(mi.name).ends_with("_leaves")
+		for i in m.get_surface_count():
+			var mat := m.surface_get_material(i) as StandardMaterial3D
+			if mat and is_leaf:
+				mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR
+				mat.alpha_scissor_threshold = 0.4
+				mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+				mat.roughness = 1.0
+			var dst := leaves if is_leaf else bark
+			dst.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, m.surface_get_arrays(i))
+			dst.surface_set_material(dst.get_surface_count() - 1, mat)
+	root.free()
+	mats[key] = [bark, leaves]
+	return mats[key]
+
+
+func _build_near_trees() -> void:
+	near_trees.clear()
+	var kinds: Array = NEAR_TREES.get(region, NEAR_TREES["cote-dor"])
+	if _near_tree_meshes(int(kinds[0][0]), 0).is_empty():
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 41
+	var clusters := 5 if region == "napa" else 8
+	var placed := []
+	var tries := 0
+	while placed.size() < clusters * 3 and tries < 4000:
+		tries += 1
+		var cx := rng.randf_range(band_x0 - 55.0, band_x1 + 55.0)
+		var cz := rng.randf_range(-hz - 55.0, hz + 55.0)
+		for i in rng.randi_range(2, 4):
+			var x := cx + rng.randf_range(-6.0, 6.0)
+			var z := cz + rng.randf_range(-6.0, 6.0)
+			var dx := maxf(maxf(band_x0 - x, x - band_x1), 0.0)
+			var dz := maxf(absf(z) - hz, 0.0)
+			var d := sqrt(dx * dx + dz * dz)
+			if d < 10.0 or d > 55.0 or _neighbour_planted(x, z) or _grass_mask_outside(x, z) < 0.5:
+				continue
+			if _rect_dist(keepout, x, z) < 8.0 or bld_rect.grow(8.0).has_point(Vector2(x, z)) or gravel_rect.grow(4.0).has_point(Vector2(x, z)):
+				continue
+			if track_dist(x, z) < 4.0 or (river.x < INF and z > river.x - 10.0 and z < river.y + 4.0):
+				continue
+			var near_other := false
+			for p in placed:
+				if Vector2(p.x, p.z).distance_to(Vector2(x, z)) < 4.5:
+					near_other = true
+					break
+			if near_other:
+				continue
+			var k: Array = kinds[rng.randi() % kinds.size()]
+			var sr: Vector2 = k[1]
+			var xf := Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(sr.x, sr.y)), Vector3(x, H(x, z) - 0.05, z))
+			var e := {"pos": xf.origin, "deciduous": bool(k[2])}
+			for lod in 2:
+				var pair := []
+				for mesh in _near_tree_meshes(int(k[0]), lod):
+					var mi := MeshInstance3D.new()
+					mi.mesh = mesh
+					mi.transform = xf
+					mi.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
+					if lod == 0:
+						mi.visibility_range_end = NEAR_TREE_LOD
+						mi.visibility_range_end_margin = 4.0
+					else:
+						mi.visibility_range_begin = NEAR_TREE_LOD
+						mi.visibility_range_begin_margin = 4.0
+						mi.visibility_range_end = 150.0
+						mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF   # far away: shadows cost more than they show
+					mi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+					world.add_child(mi)
+					pair.append(mi)
+				e["lod%d" % lod] = pair
+			near_trees.append(e)
+			placed.append(xf.origin)
 
 
 func _block_at(x: float) -> Dictionary:

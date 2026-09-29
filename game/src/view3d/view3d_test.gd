@@ -733,9 +733,51 @@ func _verge_cam(vy: Node3D, tag: String) -> void:
 		await _save_shot("world_%s_close" % tag)
 
 
+func _world_perf(vy: Node3D) -> void:
+	# the new plants on vs off on the vineyard walk camera and the verge (same frame, same weather)
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
+	Engine.max_fps = 0
+	for region in ["mosel", "cote-dor", "napa"]:
+		_look_game(region)
+		Sim.Advance(150, false)                    # June: trees in leaf, flowers out
+		snap = _snap()
+		view.apply_snapshot(snap)
+		for cam in ["walk", "verge"]:
+			if cam == "walk":
+				view.set_view("vineyard")
+			else:
+				var x0: float = vy.get("band_x0"); var x1: float = vy.get("band_x1"); var hz: float = vy.get("hz")
+				var eye := Vector3(x0 + (x1 - x0) * 0.35, 0.0, hz + 2.5)
+				eye.y = float(vy.call("ground_height", eye.x, eye.z)) + 1.6
+				view.set_camera(eye, Vector3(eye.x + 12.0, eye.y - 1.0, hz + 8.0))
+			var res := {}
+			for on in [false, true, false, true]:
+				for mmis in (vy.get("groundcover") as Dictionary).values():
+					for m in mmis: (m as Node3D).visible = on
+				for e in vy.get("near_trees"):
+					for lod in ["lod0", "lod1"]:
+						for mi in e[lod]: (mi as Node3D).visible = on
+				await _frames(60)
+				var t := 0.0
+				var n := 0
+				while n < 240:
+					await get_tree().process_frame
+					t += get_process_delta_time(); n += 1
+				var k := "on" if on else "off"
+				res[k] = res.get(k, 0.0) + n / t / 2.0
+				res[k + "_prims"] = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)
+				res[k + "_calls"] = RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)
+			print("WORLDTEST perf %s %s: off %.1f fps (%d calls, %.2f M prims) · on %.1f fps (%d calls, %.2f M prims) · ratio %.2f" % [region, cam,
+				res["off"], res["off_calls"], res["off_prims"] / 1e6, res["on"], res["on_calls"], res["on_prims"] / 1e6, res["on"] / maxf(res["off"], 0.1)])
+	get_tree().quit()
+
+
 func _world_test() -> void:
 	var ok := true
 	var vy: Node3D = view.get("vineyard")
+	if "--perf" in OS.get_cmdline_user_args():
+		await _world_perf(vy)
+		return
 	for region in ["mosel", "cote-dor", "napa"]:
 		_look_game(region)                         # starts in January
 		snap = _snap()
@@ -757,6 +799,47 @@ func _world_test() -> void:
 		ok = ok and gc_ok
 		if not "--checks" in OS.get_cmdline_user_args():
 			await _verge_cam(vy, "verge_%s" % region)
+	# near trees: hedgerow clusters per Region, each tree a near and a mid model switching at 45 m
+	for region in ["mosel", "cote-dor", "napa"]:
+		_look_game(region)
+		snap = _snap()
+		view.apply_snapshot(snap)
+		await _frames(3)
+		var trees: Array = vy.get("near_trees")
+		var lod_ok := not trees.is_empty()
+		var bare_ok := true
+		for e in trees:
+			var l0: MeshInstance3D = (e["lod0"] as Array)[0]
+			var l1: MeshInstance3D = (e["lod1"] as Array)[0]
+			lod_ok = lod_ok and l0.visibility_range_end > 0.0 and l1.visibility_range_begin == l0.visibility_range_end
+			if e["deciduous"]:                                          # the game starts in January: bare
+				bare_ok = bare_ok and not ((e["lod0"] as Array)[1] as Node3D).visible
+		var t_ok: bool = trees.size() >= (6 if region == "napa" else 10) and lod_ok and bare_ok
+		print("WORLDTEST near_trees_%s %s (%d trees, bare in January %s)" % [region, "ok" if t_ok else "FAIL", trees.size(), bare_ok])
+		ok = ok and t_ok
+		if not "--checks" in OS.get_cmdline_user_args() and not trees.is_empty():
+			var p: Vector3 = trees[0]["pos"]
+			var x0: float = vy.get("band_x0")
+			var x1: float = vy.get("band_x1")
+			var c := Vector3((x0 + x1) / 2.0, 0.0, 0.0)
+			var dir := (Vector3(p.x, 0, p.z) - Vector3(c.x, 0, c.z)).normalized()
+			var eye := p - dir * 14.0 + dir.cross(Vector3.UP) * 3.0
+			eye.y = float(vy.call("ground_height", eye.x, eye.z)) + 1.6
+			view.set_view("vineyard")
+			view.set_camera(eye, p + Vector3(0, 3.0, 0))
+			await _frames(120)
+			await _save_shot("world_trees_%s_jan" % region)
+			Sim.Advance(150, false)                                     # June: in leaf
+			snap = _snap()
+			view.apply_snapshot(snap)
+			view.set_camera(eye, p + Vector3(0, 3.0, 0))
+			await _frames(120)
+			await _save_shot("world_trees_%s" % region)
+			var far := p - dir * 70.0
+			far.y = float(vy.call("ground_height", far.x, far.z)) + 1.6
+			view.set_camera(far, p + Vector3(0, 3.0, 0))
+			await _frames(120)
+			await _save_shot("world_trees_%s_far" % region)
 	# the working gear in the yard and the cellar's bottle shelf (Côte d'Or: candlelit cellar by default)
 	_look_game("cote-dor")
 	snap = _snap()

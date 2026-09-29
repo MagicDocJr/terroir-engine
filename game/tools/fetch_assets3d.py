@@ -53,7 +53,7 @@ PROPS = ["hanging_industrial_lamp", "industrial_caged_sconce", "plastic_crate_01
 # (the scans are 6k–1.7M triangles) into models/gc_*.glb
 GROUNDCOVER = ["dandelion_01", "celandine_01", "fern_02", "dry_branches_medium_01"]
 # tree scans (46–85 MB each, ~2–5M triangles): sources for blender/build_trees3d.py (thinned, decimated near-tree models)
-TREES = ["island_tree_01", "island_tree_02", "island_tree_03"]
+TREES = ["island_tree_01", "island_tree_02", "island_tree_03", "tree_small_02"]
 
 
 def get(url, path):

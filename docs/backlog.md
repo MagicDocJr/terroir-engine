@@ -57,7 +57,6 @@ Found while building or reviewing; not urgent, but not to be forgotten. Remove a
 - Saves made before the tasks-in-3D change: the new task messages shift the Inbox message ids, so an old save can show a few messages as unread again (read marks are stored by id). Harmless; no migration written.
 - The Tasks strip's "at véraison" box takes effect with the next option click (it sends nothing by itself); consider sending the plan with the new timing when it is toggled.
 - An `assets3d/` folder fetched before the Winery look lacks its props and textures: the 3D view then shows grey walls, empty prop groups and floating candle glows with only a console warning. Rerun `game/tools/fetch_assets3d.py`; consider a HUD hint or adding one new asset to `assets3d.gd available()`.
-- The hall frame-time gate for the Winery look (within 10 %) is still to be measured with the display on (`scripts/winerylook.sh --perf`); overnight the display cap held every run near 11 fps. If slow: drop the four `potted_plant_02` (70k triangles each) and the cellar's `Lantern_01` (34k).
 - The Windows build is unsigned: SmartScreen warns on first start, and a PC with Application Control may block it.
 - Windows `dotnet` cannot build the game (Application Control blocks Godot's source generators); build through WSL (`scripts/build-game.sh`).
 - The tasting review page for the WSET L3 reviewer is still empty: https://claude.ai/artifact/PqqJ2CGJXf6qUj3Wvtm9HD
@@ -71,4 +70,6 @@ Found while building or reviewing; not urgent, but not to be forgotten. Remove a
 - Plot screen shows each Block's carry-over (fruitfulness, reserves) with a tooltip.
 - 3D pruning close-up for a bilateral Cordon: show both arms of the real vine with the spurs split between them, and Einzelpfahl's two bows as a heart.
 - Leaf-removal close-up: after a "later, at véraison" choice, the tagged leaves could come off in the world when the crew does it at véraison.
+- Near trees: a proper European species for the Mosel and Côte d'Or (walnut, cherry, oak) and a real olive or valley oak for Napa when a CC0 scan exists (Poly Haven has none today); the thinned canopies are open rather than dense.
+- Ground cover: a meadow grass scan light enough to scatter (Poly Haven's are 0.2–1.6M triangles), and autumn colour on the near trees before leaf fall.
 - A WSET-style vintage chart (one rating per Vintage) once several Vintages have been played.

@@ -12,9 +12,13 @@ args = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
 OUT = args[0] if args else os.getcwd()
 PROPS = args[1] if len(args) > 1 else os.path.join(OUT, "..", "props")
 C.set_out(OUT)
-TREES = ["island_tree_01", "island_tree_02", "island_tree_03"]
-# per level: (share of leaf cards kept, growth of each kept card, bark triangle budget)
-LODS = [(0.035, 1.75, 9000), (0.009, 2.6, 2000)]
+TREES = ["island_tree_01", "island_tree_02", "island_tree_03", "tree_small_02"]
+# per level: (leaf triangle budget, bark triangle budget); kept cards grow by (1 / share kept) ** GROW_EXP so the
+# canopy keeps roughly its look (a first pass growing 1.75x at 3.5 % read too thin)
+LODS = [(45000, 9000), (10000, 2000)]
+GROW_EXP = 0.27
+# tree_small_02's leaf "cards" are clusters joined to long stems: growing them much smears spikes across the canopy
+PER_TREE = {"tree_small_02": {"grow_exp": 0.15, "leaf_mul": 1.4}}
 
 
 def clear_all():
@@ -51,13 +55,23 @@ def thin_leaves(ob, keep, grow, seed):
             parent[a] = parent[parent[a]]
             a = parent[a]
         return a
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[rb] = ra
     for p in me.polygons:
         vs = p.vertices
-        r0 = find(vs[0])
         for v in vs[1:]:
-            r = find(v)
-            if r != r0:
-                parent[r] = r0
+            union(vs[0], v)
+    # the glTF import splits vertices at UV seams: join vertices at the same position, or one card falls apart into
+    # loose triangles (half-cards kept, slivers grown into spikes)
+    seen = {}
+    for v in me.vertices:
+        key = (round(v.co.x, 5), round(v.co.y, 5), round(v.co.z, 5))
+        if key in seen:
+            union(seen[key], v.index)
+        else:
+            seen[key] = v.index
     roots = [find(i) for i in range(n)]
     rng = random.Random(seed)
     islands = sorted(set(roots))
@@ -65,12 +79,16 @@ def thin_leaves(ob, keep, grow, seed):
     bm = bmesh.new()
     bm.from_mesh(me)
     bm.verts.ensure_lookup_table()
-    drop = [f for f in bm.faces if roots[f.verts[0].index] not in kept]
+    # the card id travels with each vertex in a layer: indices are not reliable once faces are deleted
+    isl = bm.verts.layers.int.new("island")
+    for v in bm.verts:
+        v[isl] = roots[v.index]
+    drop = [f for f in bm.faces if f.verts[0][isl] not in kept]
     bmesh.ops.delete(bm, geom=drop, context="FACES")
     # grow each kept card about its centre
     groups = {}
     for v in bm.verts:
-        groups.setdefault(roots[v.index], []).append(v)
+        groups.setdefault(v[isl], []).append(v)
     for vs in groups.values():
         c = sum((v.co for v in vs), vs[0].co * 0) / len(vs)
         for v in vs:
@@ -90,7 +108,7 @@ def decimate(ob, budget):
 
 
 for ti, tree in enumerate(TREES):
-    for li, (keep, grow, bark) in enumerate(LODS):
+    for li, (leaf_budget, bark) in enumerate(LODS):
         clear_all()
         src = os.path.join(PROPS, tree, tree + ".gltf")
         if not os.path.exists(src):
@@ -108,7 +126,9 @@ for ti, tree in enumerate(TREES):
             mat = (p.data.materials[0].name if p.data.materials else "").split(".")[0]   # a re-import names it "…_leaves.001"
             before = tris(p)
             if mat.endswith("_leaves"):
-                total, kept = thin_leaves(p, keep, grow, 7 + ti)
+                cfg = PER_TREE.get(tree, {})
+                keep = min(1.0, leaf_budget * cfg.get("leaf_mul", 1.0) / max(1, before))
+                total, kept = thin_leaves(p, keep, (1.0 / keep) ** cfg.get("grow_exp", GROW_EXP), 7 + ti)
                 p.name = "%s_leaves" % tree
                 print("layout", tree, "lod%d" % li, "leaves", before, "->", tris(p), "tris (%d of %d cards)" % (kept, total))
             else:

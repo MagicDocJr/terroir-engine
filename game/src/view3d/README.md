@@ -60,8 +60,17 @@ view is hidden.
 - **Working gear** (`winery.gd _build_working_props`, always there): wicker harvest baskets by the sorting table,
   compost bags under the lean-to, a garden hose on the east gable, a clay pot by the office door, a hand truck by the
   crate stack. The candlelit cellar also gets a bottle display shelf at the far end.
-- **Near trees**: see "Trees" below.
-- Test: `scripts/worldtest.sh` (checks + `game/shots/3d_world_*.png`; `--checks` skips the screenshots).
+- **Near trees** (`vineyard.gd _build_near_trees`): hedgerow clusters of 2–4 trees, 10–55 m from the Plot (the far
+  tree cards start at 70 m). Mosel and Côte d'Or: a slender deciduous broadleaf (`tree_small_02`), bare from leaf fall
+  to leaf-out (day 110–305 in leaf; look only). Napa: gnarled evergreen coastal trees (`island_tree_01–03`), which read
+  like the olive trees kept around Napa wineries. `tools/blender/build_trees3d.py` (`sync_assets3d.sh trees`) makes a
+  near model (lod0, ~45–60k triangles: bark decimated, leaf cards thinned to a few percent and each kept card grown so
+  the canopy stays full; decimating leaf cards melts them into blobs) and a mid model (lod1, ~15k). Each tree switches
+  at 45 m, is gone by 150 m, and only lod0 casts shadows.
+- Test: `scripts/worldtest.sh` (checks + `game/shots/3d_world_*.png`; `--checks` skips the screenshots; `--perf` times
+  the vineyard walk and verge views with the new plants on vs off). Measured 2026-09-29, display on, June: Mosel walk
+  0.99 (119.5 → 118.0 fps), Mosel verge 0.96, Côte d'Or and Napa 1.00 (at the ~161 fps cap). Shadows on the mid trees
+  cost the Mosel walk view 18 %, so lod1 casts none.
 
 ## The Winery look (cosmetic)
 
@@ -85,8 +94,8 @@ duplicates props or lights. Their glows join the room's light list, so they swit
 casts shadows. The hall GI is re-baked only when walls, floor or ceiling change. `view3d.apply_snapshot` places the building and
 applies the look before any GI bake, so a first open or a Plot change bakes once. Test: `scripts/winerylook.sh` (checks + `game/shots/3d_look_*.png`),
 `scripts/winerylook.sh --perf` (hall frame rate, draw calls and primitives, regional look vs the plain one). Measured
-2026-09-29 on the hall camera: Mosel 303 → 334 draw calls, 3.72 → 4.32 M primitives; Côte d'Or 232 → 316, 3.05 → 3.52 M;
-frame rate unchanged (but the display was asleep, capping it near 11 fps: recheck with the screen on). Heavy scans are
+2026-09-29 with the display on, hall camera: Mosel 151.7 → 145.4 fps (0.96; 274 → 361 draw calls, 3.80 → 4.46 M
+primitives), Côte d'Or 160.9 → 155.7 fps (0.97; 239 → 370, 3.07 → 3.66 M). Within the spec's 10 %. Heavy scans are
 avoided: the candles are built from cylinders (the scanned candlestick is 213k triangles) and the tall `potted_plant_01`
 (176k) is not used.
 
