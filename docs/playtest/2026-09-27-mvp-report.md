@@ -1,6 +1,6 @@
 # Terroir Engine MVP: morning report (27 Sep 2026)
 
-Web version with screenshots: <https://claude.ai/artifact/VxeTyxxwhKkzcqwFwTMSQJ> (private until you share it).
+The web version with screenshots (a claude.ai artifact) no longer exists (found 2026-09-29); this file is the record.
 
 ## TL;DR
 
