@@ -2,6 +2,12 @@
 
 Things deliberately left out of the MVP, to deep-dive once the core loop is locked.
 
+## Shortlist: what to build next (agreed with the owner 2026-09-29; check here first when asked "what's next")
+- **Famous-vintage challenges**: replay the 2016 Burgundy frost as an authored scenario (the sim already reproduces it); the hot 2003 needs a yearly Côte de Beaune flowering/véraison series first (see Simulation and science).
+- **More work types in 3D**: shoot thinning, bâtonnage, a barrel sample with the thief, tasting berries for harvest timing, tying down; they build on the Tasks system.
+- **3D time-lapse**: watch the days pass in the vineyard at 1×/2×/4× (seasons, trees leafing out, flowers coming and going).
+- Also open: the tasting-review page for the WSET L3 reviewer (see Build and review).
+
 ## First expansion (top priority after MVP)
 - ~~Multi-vintage play on the Timeline~~ — done 2026-09-28 (spec `docs/superpowers/specs/2026-09-28-multi-vintage-design.md`, report `docs/playtest/2026-09-28-multi-vintage.md`). Follow-ups: selling wine over time (stock and markets), replanting and top-grafting, phylloxera on own-rooted vines, dropping bottled Lots from the snapshot, in-memory replay checkpoints if long games load slowly, mature Côte d'Or yield calibration.
 
