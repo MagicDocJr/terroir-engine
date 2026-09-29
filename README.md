@@ -8,4 +8,5 @@ A private, realistic vineyard-founding and winemaking simulator. You buy bare la
 - **Simulation core:** `sim/`, a headless, deterministic C# library. Test it with `cd sim && dotnet test` (ADR 0001).
 - **Game:** `game/`, Godot 4.7 .NET plus Blender-built 3D (ADR 0003). The 3D assets are not in git; rebuild them with `game/tools/sync_assets3d.sh`.
 - **Checks:** `scripts/fuzz.sh` presses every button through a whole Vintage. `scripts/capture.sh <plot>` plays a scripted game and screenshots every screen.
+- **Tasting practice and the Wine Fair:** from the title screen or the game's menu. The simulation pours real-vintage Wines for four exercises, themed Stands with vintage quizzes, ranks, medals and a Cellar book (`docs/science/tasting-practice.md`). `scripts/practice.sh` drives it headlessly; the CLI has `pour <plot> <vintage> …` and `fair [stand] [seed]`.
 - **Read first:** `docs/spec.md`, `CONTEXT.md` (glossary), `docs/adr/`, `docs/backlog.md`, `docs/science/` (every in-game fact is cited there).
