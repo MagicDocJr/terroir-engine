@@ -22,17 +22,23 @@ public sealed record VintageFacts(string RegionId, int Year, double Gdd, double 
     /// <summary>The last vintage the record covers in full.</summary>
     public static int LastRecordYear(GameData data, string regionId) => Archive(data, regionId).LastCompleteYear;
 
-    /// <summary>Every vintage 1995 to the end of the record, ranked by growing-degree days.</summary>
-    public static IReadOnlyList<VintageFacts> Record(GameData data, string regionId) => Records.GetOrAdd(data.DataRoot + "|" + regionId, _ =>
+    /// <summary>Every vintage from 1995 to the end of the record, or to upTo (inside a game: the last vintage harvested on its
+    /// Timeline, so ranks never count years the player cannot know yet; ADR 0002), ranked by growing-degree days.</summary>
+    public static IReadOnlyList<VintageFacts> Record(GameData data, string regionId, int? upTo = null)
     {
         var arc = Archive(data, regionId);
-        int to = arc.LastCompleteYear;
-        var raw = Enumerable.Range(FirstRecordYear, to - FirstRecordYear + 1).Select(y => Compute(arc, regionId, y)).ToList();
-        var byGdd = raw.OrderByDescending(f => f.Gdd).Select(f => f.Year).ToList();
-        return raw.Select(f => f with { GddRank = byGdd.IndexOf(f.Year) + 1, RecordYears = raw.Count, RecordFrom = FirstRecordYear, RecordTo = to }).ToArray();
-    });
+        int to = Math.Min(arc.LastCompleteYear, upTo ?? int.MaxValue);
+        if (to < FirstRecordYear) to = FirstRecordYear;
+        return Records.GetOrAdd($"{data.DataRoot}|{regionId}|{to}", _ =>
+        {
+            var raw = Enumerable.Range(FirstRecordYear, to - FirstRecordYear + 1).Select(y => Compute(arc, regionId, y)).ToList();
+            var byGdd = raw.OrderByDescending(f => f.Gdd).Select(f => f.Year).ToList();
+            return raw.Select(f => f with { GddRank = byGdd.IndexOf(f.Year) + 1, RecordYears = raw.Count, RecordFrom = FirstRecordYear, RecordTo = to }).ToArray();
+        });
+    }
 
-    public static VintageFacts For(GameData data, string regionId, int year) => Record(data, regionId).First(f => f.Year == year);
+    public static VintageFacts For(GameData data, string regionId, int year, int? upTo = null) =>
+        Record(data, regionId, upTo is int u && u < year ? year : upTo).First(f => f.Year == year);
 
     /// <summary>The coldest night (lowest minimum) between two dates, in the Region's record.</summary>
     public static (DateOnly Date, double Tmin) ColdestNight(GameData data, string regionId, DateOnly from, DateOnly to)

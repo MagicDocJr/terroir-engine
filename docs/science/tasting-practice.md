@@ -38,6 +38,9 @@ From the Region's ERA5 grid cell (`data/weather/README.md`, `weather-and-climate
 | Rank | the vintage's place among the record's years by growing-degree days (1 = warmest) |
 
 - The grid cell is the Region's reference weather, not a slope: frost lies colder in low spots, and the quiz says so.
+- Inside a game ranks, thirds and the record's span stop at the last vintage harvested on its Timeline, so "4th warmest"
+  never counts years the player cannot know yet (ADR 0002).
+- The frost figure is the share of young shoots killed (secondary buds partly replace them, `phenology.md`), not crop lost.
 - **Cool, moderate or warm** (Identify, Vintage cards): the warmest third of the record's years counts as warm, the coolest
   third as cool. **Game simplification:** relative to the Region's own record, not an absolute climate class.
 - The 2016 Côte d'Or frost night comes out of the record on 27 April (−0.5 °C at the grid cell), matching the real frost of
@@ -52,16 +55,17 @@ vintage or the cellar is the only difference:
   oak (2018), Mosel 2002 · 2003 · 2004, Côte d'Or whites 2017 · 2018 · 2021.
 - **Cool and warm stands** pick the years with the fewest and the most growing-degree days in the record (Mosel 1996 and
   2018, Napa 2010 and 2020), not hard-coded claims.
-- A stand is only built where the simulation reproduces the real vintage. Mosel 2010 (tiny crop, very high acidity) and
+- A stand is only built where the simulation reproduces the real vintage, and random practice pours skip the same years
+  (`PracticePours.Miscalibrated`). Mosel 2010 (tiny crop, very high acidity) and
   Côte d'Or 2019–2022 frost years are left out until they are calibrated (`docs/backlog.md`).
 
 ## 4. The vintage quiz
 
 `VintageQuiz` asks 3–5 questions per Flight, each answered by one glass: hottest summer, warmest or coolest season, frost
-loss (with the frost night), smallest crop, most or least acidic must, earliest picking, ripest or least ripe, sweetest,
+shoots killed by spring frost (with the frost night), smallest crop, most or least acidic must, earliest picking, ripest or least ripe, sweetest,
 most rain before harvest, which glass saw new oak, old oak or no wood. The evidence quotes the numbers for every glass.
 A topic is skipped when its answer is not clear-cut in that Flight. **Design choice, not a science claim:** the margins are
-0.8 °C summer maximum, 60 growing-degree days, 10 points of frost loss, 5 hL/ha, 0.5 g/L acidity, 3 days, 3 °Oe, 5 g/L
+0.8 °C summer maximum, 60 growing-degree days, 10 points of shoots killed by frost, 5 hL/ha, 0.5 g/L acidity, 3 days, 3 °Oe, 5 g/L
 sugar and 15 mm rain.
 
 The two explanatory lines in the acidity questions ("cooler seasons and earlier picking leave more malic acid", "heat burns
@@ -86,17 +90,18 @@ Every reward is earned by a marked answer. Design rationale, not in-game facts: 
 a non-game context [DETERDING-2011]; spaced practice and retrieval practice improve long-term retention [CEPEDA-2006],
 [ROEDIGER-2006], hence the daily glass, the quizzes and the reveal that explains each answer.
 
-- **XP:** 10 per full mark (5 for half), −5 per hint; medal bonuses (bronze 20, silver 40, gold 80, paid once per
+- **XP:** 10 per full mark (5 for half), −5 per hint; a replayed stand pays item XP only for improving on its best score; medal bonuses (bronze 20, silver 40, gold 80, paid once per
   improvement); Glass of the day +25.
 - **Taster ranks:** Novice taster 0, Cellar hand 300, Taster 1,500 (opens blind Flights), Senior taster 5,000, Fair judge
   12,000 XP. Paced for months of study: a Flight at half marks earns roughly 250 XP.
 - **Medals:** bronze, silver, gold at 50, 70 and 85 % of a stand's marks; the best is kept. One medal opens the second tier
-  of stands, three open the third.
+  of stands, three open the third; inside an early game a tier also opens while every stand below it is still in the future.
 - **Glass of the day:** the same Wine for everyone on a date, Identify format; days in a row count consecutive daily
   glasses, and a missed day resets the run without costing rank.
 - **Adaptive practice:** the weakest skill (lowest average of the last 20 answers, at least three answers) picks the next
   Wine: a red for tannin or appearance, Riesling across the sweetness range for sweetness, and so on.
-- The study record is `user://tasting_record.json`, separate from any Estate save, and tolerant of missing or unknown fields.
+- The study record is `user://tasting_record.json`, separate from any Estate save, and tolerant of missing or unknown fields;
+  an unreadable file is copied aside (`.unreadable-<time>`) before a fresh record replaces it.
 
 ## 7. No future knowledge (ADR 0002)
 

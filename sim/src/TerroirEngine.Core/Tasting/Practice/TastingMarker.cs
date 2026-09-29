@@ -93,9 +93,9 @@ public static class TastingMarker
     }
 
     /// <summary>Cool, moderate or warm for the Region: the vintage's growing-degree days against the record's thirds.</summary>
-    public static (string Climate, string Because) VintageClimate(GameData data, string regionId, int vintage)
+    public static (string Climate, string Because) VintageClimate(GameData data, string regionId, int vintage, int? upTo = null)
     {
-        var f = VintageFacts.For(data, regionId, vintage);
+        var f = VintageFacts.For(data, regionId, vintage, upTo);
         string c = f.GddRank <= f.RecordYears / 3.0 ? "warm" : f.GddRank > f.RecordYears * 2 / 3.0 ? "cool" : "moderate";
         return (c, $"{vintage}: {f.Gdd:0} growing-degree days, {Ord(f.GddRank)} warmest of the {f.RecordYears} years in the {data.Region(regionId).Name} record ({f.RecordFrom}–{f.RecordTo}); the warmest third counts as warm, the coolest third as cool");
     }
@@ -105,7 +105,7 @@ public static class TastingMarker
     private static string Str(JsonObject a, string key) =>
         a.TryGetPropertyValue(key, out var v) && v is JsonValue jv && jv.TryGetValue<string>(out var s) ? s.Trim() : "";
 
-    public static MarkResult Mark(GameData data, PouredWine p, string exercise, JsonObject answers)
+    public static MarkResult Mark(GameData data, PouredWine p, string exercise, JsonObject answers, int? upTo = null)
     {
         var sh = p.Sheet; var c = p.Context;
         string Pal(string attr) => sh.Palate.FirstOrDefault(x => x.Attribute == attr) is { } l ? l.Level.Split(',')[0].Trim() : "";
@@ -162,7 +162,7 @@ public static class TastingMarker
                 "readiness" => (sh.Readiness, sh.QualityBecause),
                 "variety" => (c.Variety, $"{c.Variety} from {c.PlotName}, {c.RegionName}"),
                 "region" => (c.RegionName, $"{c.PlotName}, {c.RegionName}"),
-                "climate" => VintageClimate(data, c.RegionId, c.Vintage),
+                "climate" => VintageClimate(data, c.RegionId, c.Vintage, upTo),
                 _ => ("", ""),
             };
             if (yours.Length == 0) score = 0;

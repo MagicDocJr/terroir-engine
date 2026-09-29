@@ -17,7 +17,7 @@
     },
     {
       "id": "mosel-ladder", "tier": 0, "title": "The Mosel ripeness ladder",
-      "blurb": "One slope, one vintage (2018), three pickings: Kabinett, Spätlese and Auslese. The glasses are poured in a secret order.",
+      "blurb": "One slope, one vintage (2018), three pickings: Kabinett, Spätlese and Auslese. Which glass is which?",
       "host": { "name": "Katrin Brandt", "producer": "Weingut Brandt", "greeting": "We walked this slope three times that autumn. Which glass waited longest for the sun?" },
       "plot": "mosel-seitental", "variety": "Riesling", "vintage": 2018, "styles": ["spatlese", "auslese", "kabinett"],
       "quiz": ["ripest", "sweetest", "picked-first", "least-ripe"]

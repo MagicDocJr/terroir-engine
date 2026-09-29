@@ -59,7 +59,8 @@ static func _lobby(shell, L: Dictionary) -> Control:
 	wk[1].add_child(wb)
 	top.add_child(wk[0])
 	# the four exercises
-	var ex: Array = UI.panel("Exercises", "a random Wine from 1995–2025 in each")
+	var mv = L.get("maxVintage", null)
+	var ex: Array = UI.panel("Exercises", "a random Wine from 1995–%s in each" % (str(int(mv)) if mv != null else "2025"))
 	var grid := GridContainer.new(); grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 14); grid.add_theme_constant_override("v_separation", 14)
 	ex[1].add_child(grid)

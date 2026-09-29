@@ -122,7 +122,7 @@ public static class TastingLab
             // stable across runs (HashCode.Combine is randomised per process)
             Producer = spec.Producer ?? names[Math.Abs(spec.Vintage * 31 + bs.Data.Id.Sum(ch => ch) * 7 + seed) % names.Length],
             StyleId = style.Id, StyleLabel = style.Label, Red = bs.Variety.Red, Vintage = spec.Vintage,
-            Gdd = prov.WinklerBlock, SeasonTemp = prov.SeasonTemp, FrostLossPct = prov.FrostLoss * 100,   // Provenance stores a fraction
+            Gdd = prov.WinklerBlock, SeasonTemp = prov.SeasonTemp, FrostLossPct = prov.FrostLoss * 100,   // share of shoots killed by spring frost; Provenance stores a fraction
             GreyRotPct = prov.GreyRotPct, NobleRotPct = prov.NobleRotPct,
             YieldHlHa = prov.YieldHlHa, HarvestOe = prov.HarvestOe, HarvestTa = prov.HarvestTa, HarvestPh = prov.HarvestPh,
             HarvestDate = prov.HarvestDate, Budburst = prov.Budburst, TastedOn = tasted, AgeYears = Math.Round((tasted.DayNumber - prov.HarvestDate.DayNumber) / 365.0, 1),

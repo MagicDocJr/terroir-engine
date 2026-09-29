@@ -75,7 +75,7 @@ static func rank_badge(L: Dictionary) -> Control:
 static func start_pour(shell, req: Dictionary, owner: String) -> void:
 	if String(shell.state.get("tp_view", "")) == "pouring": return
 	var id: int = Sim.PourStart(JSON.stringify(req))
-	if id == 0: shell.notify("Could not pour: the game data did not load."); return
+	if id == 0: shell.notify("Could not pour: " + (String(Sim.LastError()).left(160) if String(Sim.LastError()) != "" else "the game data did not load.")); return
 	shell.state["tp_job"] = id
 	shell.state["tp_view"] = "pouring"
 	shell.state["tp_owner"] = owner
@@ -189,7 +189,7 @@ static func _context_view(W: Dictionary, full: bool) -> Control:
 		v.add_child(UI.label("The season", 14, UI.GOLD, UI.f_body_b))
 		v.add_child(UI.kv("Growing-degree days", "%d  (April–October, above 10 °C)" % int(C["gdd"])))
 		v.add_child(UI.kv("Summer maximum", "%.1f °C mean daily maximum, June–August" % float(C["summerTmax"])))
-		if float(C["frostLoss"]) >= 1: v.add_child(UI.kv("Spring frost", "%d %% of the crop lost" % int(C["frostLoss"]), "", UI.SERIOUS))
+		if float(C["frostLoss"]) >= 1: v.add_child(UI.kv("Spring frost", "%d %% of the young shoots killed" % int(C["frostLoss"]), "", UI.SERIOUS))
 		v.add_child(UI.kv("Rain before harvest", "%d mm in the three weeks before picking" % int(C["harvestRain"])))
 		v.add_child(UI.label("Harvest and cellar", 14, UI.GOLD, UI.f_body_b))
 		v.add_child(UI.kv("Picked", "%s at %d °Oe, TA %.1f g/L, pH %.2f" % [C["harvestDate"], int(C["harvestOe"]), float(C["harvestTa"]), float(C["harvestPh"])]))

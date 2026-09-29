@@ -133,7 +133,18 @@ public partial class SimBridge : Node
     /// <summary>Harness and fuzz runs keep their own record so they never touch the player's.</summary>
     public void SetRecordPath(string path) { _recordPath = path.StartsWith("user://") ? ProjectSettings.GlobalizePath(path) : path; if (File.Exists(_recordPath)) File.Delete(_recordPath); }
     public string RecordFile() => RecordPath;
-    private JsonObject LoadRecord() => PracticeProgress.Load(File.Exists(RecordPath) ? File.ReadAllText(RecordPath) : "");
+    private JsonObject LoadRecord()
+    {
+        if (!File.Exists(RecordPath)) return new JsonObject();
+        if (PracticeProgress.TryLoad(File.ReadAllText(RecordPath), out var rec)) return rec;
+        // unreadable: keep a copy before the next save replaces it, so no XP or medals are lost for good
+        var bad = RecordPath + $".unreadable-{DateTime.Now:yyyyMMdd-HHmmss}";
+        File.Copy(RecordPath, bad, true);
+        File.Delete(RecordPath);
+        _lastError = "The Tasting-practice record could not be read; a copy was kept at " + bad;
+        GD.PushWarning("Terroir: " + _lastError);
+        return rec;
+    }
     private void SaveRecord(JsonObject r)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(RecordPath)!);
@@ -161,7 +172,9 @@ public partial class SimBridge : Node
     public int PourStart(string requestJson)
     {
         if (_data == null) return 0;
-        var req = JsonNode.Parse(requestJson) as JsonObject ?? new JsonObject();
+        JsonObject req;
+        try { req = JsonNode.Parse(requestJson) as JsonObject ?? new JsonObject(); }
+        catch (Exception e) { _lastError = e.Message; return 0; }
         if (req["seed"] == null) req["seed"] = (int)(DateTime.Now.Ticks % 1_000_000) + 1;
         var rec = LoadRecord(); var max = MaxVintage(); var today = Today(); var data = _data;
         _pourTaskId = ++_pourId;
@@ -197,7 +210,7 @@ public partial class SimBridge : Node
             var answers = JsonNode.Parse(answersJson) as JsonObject ?? new JsonObject();
             var (result, rec) = _session.Mark(_data, answers, LoadRecord(), Today());
             SaveRecord(rec);
-            _session = null;   // one mark per pour: no double points
+            _session = null; _pourTask = null; _pourTaskId = 0;   // one mark per pour: no double points
             return result.ToJsonString();
         }
         catch (Exception e) { _lastError = e.ToString(); GD.PushError("Terroir: marking failed: " + e); return "{}"; }

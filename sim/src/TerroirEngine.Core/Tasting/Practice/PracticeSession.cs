@@ -14,6 +14,8 @@ public sealed class PracticeSession
     public string? Focus;
     public int Seed;
     public bool Blind;
+    /// <summary>Inside a game: the last vintage harvested on its Timeline (null from the title screen).</summary>
+    public int? MaxVintage;
     public List<PourSpec> Specs = new();
     public List<PouredWine> Flight = new();
     public List<QuizQuestion> Quiz = new();
@@ -44,6 +46,16 @@ public sealed class PracticeSession
         ["finish"] = "Your weak spot: flavour intensity and finish. Yield and ripeness drive concentration.",
     };
 
+    /// <summary>The highest open tier of stands: what the medals open, and inside an early game also the next tier while every
+    /// stand below it is still in the future (otherwise the Fair would have nothing to taste).</summary>
+    public static int OpenTier(GameData data, JsonObject record, int? maxVintage)
+    {
+        int tier = PracticeProgress.UnlockedTier(record);
+        var stands = FairStands.All(data, maxVintage);
+        while (tier + 1 < PracticeProgress.MedalsForTier.Length && stands.Where(s => s.Tier <= tier).All(s => s.Locked)) tier++;
+        return tier;
+    }
+
     /// <summary>The last vintage whose harvest is over on a game's Timeline: this year's from December, else last year's.
     /// Game simplification: a single cut-off date for every Region and style.</summary>
     public static int MaxVintageFor(DateOnly today) => today.Month == 12 ? today.Year : today.Year - 1;
@@ -54,14 +66,14 @@ public sealed class PracticeSession
 
     public static PracticeSession Pour(GameData data, JsonObject req, JsonObject record, DateOnly today, int? maxVintage)
     {
-        var s = new PracticeSession { Kind = Str(req["kind"]) ?? "practice", Seed = Int(req["seed"]) ?? 1 };
+        var s = new PracticeSession { Kind = Str(req["kind"]) ?? "practice", Seed = Int(req["seed"]) ?? 1, MaxVintage = maxVintage };
         string? ex = Str(req["exercise"]);
         if (s.Kind == "stand")
         {
             string id = Str(req["stand"]) ?? "";
             var st = FairStands.All(data, maxVintage).FirstOrDefault(x => x.Id == id) ?? throw new InvalidOperationException($"no stand {id}");
             if (st.Locked) throw new InvalidOperationException($"stand {id} opens after the {st.UnlockYear} harvest");
-            if (st.Tier > PracticeProgress.UnlockedTier(record)) throw new InvalidOperationException($"stand {id} needs more medals");
+            if (st.Tier > OpenTier(data, record, maxVintage)) throw new InvalidOperationException($"stand {id} needs more medals");
             s.Stand = st; s.Exercise = "sheet"; s.Specs = st.Pours.ToList(); s.Shown = st.Shown.ToList();
             s.Blind = Bool(req["blind"]) && PracticeProgress.RankIndex(Int(record["xp"]) ?? 0) >= PracticeProgress.BlindRank;
             if (s.Blind)
@@ -72,7 +84,7 @@ public sealed class PracticeSession
                 s.Shown = s.Specs.Select(_ => "?").ToList();
             }
             s.Flight = s.Specs.Select((p, i) => TastingLab.Pour(data, p, s.Seed * 31 + i)).ToList();
-            s.Quiz = VintageQuiz.For(data, st, s.Flight);
+            s.Quiz = VintageQuiz.For(data, st, s.Flight, maxVintage);
             return s;
         }
         if (!PracticePours.Available(maxVintage)) throw new InvalidOperationException($"no vintage from {PracticePours.FirstVintage} on has been harvested yet");
@@ -164,7 +176,7 @@ public sealed class PracticeSession
     public (JsonObject Result, JsonObject Record) Mark(GameData data, JsonObject answers, JsonObject record, DateOnly today)
     {
         var wineAnswers = answers["wines"] as JsonArray;
-        var marks = Flight.Select((p, i) => TastingMarker.Mark(data, p, Exercise, wineAnswers != null && i < wineAnswers.Count && wineAnswers[i] is JsonObject o ? o : new JsonObject())).ToList();
+        var marks = Flight.Select((p, i) => TastingMarker.Mark(data, p, Exercise, wineAnswers != null && i < wineAnswers.Count && wineAnswers[i] is JsonObject o ? o : new JsonObject(), MaxVintage)).ToList();
         var quiz = TastingMarker.MarkQuiz(Quiz, answers["quiz"] as JsonObject ?? new JsonObject());
         double total = marks.Sum(m => m.Total) + quiz.Sum(q => q.Score), max = marks.Sum(m => m.Max) + quiz.Count;
         double percent = max <= 0 ? 0 : Math.Round(100 * total / max, 1);
@@ -192,7 +204,7 @@ public sealed class PracticeSession
                 ["items"] = new JsonArray(marks[i].Items.Select(x => (JsonNode)ItemJson(x)).ToArray()),
                 ["total"] = marks[i].Total, ["max"] = marks[i].Max, ["percent"] = marks[i].Percent, ["hints"] = marks[i].Hints,
                 ["vintage"] = c.Vintage, ["label"] = Flight[i].Wine.Legal?.Label, ["producer"] = c.Producer, ["style"] = c.StyleLabel,
-                ["climate"] = TastingMarker.VintageClimate(data, c.RegionId, c.Vintage).Because,
+                ["climate"] = TastingMarker.VintageClimate(data, c.RegionId, c.Vintage, MaxVintage).Because,
                 ["note"] = NoteJson(data, c.RegionId, c.Vintage),
             });
         }
@@ -220,7 +232,8 @@ public sealed class PracticeSession
     public static JsonObject Lobby(GameData data, JsonObject record, DateOnly today, int? maxVintage)
     {
         var sum = PracticeProgress.Summary(record, today);
-        int tier = PracticeProgress.UnlockedTier(record);
+        int tier = OpenTier(data, record, maxVintage);
+        sum["unlockedTier"] = tier;
         var medals = sum["medals"] as JsonObject;
         var best = record["bestPercent"] as JsonObject;
         var stands = new JsonArray();
@@ -242,7 +255,7 @@ public sealed class PracticeSession
             if (parts.Length != 2 || !int.TryParse(parts[1], out int year) || data.Plots.Regions.All(r => r.Id != parts[0])) continue;
             if (year < VintageFacts.FirstRecordYear || year > VintageFacts.LastRecordYear(data, parts[0])) continue;
             if (maxVintage != null && year > maxVintage) { hidden++; continue; }
-            cards.Add(CardJson(data, parts[0], year));
+            cards.Add(CardJson(data, parts[0], year, maxVintage));
         }
         return new JsonObject
         {
@@ -260,10 +273,10 @@ public sealed class PracticeSession
         };
     }
 
-    public static JsonObject CardJson(GameData data, string regionId, int year)
+    public static JsonObject CardJson(GameData data, string regionId, int year, int? upTo = null)
     {
-        var f = VintageFacts.For(data, regionId, year);
-        var (climate, because) = TastingMarker.VintageClimate(data, regionId, year);
+        var f = VintageFacts.For(data, regionId, year, upTo);
+        var (climate, because) = TastingMarker.VintageClimate(data, regionId, year, upTo);
         return new JsonObject
         {
             ["region"] = regionId, ["regionName"] = data.Region(regionId).Name, ["year"] = year, ["climate"] = climate, ["climateBecause"] = because,

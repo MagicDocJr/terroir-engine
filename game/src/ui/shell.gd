@@ -211,6 +211,7 @@ func show_screen(id: String) -> void:
 	if not SCREENS.has(id): id = "inbox"
 	if not Sim.HasGame() and not (id in PREGAME) and not (id in TASTING): id = "title"
 	if id != current and sfx: sfx.play("page")
+	if id in TASTING and not (current in TASTING): state.erase("tp_lobby")   # the Timeline, the date or the record may have moved on
 	# re-rendering the same screen (after a choice) keeps the scroll position instead of jumping to the top
 	var cur_e: Dictionary = _screen_cache.get(current, {})
 	var keep_scroll := -1

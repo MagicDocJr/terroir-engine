@@ -17,14 +17,14 @@ public static class VintageQuiz
 
     public static string Glass(int i) => $"Glass {i + 1}";
 
-    public static List<QuizQuestion> For(GameData data, Stand stand, IReadOnlyList<PouredWine> flight)
+    public static List<QuizQuestion> For(GameData data, Stand stand, IReadOnlyList<PouredWine> flight, int? upTo = null)
     {
         var quiz = new List<QuizQuestion>();
         foreach (var topic in stand.Quiz.Concat(Fallback))
         {
             if (quiz.Count >= MaxQuestions || (quiz.Count >= MinQuestions && !stand.Quiz.Contains(topic))) break;
             if (quiz.Any(q => q.Topic == topic)) continue;
-            var q = Make(data, topic, flight);
+            var q = Make(data, topic, flight, upTo);
             if (q != null) quiz.Add(q);
         }
         return quiz;
@@ -40,7 +40,7 @@ public static class VintageQuiz
         return Math.Abs(v[order[0]] - v[order[1]]) >= margin ? order[0] : null;
     }
 
-    private static QuizQuestion? Make(GameData data, string topic, IReadOnlyList<PouredWine> flight)
+    private static QuizQuestion? Make(GameData data, string topic, IReadOnlyList<PouredWine> flight, int? upTo)
     {
         int n = flight.Count;
         if (n < 2) return null;
@@ -49,7 +49,7 @@ public static class VintageQuiz
         bool distinctVintages = ctx.Select(c => c.Vintage).Distinct().Count() == n;
         string G(int i) => distinctVintages ? $"{Glass(i)} ({ctx[i].Vintage})" : Glass(i);
         string List(Func<int, string> val) => string.Join(", ", Enumerable.Range(0, n).Select(i => $"{G(i)} {val(i)}"));
-        var facts = distinctVintages ? ctx.Select(c => VintageFacts.For(data, c.RegionId, c.Vintage)).ToList() : null;
+        var facts = distinctVintages ? ctx.Select(c => VintageFacts.For(data, c.RegionId, c.Vintage, upTo)).ToList() : null;
         // the record rank only when it is remarkable (top three)
         string Rank(VintageFacts f, bool cool) => (cool ? f.RecordYears - f.GddRank + 1 : f.GddRank) > 3 ? "" : cool
             ? $" {f.Year} ranks {Ord(f.RecordYears - f.GddRank + 1)} coolest of the {f.RecordYears} years in the record ({f.RecordFrom}–{f.RecordTo})."
@@ -74,15 +74,15 @@ public static class VintageQuiz
                 var c = ctx[f];
                 var from = c.Budburst ?? new DateOnly(c.Vintage, 4, 1);
                 var (night, tmin) = VintageFacts.ColdestNight(data, c.RegionId, from, new DateOnly(c.Vintage, 5, 31));
-                return Q("Which glass comes from a vintage that lost crop to spring frost?", f,
-                    $"Crop lost to frost: {List(i => F(ctx[i].FrostLossPct) + " %")}. In {c.Vintage} the buds had burst on " +
+                return Q("Which glass comes from a vintage where spring frost killed young shoots?", f,
+                    $"Shoots killed by spring frost: {List(i => F(ctx[i].FrostLossPct) + " %")}. In {c.Vintage} the buds had burst on " +
                     $"{from.ToString("d MMMM", Ci)}; the coldest night after that was {night.ToString("d MMMM", Ci)} ({F(tmin, "0.0")} °C at the Region's " +
                     "weather station, colder in the low spots where frost settles).");
             }
             case "yield":
                 if (Leader(ctx.Select(c => c.YieldHlHa).ToList(), 5, lowest: true) is not int y) return null;
                 return Q("Which glass comes from the smallest crop?", y,
-                    $"Yield: {List(i => F(ctx[i].YieldHlHa) + " hL/ha")}." + (ctx[y].FrostLossPct >= 10 ? $" Frost took {F(ctx[y].FrostLossPct)} % of the {ctx[y].Vintage} crop." : ""));
+                    $"Yield: {List(i => F(ctx[i].YieldHlHa) + " hL/ha")}." + (ctx[y].FrostLossPct >= 10 ? $" Spring frost killed {F(ctx[y].FrostLossPct)} % of the {ctx[y].Vintage} shoots." : ""));
             case "acid":
             case "acid-low":
                 bool low = topic == "acid-low";

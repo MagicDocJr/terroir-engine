@@ -30,11 +30,28 @@ public static class PracticeProgress
 
     public static string? MedalFor(double percent) => percent >= 85 ? "gold" : percent >= 70 ? "silver" : percent >= 50 ? "bronze" : null;
 
-    public static JsonObject Load(string? text)
+    public static JsonObject Load(string? text) => TryLoad(text, out var r) ? r : r;
+
+    /// <summary>False when the text is not a readable record (not JSON, not an object, duplicate keys): the caller should keep a
+    /// copy of the file before anything overwrites it. The record is then empty. No text at all is a fresh start (true).</summary>
+    public static bool TryLoad(string? text, out JsonObject record)
     {
-        if (string.IsNullOrWhiteSpace(text)) return new JsonObject();
-        try { return JsonNode.Parse(text) as JsonObject ?? new JsonObject(); }
-        catch (JsonException) { return new JsonObject(); }
+        record = new JsonObject();
+        if (string.IsNullOrWhiteSpace(text)) return true;
+        try
+        {
+            if (JsonNode.Parse(text) is not JsonObject o) return false;
+            Walk(o);   // enumerating builds each object's dictionary, so duplicate keys fail here and not later
+            record = o;
+            return true;
+        }
+        catch (Exception e) when (e is JsonException or ArgumentException or InvalidOperationException) { record = new JsonObject(); return false; }
+    }
+
+    private static void Walk(JsonNode? n)
+    {
+        if (n is JsonObject o) foreach (var kv in o) Walk(kv.Value);
+        else if (n is JsonArray arr) foreach (var x in arr) Walk(x);
     }
 
     // ------------------------------------------------------------------------------------------------ tolerant readers
@@ -70,6 +87,7 @@ public static class PracticeProgress
         var rec = (JsonObject)record.DeepClone();
         string? kind = Str(ev["kind"]);
         var date = Date(ev["date"]);
+        rec["lastGain"] = 0;
         if (kind is not ("practice" or "stand" or "daily") || date == null || ev["items"] is not JsonArray items) return rec;
         rec["version"] = Version;
         var daily = Obj(rec, "daily");
@@ -92,6 +110,11 @@ public static class PracticeProgress
 
         if (kind == "stand" && Str(ev["stand"]) is { Length: > 0 } stand)
         {
+            // a replayed stand pours the same vintages again: only an improvement on the best score earns item XP
+            double prev = rec["bestPercent"] is JsonObject bp ? Num(bp[stand]) : double.NaN;
+            double pctNow = Num(ev["percent"]);
+            if (!double.IsNaN(prev))
+                gained = double.IsNaN(pctNow) || pctNow <= prev ? 0 : (int)Math.Round((pctNow - prev) / 100.0 * items.Count * XpPerMark);
             var medals = Obj(rec, "medals");
             string? old = Str(medals[stand]), now = MedalFor(Num(ev["percent"]) is var p && double.IsNaN(p) ? 0 : p);
             if (now != null && Array.IndexOf(MedalOrder, now) > Array.IndexOf(MedalOrder, old ?? ""))

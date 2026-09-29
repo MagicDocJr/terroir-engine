@@ -15,6 +15,18 @@ public static class PracticePours
         ("mosel", "Riesling"), ("cote-dor", "Pinot Noir"), ("cote-dor", "Chardonnay"), ("napa", "Cabernet Sauvignon"),
     };
 
+    /// <summary>(Region, Variety, vintage) the simulation does not yet reproduce (docs/backlog.md, science review): random pours
+    /// skip them so practice never teaches a wrong vintage. Côte d'Or spring frost is far too harsh in 2019, 2020 and 2022, and
+    /// Mosel 2010's tiny, very acidic crop comes out normal.</summary>
+    private static readonly HashSet<(string, string, int)> Skip = new()
+    {
+        ("cote-dor", "Chardonnay", 2019), ("cote-dor", "Chardonnay", 2020), ("cote-dor", "Chardonnay", 2022),
+        ("cote-dor", "Pinot Noir", 2019), ("cote-dor", "Pinot Noir", 2020), ("cote-dor", "Pinot Noir", 2022),
+        ("mosel", "Riesling", 2010),
+    };
+
+    public static bool Miscalibrated(string regionId, string variety, int vintage) => Skip.Contains((regionId, variety, vintage));
+
     /// <summary>False inside a game that has not yet harvested a vintage Tasting practice can pour.</summary>
     public static bool Available(int? maxVintage) => maxVintage == null || maxVintage >= FirstVintage;
 
@@ -34,6 +46,7 @@ public static class PracticePours
         var plot = plots[rng.Next(plots.Count)];
         int last = Math.Min(VintageFacts.LastRecordYear(data, region), maxVintage ?? int.MaxValue);
         int vintage = FirstVintage + rng.Next(last - FirstVintage + 1);
+        for (int tries = 0; tries < 50 && Miscalibrated(region, variety, vintage); tries++) vintage = FirstVintage + rng.Next(last - FirstVintage + 1);
         string? style = focus switch
         {
             "sweetness" => new[] { "dry", "off-dry", "kabinett", "spatlese", "auslese" }[rng.Next(5)],
