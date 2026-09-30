@@ -5,6 +5,7 @@ Things deliberately left out of the MVP, to deep-dive once the core loop is lock
 ## Shortlist: what to build next (agreed with the owner 2026-09-29; check here first when asked "what's next")
 - **Famous-vintage challenges**: replay the 2016 Burgundy frost as an authored scenario (the sim already reproduces it); the hot 2003 needs a yearly Côte de Beaune flowering/véraison series first (see Simulation and science).
 - **More work types in 3D**: shoot thinning, bâtonnage, a barrel sample with the thief, tasting berries for harvest timing, tying down; they build on the Tasks system.
+- **Research-backed roadmap (proposed 2026-09-30, awaiting the owner's pick):** `docs/research/2026-09-30-fun-and-learning.md`. Recommended next specs: (1) Learning core: cause items on a spaced review queue, confidence before every reveal, mixed sessions, mastery-based ranks, a weekly rhythm instead of a daily streak, predict-before-reveal at every bottling; (2) Tasting sheet 2: conformance with the systematic approach and quality as an argument, with the reviewer recalibration; (3) Play together: Tasting duet, explain-it cards, taste-along with real bottles. Phases 4–5 (scenarios, Vintage in review, what-if, codex, label law, exam breadth) are listed there.
 - Also open: the tasting-review page for the WSET L3 reviewer (see Build and review); the Tasting practice follow-ups (see Gameplay).
 
 ## First expansion (top priority after MVP)
