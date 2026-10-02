@@ -153,8 +153,38 @@ A card in the Cellar book for a vintage tasted at a Stand: its weather in number
 _Avoid_: Badge, collectible
 
 **Taster rank**:
-The player's progression in Tasting practice (Novice taster to Fair judge), earned only by marked answers.
+The player's progression in Tasting practice (Novice taster to Fair judge), set by the share of Causes the player Knows.
 _Avoid_: Level, score
+
+### Learning
+
+**Cause**:
+One cause chain from a choice, a site, a vintage or a fault to what it does in the glass (e.g. cool fermentation → more fruity esters → pear on the nose). Tasting sheet lines are tagged with the Causes they show.
+_Avoid_: Fact, flashcard, lesson
+
+**Review queue**:
+The Causes the player has met, each due again after a spaced gap that grows with every right answer.
+_Avoid_: Deck, backlog, revision list
+
+**Known**:
+A Cause answered right on three separate days; two misses in a row return it to learning.
+_Avoid_: Mastered, learned, completed
+
+**Confidence**:
+How sure the player is of an answer (guess, think so, sure), given before the reveal.
+_Avoid_: Certainty, bet
+
+**Weekly rhythm**:
+The goal of five study days in each Monday-to-Sunday week; extra reviews repair a missed day.
+_Avoid_: Streak, daily goal
+
+**Exam date**:
+An optional date the review queue works towards: gaps shrink so every Cause comes back before it.
+_Avoid_: Deadline, test day
+
+**Learn card**:
+A short card that opens beside a choice and explains what that choice does in the wine, applied to the player's own Block or Lot.
+_Avoid_: Tooltip, help page, tutorial
 
 ### Play modes
 
