@@ -38,6 +38,8 @@ public sealed class TastingSheet
     public string QualityNotHigher = "";
     /// <summary>The drinking window in years from the harvest (structure-based; UNVERIFIED design values).</summary>
     public double WindowYears;
+    /// <summary>The raw scores behind the scale words (calibration and the qualitysweep report only; never shown).</summary>
+    public double NoseScore, FlavourScore, FinishScore, BodyScore;
     public List<string> Chemistry { get; } = new();
     /// <summary>The Causes (data/causes.json) behind this sheet and the line each shows on: "appearance", "aroma:&lt;family&gt;",
     /// "palate:&lt;Attribute&gt;", "fault" or "vintage" (learning-core design §3.2). Written by the generator at the same
@@ -163,7 +165,10 @@ public static class TastingSheetGenerator
         if (mlf > 0) fam.Add(("Secondary", "malolactic", "butter, cream", mlf, $"diacetyl from malolactic fermentation ({(b.Choices["MLF"] == 2 ? "spontaneous, which makes more" : "inoculated")})"));
         double lees = b.LeesMonths / 9.0 * (1 + 1.5 * (b.BatonnageMonths / Math.Max(0.01, b.LeesMonths)));
         if (lees > 0.6) fam.Add(("Secondary", "lees", "bread, biscuit, yeast", Math.Min(2, lees), $"{b.LeesMonths:0} months on fine lees{(b.BatonnageMonths > 0.5 ? " with bâtonnage" : "")}"));
-        double oak = Perceived(b.Vanillin, 60) + Perceived(b.OakLactone, red ? 74 : 20) + Perceived(b.Guaiacol, 10) * 0.8 + Perceived(b.Eugenol, 6) * 0.6;
+        // the oak family's strength: the strongest oak compound leads and the others add a little (perceived strengths do not
+        // simply add up; game calibration, UNVERIFIED)
+        double[] oakParts = { Perceived(b.Vanillin, 60), Perceived(b.OakLactone, red ? 74 : 20), Perceived(b.Guaiacol, 10) * 0.8, Perceived(b.Eugenol, 6) * 0.6 };
+        double oak = oakParts.Max() + 0.25 * (oakParts.Sum() - oakParts.Max());
         if (oak > 0.3)
         {
             var t = new List<string>();
@@ -201,7 +206,8 @@ public static class TastingSheetGenerator
 
         foreach (var f in fam.Where(f => f.p > 0.25).OrderBy(f => f.cat == "Primary" ? 0 : f.cat == "Secondary" ? 1 : 2).ThenByDescending(f => f.p))
             s.Aromas.Add(new Descriptor(f.cat, f.family, f.terms, IntensityWord(Math.Max(1, f.p)), f.because));
-        var ps = fam.Where(f => f.p > 0.25).Select(f => f.p).OrderByDescending(x => x).ToList();
+        // the fruit counts once in the intensity, however many fruit families it is split into
+        var ps = fam.Where(f => f.p > 0.25).GroupBy(f => TastingSheet.IsFruit(f.family) ? "fruit" : f.family).Select(g => g.Max(f => f.p)).OrderByDescending(x => x).ToList();
         double intensity = ps.Count == 0 ? 0 : 0.55 * ps[0] + 0.17 * ps.Skip(1).Take(3).Sum();
         s.NoseIntensity = intensity < 0.9 ? "light" : intensity < 1.25 ? "medium(−)" : intensity < 1.6 ? "medium" : intensity < 1.95 ? "medium(+)" : "pronounced";
         s.NoseCondition = s.Faults.Count > 0 ? "unclean" : "clean";
@@ -233,10 +239,14 @@ public static class TastingSheetGenerator
         double bodyScore = (alc - 8) / 5 + rs / 60 + (b.Glycerol - 6) / 12 + b.TotalTannin / 2000 + b.LeesMonths * 0.01 + b.NobleRotShare;
         string body = bodyScore < 0.8 ? "light" : bodyScore < 1.05 ? "medium(−)" : bodyScore < 1.35 ? "medium" : bodyScore < 1.8 ? "medium(+)" : "full";
         s.Palate.Add(new("Body", body, $"alcohol {alc:0.0} %, glycerol {b.Glycerol:0} g/L{(rs > 10 ? $", sugar {rs:0} g/L" : "")}{(b.LeesMonths > 3 ? ", lees texture" : "")}{(red ? $", tannin {b.TotalTannin:0} mg/L" : "")}"));
-        double flav = intensity + (rs > 20 ? 0.2 : 0) + (red && b.TotalTannin > 700 ? 0.2 : 0);
+        // sugar carries flavour (an Auslese reads stronger than a dry wine of the same nose); tannin adds a little grip
+        double flav = intensity + Math.Min(rs, 100) / 250 + (red && b.TotalTannin > 700 ? 0.1 : 0);
         s.FlavourIntensity = flav < 0.9 ? "light" : flav < 1.25 ? "medium(−)" : flav < 1.6 ? "medium" : flav < 1.95 ? "medium(+)" : "pronounced";
         s.Palate.Add(new("Flavour intensity", s.FlavourIntensity, "as on the nose; " + (concentration > 1.1 ? "low yields concentrate flavour" : concentration < 0.8 ? "high yields dilute flavour" : "average concentration")));
-        double finishScore = flav * 0.7 + bodyScore * 0.45 + (acidScore > 6.5 ? 0.2 : 0) + (red ? b.TotalTannin / 2500 : 0) + b.NobleRotShare;
+        // length follows flavour concentration first, then acidity and sugar; body and tannin add a little (game calibration, UNVERIFIED)
+        double finishScore = 0.15 + flav * 0.8 + (bodyScore - 1) * 0.25 + (acidScore >= 8 ? 0.3 : acidScore >= 6.5 ? 0.15 : 0) + Math.Min(rs, 90) / 200
+            + (red ? Math.Max(0, b.TotalTannin - 600) / 2500 : 0) + b.NobleRotShare;
+        s.NoseScore = intensity; s.FlavourScore = flav; s.FinishScore = finishScore; s.BodyScore = bodyScore;
         s.Finish = finishScore < 1.3 ? "short" : finishScore < 1.6 ? "medium(−)" : finishScore < 1.9 ? "medium" : finishScore < 2.2 ? "medium(+)" : "long";
         s.Palate.Add(new("Finish", s.Finish, "length follows flavour concentration, extract and acidity"));
 
@@ -255,14 +265,15 @@ public static class TastingSheetGenerator
         bool balance = !(hot || flabby || tart || green || thin || oakDominant);
         string balWhy = balance ? "sugar, acidity, alcohol" + (red ? " and tannin" : "") + " in harmony" :
             hot ? "alcohol is hot and not carried by the body" : oakDominant ? "the oak dominates the fruit (not integrated)" : flabby ? "too little acidity for the sweetness and ripeness (flabby)" : tart ? "acidity is sharp and unripe" : green ? "green, coarse tannins" : "thin and tart";
-        bool length = s.Finish is "medium(+)" or "long";
+        // length: long, or medium(+) carried by pronounced flavour (intense wines generally have a long finish, UW-2016 p. 8)
+        bool length = s.Finish == "long" || (s.Finish == "medium(+)" && s.FlavourIntensity == "pronounced");
         bool inten = s.FlavourIntensity is "medium(+)" or "pronounced";
         var clear = fam.Where(f => f.p >= 1.25).ToList();   // clearly perceived families only
-        int families = clear.Select(a => a.family).Distinct().Count();
+        int families = clear.Select(a => TastingSheet.IsFruit(a.family) ? "fruit" : a.family).Distinct().Count();
         int cats = clear.Select(a => a.cat).Distinct().Count();
         bool complexity = families >= 3 && cats >= 2;
         s.Blic.Add(("Balance", balance, balWhy));
-        s.Blic.Add(("Length", length, $"finish is {s.Finish}"));
+        s.Blic.Add(("Length", length, $"finish is {s.Finish}" + (s.Finish == "medium(+)" && !length ? ", not carried by pronounced flavour" : "")));
         s.Blic.Add(("Intensity", inten, $"flavour intensity is {s.FlavourIntensity}"));
         s.Blic.Add(("Complexity", complexity, $"{families} clearly defined aroma families across {cats} categor{(cats == 1 ? "y" : "ies")}"));
         int met = s.Blic.Count(x => x.Met);

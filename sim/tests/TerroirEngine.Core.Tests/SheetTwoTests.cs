@@ -153,3 +153,26 @@ public class SheetTwoTests
         Assert.Contains("tawny", TastingSheet.ColoursRed);
     }
 }
+
+/// <summary>The quality verdict spreads like a mixed line-up (Tasting sheet 2 spec §3.3; target bands UNVERIFIED, for the
+/// Level 3 reviewer). Over 150 pours on 2026-10-02: Outstanding 13 %, Very good 24 %, Good 33 %, Acceptable 27 %, Poor 3 %.</summary>
+public class QualitySpreadTests
+{
+    [Fact]
+    public void Quality_SpreadsAcrossRandomPours()
+    {
+        var counts = new Dictionary<string, int>(); int n = 0;
+        for (int seed = 1; seed <= 60; seed++)
+        {
+            var q = TastingLab.Pour(Fixture.Data, PracticePours.Random(Fixture.Data, seed), seed).Sheet.Quality;
+            counts[q] = counts.GetValueOrDefault(q) + 1; n++;
+        }
+        double Share(string q) => counts.GetValueOrDefault(q) / (double)n;
+        var report = string.Join(", ", counts.Select(kv => $"{kv.Key} {kv.Value}"));
+        Assert.True(Share("Outstanding") <= 0.17, report);
+        Assert.InRange(Share("Very good"), 0.15, 0.35);
+        Assert.InRange(Share("Good"), 0.20, 0.42);
+        Assert.InRange(Share("Acceptable"), 0.15, 0.38);
+        Assert.True(Share("Very good") + Share("Outstanding") <= 0.45, report);
+    }
+}
