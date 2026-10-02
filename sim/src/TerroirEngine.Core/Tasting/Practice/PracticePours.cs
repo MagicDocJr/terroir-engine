@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using TerroirEngine.Data;
+using TerroirEngine.Learning;
 
 namespace TerroirEngine.Tasting.Practice;
 
@@ -67,4 +68,52 @@ public static class PracticePours
     public static PourSpec Daily(GameData data, DateOnly date, int? maxVintage = null) => Random(data, date.DayNumber, maxVintage);
 
     public static int DailySeed(DateOnly date) => date.DayNumber % 100000 + 1;
+
+    /// <summary>A new Wine that shows the Cause (its sheet is tagged with it), found from the Cause's pour hints; null for a
+    /// chain-reviewed Cause or when six candidates do not show it (the session then falls back to the chain).</summary>
+    public static PouredWine? ForCause(GameData data, Cause c, int seed, int? maxVintage)
+    {
+        if (c.ReviewBy != "wine" || !Available(maxVintage)) return null;
+        for (int i = 0; i < 6; i++)
+        {
+            int sd = seed * 37 + i;
+            try
+            {
+                var p = TastingLab.Pour(data, CausePours.Spec(data, c, sd, maxVintage), sd);
+                if (p.Sheet.Causes.Contains(c.Id)) return p;
+            }
+            catch (InvalidOperationException) { }
+        }
+        return null;
+    }
+
+    private static string[] StylesFor(string variety) => variety switch
+    {
+        "Riesling" => new[] { "dry", "off-dry", "kabinett", "spatlese", "auslese" },
+        "Chardonnay" => new[] { "steel", "old-oak", "new-oak" },
+        _ => new[] { "classic", "light", "extracted" },
+    };
+
+    /// <summary>Two Wines from the same Block that differ in this Cause: one shows it, the other (another cellar style, or
+    /// another vintage) does not. Null when no such pair turns up.</summary>
+    public static (PouredWine With, PouredWine Without)? ContrastFor(GameData data, Cause c, int seed, int? maxVintage)
+    {
+        var with = ForCause(data, c, seed, maxVintage);
+        if (with == null) return null;
+        var x = with.Context;
+        var candidates = StylesFor(x.Variety).Where(st => st != x.StyleId).Select(st => new PourSpec(x.PlotId, x.Vintage, x.BlockId, x.Variety, st)).ToList();
+        var years = VintageFacts.Record(data, x.RegionId, maxVintage).Select(f => f.Year)
+            .Where(y => y != x.Vintage && !Miscalibrated(x.RegionId, x.Variety, y)).OrderBy(y => new Random(seed * 13 + y).Next()).Take(4);
+        candidates.AddRange(years.Select(y => new PourSpec(x.PlotId, y, x.BlockId, x.Variety, x.StyleId)));
+        foreach (var spec in candidates)
+        {
+            try
+            {
+                var w = TastingLab.Pour(data, spec, seed * 41 + 1);
+                if (!w.Sheet.Causes.Contains(c.Id)) return (with, w);
+            }
+            catch (InvalidOperationException) { }
+        }
+        return null;
+    }
 }
