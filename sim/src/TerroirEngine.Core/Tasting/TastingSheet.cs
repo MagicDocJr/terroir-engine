@@ -18,6 +18,11 @@ public sealed class TastingSheet
     public string Quality = "", QualityBecause = "", Readiness = "";
     public List<(string Criterion, bool Met, string Why)> Blic { get; } = new();
     public List<string> Chemistry { get; } = new();
+    /// <summary>The Causes (data/causes.json) behind this sheet and the line each shows on: "appearance", "aroma:&lt;family&gt;",
+    /// "palate:&lt;Attribute&gt;", "fault" or "vintage" (learning-core design §3.2). Written by the generator at the same
+    /// conditions that write each "because".</summary>
+    public List<(string Cause, string Line)> CauseLinks { get; } = new();
+    public IEnumerable<string> Causes => CauseLinks.Select(x => x.Cause).Distinct();
 }
 
 /// <summary>Turns chemistry and history into a structured tasting sheet in our own wording (docs/science/tasting-sheet.md;
@@ -212,6 +217,57 @@ public static class TastingSheetGenerator
         s.QualityBecause = faulty ? "a fault dominates the wine" : $"{met} of 4 quality criteria met: " + string.Join("; ", s.Blic.Select(x => $"{x.Criterion} {(x.Met ? "✓" : "✗")} ({x.Why})"));
         bool ageWorthy = (acidScore > 7 || (red && b.TotalTannin > 700) || rs > 30) && inten;
         s.Readiness = faulty ? "not for sale as it is" : ageWorthy ? "can drink now, but has potential for ageing" : "drink now; not designed for long ageing";
+
+        // ---------------- Causes (learning-core design §3.2): the same conditions as the "because" lines above
+        void Tag(string cause, string line) { if (!s.CauseLinks.Contains((cause, line))) s.CauseLinks.Add((cause, line)); }
+        if (red && s.ColourIntensity == "pale" && v == "Pinot Noir") Tag("pinot-pale-colour", "appearance");
+        if (red && s.ColourIntensity == "deep") Tag("extraction-colour-tannin", "appearance");
+        if (red && s.Colour == "garnet") Tag("age-garnet-colour", "appearance");
+        foreach (var a in s.Aromas)
+        {
+            string line = "aroma:" + a.Family;
+            switch (a.Family)
+            {
+                case "fruit" or "red and black fruit": Tag("ripeness-fruit-character", line); break;
+                case "noble rot": Tag("noble-rot", line); break;
+                case "floral" when v == "Riesling": Tag("riesling-terpenes", line); break;
+                case "tropical (thiols)": Tag("thiols-skin-contact", line); break;
+                case "herbaceous": Tag(b.Ibmp > (red ? 15 : 8) ? "pyrazines-shade-cool" : "whole-bunch-stems", line); break;
+                case "fermentation" when b.MaxTempC < 18: Tag("cool-ferment-esters", line); break;
+                case "malolactic": Tag("mlf-diacetyl", line); break;
+                case "lees": Tag("lees-bread-texture", line); break;
+                case "oak": Tag(b.Choices["Vessel"] >= 4 ? "new-oak-vanilla-toast" : "old-oak-texture", line); break;
+                case "bottle age (petrol)": Tag("sun-exposure-tdn", line); break;
+                case "bottle age": Tag("bottle-age-tertiary", line); break;
+                case "oxidative": Tag("oxidation", line); break;
+                case "animal": Tag("brett", line); break;
+                case "volatile": Tag("volatile-acidity", line); break;
+                case "reductive": Tag("low-yan-h2s", line); break;
+                case "cooked": Tag("sunburn-cooked", line); break;
+            }
+        }
+        if (b.Acetic > vaLimit) Tag("volatile-acidity", "fault");
+        if (b.H2sIndex > 1.0) Tag("low-yan-h2s", "fault");
+        if (b.FourEp > 425) Tag("brett", "fault");
+        if (b.Acetaldehyde > 100) Tag("oxidation", "fault");
+        if (b.GreyRotShare > 0.06) Tag("grey-rot-taint", "fault");
+        if ((b.FourEp > 230 || b.Acetic > 0.75 || b.Acetaldehyde > 40) && b.MolecularSo2 < 0.5) Tag("molecular-so2-ph", "fault");
+        if (b.Stopped) Tag("stopped-ferment-sweetness", "palate:Sweetness");
+        if (p0.SeasonTemp < 15.5) Tag("cool-season-acid", "palate:Acidity");
+        if (p0.SeasonTemp > 18) Tag("warm-season-malic-loss", "palate:Acidity");
+        if (b.Malic < 0.3 && b.Lactic > 0.5) Tag("mlf-softens-acid", "palate:Acidity");
+        if (b.AcidAdded > 0) Tag("acidification", "palate:Acidity");
+        if (red)
+        {
+            var tl = s.Palate.First(x => x.Attribute == "Tannin").Level;
+            if (tl.Contains("green")) Tag("seed-ripeness-tannin", "palate:Tannin");
+            if (b.TotalTannin >= 750) Tag("extraction-colour-tannin", "palate:Tannin");
+            if (b.StemTannin > 5 && b.WholeBunchShare > 0.2) Tag("whole-bunch-stems", "palate:Tannin");
+        }
+        Tag("sugar-to-alcohol", "palate:Alcohol");
+        if (b.ChaptalSugarAdded > 0) Tag("chaptalisation", "palate:Alcohol");
+        if (concentration > 1.1 || concentration < 0.8) Tag("yield-concentration", "palate:Flavour intensity");
+        if (parts.Any(pt => pt.prov.FrostLoss > 0.1)) Tag("spring-frost-yield", "vintage");
         return s;
     }
 }

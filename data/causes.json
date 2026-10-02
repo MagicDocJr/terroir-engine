@@ -1,0 +1,685 @@
+{
+  "about": "Causes: the cause→effect links the simulation models and the game teaches (learning-core design §3). Each chain step is backed by the cited docs/science section ('file.md#heading text'). 'pour' hints help find a new Wine that shows the Cause; 'line' is where it shows on a Tasting sheet. Topics paraphrase the Level 3 learning-outcome areas (no WSET wording). 'reviewBy': 'chain' marks Causes that practice pours rarely or never show (faults, sunburn, noble rot in the Mosel); they are reviewed with chain questions, and still tagged on the player's own Wines.",
+  "causes": [
+    {
+      "id": "cool-season-acid",
+      "title": "A cool season keeps acidity high",
+      "chain": [
+        "Cool nights and a cool season",
+        "slow the berry's respiration of malic acid",
+        "so the must keeps more malic acid and a lower pH",
+        "and the wine tastes high in acidity"
+      ],
+      "topic": "Climate and weather: vintage variation",
+      "level": "L3",
+      "line": "palate:Acidity",
+      "sources": [
+        "ripening.md#4.1 Malic acid",
+        "acid-ph-so2.md#1. Acid composition"
+      ],
+      "pour": {
+        "region": "mosel",
+        "variety": "Riesling",
+        "style": "dry",
+        "vintageClass": "cool"
+      }
+    },
+    {
+      "id": "warm-season-malic-loss",
+      "title": "A warm season burns malic acid off",
+      "chain": [
+        "A warm season and warm nights",
+        "speed up the berry's respiration of malic acid",
+        "so the must has less acid and a higher pH",
+        "and the wine tastes softer, lower in acidity"
+      ],
+      "topic": "Climate and weather: vintage variation",
+      "level": "L3",
+      "line": "palate:Acidity",
+      "sources": [
+        "ripening.md#4.1 Malic acid",
+        "acid-ph-so2.md#2. pH by charge balance"
+      ],
+      "pour": {
+        "region": "napa",
+        "variety": "Cabernet Sauvignon",
+        "vintageClass": "warm"
+      }
+    },
+    {
+      "id": "sugar-to-alcohol",
+      "title": "Must weight sets the alcohol",
+      "chain": [
+        "Riper grapes have more sugar (higher °Oe or °Brix)",
+        "yeast turn that sugar into alcohol",
+        "so a riper harvest gives a higher alcohol and fuller body"
+      ],
+      "topic": "Grape growing: harvest timing and ripeness",
+      "level": "L3",
+      "line": "palate:Alcohol",
+      "sources": [
+        "fermentation.md#Conventions and conversions",
+        "ripening.md#3. Sugar"
+      ],
+      "pour": {
+        "region": "napa",
+        "variety": "Cabernet Sauvignon",
+        "style": "extracted"
+      }
+    },
+    {
+      "id": "ripeness-fruit-character",
+      "title": "Ripeness moves the fruit character",
+      "chain": [
+        "The later the grapes are picked",
+        "the further they ripen (more sugar, less acid and green character)",
+        "so the fruit moves from citrus and green fruit to stone and tropical fruit (whites), or from red to black fruit (reds)"
+      ],
+      "topic": "Grape growing: harvest timing and ripeness",
+      "level": "L3",
+      "line": "aroma:fruit",
+      "sources": [
+        "ripening.md#10. The harvest decision",
+        "tasting-sheet.md#2. Nose"
+      ],
+      "pour": {
+        "region": "mosel",
+        "variety": "Riesling",
+        "style": "auslese"
+      }
+    },
+    {
+      "id": "yield-concentration",
+      "title": "Low yields concentrate flavour",
+      "chain": [
+        "Fewer bunches per vine (low bud load, green harvest)",
+        "share the vine's leaf area and sugar between less fruit",
+        "so each berry is more concentrated",
+        "and the wine has more flavour intensity"
+      ],
+      "topic": "Grape growing: yield and vine management",
+      "level": "L3",
+      "line": "palate:Flavour intensity",
+      "sources": [
+        "canopy-and-yield.md#2.2 Leaf area to fruit ratio",
+        "tasting-sheet.md#3. Palate"
+      ],
+      "pour": {
+        "region": "cote-dor",
+        "variety": "Pinot Noir",
+        "vintageClass": "any"
+      }
+    },
+    {
+      "id": "spring-frost-yield",
+      "title": "Spring frost kills young shoots",
+      "chain": [
+        "A frost night after budburst",
+        "kills the young green shoots and their flower clusters",
+        "secondary buds replace only part of the crop",
+        "so yields fall, sometimes drastically"
+      ],
+      "topic": "Grape growing: hazards",
+      "level": "L3",
+      "line": "vintage",
+      "sources": [
+        "phenology.md#6. Frost damage by stage"
+      ],
+      "pour": {
+        "region": "cote-dor",
+        "variety": "Pinot Noir",
+        "vintageClass": "frost"
+      }
+    },
+    {
+      "id": "noble-rot",
+      "title": "Noble rot concentrates sweet wines",
+      "chain": [
+        "Misty mornings then dry, sunny afternoons on ripe, intact grapes",
+        "let Botrytis grow without splitting the berries",
+        "the berries shrivel, concentrating sugar and acid and adding new aromas",
+        "so the wine shows honey, marmalade and dried apricot"
+      ],
+      "topic": "Winemaking: sweet wines and sugar concentration",
+      "level": "L3",
+      "line": "aroma:noble rot",
+      "sources": [
+        "disease.md#5.5 Noble rot",
+        "aroma-and-faults.md#Marker compounds"
+      ],
+      "pour": {
+        "region": "mosel",
+        "variety": "Riesling",
+        "style": "auslese",
+        "vintageClass": "warm"
+      },
+      "reviewBy": "chain"
+    },
+    {
+      "id": "grey-rot-taint",
+      "title": "Grey rot taints the wine",
+      "chain": [
+        "Wet weather near harvest on damaged or tight bunches",
+        "lets Botrytis spread as grey rot",
+        "rotten fruit reaching the press brings mouldy, earthy off-flavours and oxidising enzymes",
+        "so the wine can be faulty and browner"
+      ],
+      "topic": "Grape growing: pests and diseases",
+      "level": "L3",
+      "line": "fault",
+      "sources": [
+        "disease.md#5.6 Consequences",
+        "aroma-and-faults.md#Faults"
+      ],
+      "pour": {
+        "region": "mosel",
+        "variety": "Riesling",
+        "vintageClass": "cool"
+      },
+      "reviewBy": "chain"
+    },
+    {
+      "id": "pyrazines-shade-cool",
+      "title": "Shade and cool weather keep green pepper notes",
+      "chain": [
+        "Bunches shaded before véraison, a cool season or an early harvest",
+        "keep more methoxypyrazines in the grapes",
+        "so the wine smells of green bell pepper and leaves"
+      ],
+      "topic": "Grape growing: canopy and ripeness",
+      "level": "L3",
+      "line": "aroma:herbaceous",
+      "sources": [
+        "ripening.md#6. Methoxypyrazines",
+        "canopy-and-yield.md#2.3 Fruit exposure and fruit-zone microclimate"
+      ],
+      "pour": {
+        "region": "napa",
+        "variety": "Cabernet Sauvignon",
+        "style": "light",
+        "vintageClass": "cool"
+      }
+    },
+    {
+      "id": "sun-exposure-tdn",
+      "title": "Sun on Riesling bunches builds the petrol note",
+      "chain": [
+        "Bunches exposed to the sun (leaf removal, a sunny season)",
+        "build up carotenoid-derived TDN precursors",
+        "which turn into TDN as the wine ages in bottle",
+        "so older Riesling smells of petrol or kerosene"
+      ],
+      "topic": "Grape growing: canopy management; wine ageing",
+      "level": "L3",
+      "line": "aroma:bottle age (petrol)",
+      "sources": [
+        "ripening.md#7. TDN precursors",
+        "aroma-and-faults.md#Marker compounds"
+      ],
+      "pour": {
+        "region": "mosel",
+        "variety": "Riesling",
+        "style": "dry",
+        "vintageClass": "warm"
+      }
+    },
+    {
+      "id": "riesling-terpenes",
+      "title": "Riesling's floral terpenes",
+      "chain": [
+        "Riesling grapes carry terpenes such as linalool",
+        "sun-exposed bunches make more of them",
+        "so the wine smells floral (blossom, citrus flower)"
+      ],
+      "topic": "Grape varieties: Riesling",
+      "level": "L3",
+      "line": "aroma:floral",
+      "sources": [
+        "aroma-and-faults.md#Marker compounds",
+        "canopy-and-yield.md#2.3 Fruit exposure and fruit-zone microclimate"
+      ],
+      "pour": {
+        "region": "mosel",
+        "variety": "Riesling",
+        "style": "kabinett"
+      }
+    },
+    {
+      "id": "sunburn-cooked",
+      "title": "Sunburn gives cooked, bitter notes",
+      "chain": [
+        "Bunches suddenly exposed to strong sun in a heatwave",
+        "overheat and burn",
+        "so the wine shows cooked fruit and bitter phenolics"
+      ],
+      "topic": "Grape growing: hazards; canopy management",
+      "level": "L3",
+      "line": "aroma:cooked",
+      "sources": [
+        "canopy-and-yield.md#2.5 Sunburn"
+      ],
+      "pour": {
+        "region": "napa",
+        "variety": "Cabernet Sauvignon",
+        "vintageClass": "warm"
+      },
+      "reviewBy": "chain"
+    },
+    {
+      "id": "extraction-colour-tannin",
+      "title": "More extraction, more colour and tannin",
+      "chain": [
+        "Warmer fermentation, more vigorous cap work and longer maceration",
+        "pull more colour and tannin out of the skins and seeds",
+        "so the red wine is deeper in colour and higher in tannin"
+      ],
+      "topic": "Winemaking: red winemaking",
+      "level": "L3",
+      "line": "palate:Tannin",
+      "sources": [
+        "extraction-and-oak.md#1. Red maceration: extraction kinetics"
+      ],
+      "pour": {
+        "region": "napa",
+        "variety": "Cabernet Sauvignon",
+        "style": "extracted"
+      }
+    },
+    {
+      "id": "seed-ripeness-tannin",
+      "title": "Unripe seeds give green, coarse tannin",
+      "chain": [
+        "Grapes picked before the seeds turn brown",
+        "have green, astringent seed tannin",
+        "which extracts more in alcohol during long maceration",
+        "so the wine's tannin feels green and coarse"
+      ],
+      "topic": "Grape growing: harvest timing; red winemaking",
+      "level": "L3",
+      "line": "palate:Tannin",
+      "sources": [
+        "ripening.md#5.1 Seeds",
+        "extraction-and-oak.md#1. Red maceration: extraction kinetics"
+      ],
+      "pour": {
+        "region": "cote-dor",
+        "variety": "Pinot Noir",
+        "style": "light",
+        "vintageClass": "cool"
+      }
+    },
+    {
+      "id": "whole-bunch-stems",
+      "title": "Whole bunches add stem tannin and lift",
+      "chain": [
+        "Fermenting with whole bunches",
+        "adds stem tannin and potassium and some intact-berry (carbonic) fruit",
+        "so the wine gets a fresh herbal lift; with unripe stems it tastes green"
+      ],
+      "topic": "Winemaking: red winemaking",
+      "level": "L3",
+      "line": "aroma:herbaceous",
+      "sources": [
+        "extraction-and-oak.md#1. Red maceration: extraction kinetics"
+      ],
+      "pour": {
+        "region": "cote-dor",
+        "variety": "Pinot Noir",
+        "style": "classic"
+      }
+    },
+    {
+      "id": "cool-ferment-esters",
+      "title": "A cool fermentation keeps fruity esters",
+      "chain": [
+        "Fermenting white wine cool (about 14–16 °C)",
+        "keeps the fruity esters the yeast make from escaping",
+        "so the young wine smells of banana and pear drops"
+      ],
+      "topic": "Winemaking: white winemaking; fermentation",
+      "level": "L3",
+      "line": "aroma:fermentation",
+      "sources": [
+        "fermentation.md#Heat and tank temperature",
+        "aroma-and-faults.md#Marker compounds"
+      ],
+      "pour": {
+        "region": "mosel",
+        "variety": "Riesling",
+        "style": "dry"
+      }
+    },
+    {
+      "id": "low-yan-h2s",
+      "title": "Too little yeast nitrogen gives a rotten-egg smell",
+      "chain": [
+        "A must low in yeast-assimilable nitrogen (below about 140–150 mg/L)",
+        "starves the yeast",
+        "which ferment slowly and release hydrogen sulphide (H₂S)",
+        "so the wine smells reduced (struck match, rotten egg)"
+      ],
+      "topic": "Winemaking: fermentation; faults",
+      "level": "L3",
+      "line": "aroma:reductive",
+      "sources": [
+        "fermentation.md#Yeast-assimilable nitrogen (YAN)",
+        "aroma-and-faults.md#Faults"
+      ],
+      "pour": {
+        "region": "cote-dor",
+        "variety": "Chardonnay",
+        "style": "rustic"
+      },
+      "reviewBy": "chain"
+    },
+    {
+      "id": "stopped-ferment-sweetness",
+      "title": "Stopping fermentation leaves sweetness",
+      "chain": [
+        "Chilling the wine and adding SO₂ partway through fermentation",
+        "stops the yeast before all the sugar is used",
+        "so the wine keeps residual sugar and lower alcohol (the Mosel Kabinett way)"
+      ],
+      "topic": "Winemaking: sweet wines",
+      "level": "L3",
+      "line": "palate:Sweetness",
+      "sources": [
+        "fermentation.md#Stopping fermentation for residual sugar"
+      ],
+      "pour": {
+        "region": "mosel",
+        "variety": "Riesling",
+        "style": "kabinett"
+      }
+    },
+    {
+      "id": "chaptalisation",
+      "title": "Chaptalisation raises alcohol",
+      "chain": [
+        "Adding sugar to the must before fermentation (where the law allows)",
+        "gives the yeast more sugar to convert",
+        "so the wine has more alcohol than the grapes alone would give"
+      ],
+      "topic": "Winemaking: must adjustments; wine law",
+      "level": "L3",
+      "line": "palate:Alcohol",
+      "sources": [
+        "acid-ph-so2.md#3. Must adjustments"
+      ],
+      "pour": {
+        "region": "cote-dor",
+        "variety": "Pinot Noir",
+        "style": "chaptalised",
+        "vintageClass": "cool"
+      }
+    },
+    {
+      "id": "acidification",
+      "title": "Acidification freshens warm-climate musts",
+      "chain": [
+        "Adding tartaric acid to the must (where the law allows)",
+        "raises titratable acidity and lowers pH",
+        "so a warm-climate wine tastes fresher and is more stable"
+      ],
+      "topic": "Winemaking: must adjustments",
+      "level": "L3",
+      "line": "palate:Acidity",
+      "sources": [
+        "acid-ph-so2.md#3. Must adjustments"
+      ],
+      "pour": {
+        "region": "napa",
+        "variety": "Cabernet Sauvignon",
+        "vintageClass": "warm"
+      }
+    },
+    {
+      "id": "mlf-softens-acid",
+      "title": "Malolactic conversion softens acidity",
+      "chain": [
+        "Lactic bacteria convert sharp malic acid into softer lactic acid",
+        "titratable acidity falls and pH rises",
+        "so the wine tastes softer, rounder and less tart"
+      ],
+      "topic": "Winemaking: malolactic conversion",
+      "level": "L3",
+      "line": "palate:Acidity",
+      "sources": [
+        "acid-ph-so2.md#4. Malolactic fermentation (MLF)"
+      ],
+      "pour": {
+        "region": "cote-dor",
+        "variety": "Chardonnay",
+        "style": "old-oak"
+      }
+    },
+    {
+      "id": "mlf-diacetyl",
+      "title": "Malolactic conversion adds buttery notes",
+      "chain": [
+        "Malolactic bacteria make diacetyl as a by-product",
+        "especially in a spontaneous conversion",
+        "so the wine smells of butter and cream"
+      ],
+      "topic": "Winemaking: malolactic conversion",
+      "level": "L3",
+      "line": "aroma:malolactic",
+      "sources": [
+        "acid-ph-so2.md#4. Malolactic fermentation (MLF)",
+        "aroma-and-faults.md#Marker compounds"
+      ],
+      "pour": {
+        "region": "cote-dor",
+        "variety": "Chardonnay",
+        "style": "new-oak"
+      }
+    },
+    {
+      "id": "lees-bread-texture",
+      "title": "Lees ageing adds bread and texture",
+      "chain": [
+        "Leaving the wine on its fine lees, stirred (bâtonnage)",
+        "lets dead yeast cells break down (autolysis) and release mannoproteins",
+        "so the wine gains bready, biscuity notes and a rounder texture"
+      ],
+      "topic": "Winemaking: maturation on lees",
+      "level": "L3",
+      "line": "aroma:lees",
+      "sources": [
+        "extraction-and-oak.md#3. Lees ageing and bâtonnage"
+      ],
+      "pour": {
+        "region": "cote-dor",
+        "variety": "Chardonnay",
+        "style": "new-oak"
+      }
+    },
+    {
+      "id": "new-oak-vanilla-toast",
+      "title": "New French oak adds vanilla and toast",
+      "chain": [
+        "New barrels still hold their oak compounds",
+        "vanillin and toasted-wood compounds (guaiacol, eugenol) move into the wine",
+        "so it smells of vanilla, toast, smoke and clove, and gains oak tannin"
+      ],
+      "topic": "Winemaking: oak maturation",
+      "level": "L3",
+      "line": "aroma:oak",
+      "sources": [
+        "extraction-and-oak.md#2. Oak ageing",
+        "extraction-and-oak.md#Oak aroma thresholds"
+      ],
+      "pour": {
+        "region": "cote-dor",
+        "variety": "Chardonnay",
+        "style": "new-oak"
+      }
+    },
+    {
+      "id": "old-oak-texture",
+      "title": "Old barrels add texture, not oak flavour",
+      "chain": [
+        "Used barrels have given up most of their oak compounds",
+        "but still let a little oxygen through the wood",
+        "so the wine gains texture and gentle development with little oak flavour"
+      ],
+      "topic": "Winemaking: oak maturation",
+      "level": "L3",
+      "line": "aroma:oak",
+      "sources": [
+        "extraction-and-oak.md#Vessel parameters"
+      ],
+      "pour": {
+        "region": "cote-dor",
+        "variety": "Chardonnay",
+        "style": "old-oak"
+      }
+    },
+    {
+      "id": "bottle-age-tertiary",
+      "title": "Bottle age brings tertiary aromas",
+      "chain": [
+        "Years in bottle",
+        "slowly transform primary fruit aromas and polymerise pigments and tannins",
+        "so the wine shows dried fruit, leather and forest floor, a garnet hue and softer tannins"
+      ],
+      "topic": "Wine ageing",
+      "level": "L3",
+      "line": "aroma:bottle age",
+      "sources": [
+        "tasting-sheet.md#2. Nose",
+        "tasting-sheet.md#1. Appearance"
+      ],
+      "pour": {
+        "region": "cote-dor",
+        "variety": "Pinot Noir",
+        "style": "classic"
+      }
+    },
+    {
+      "id": "age-garnet-colour",
+      "title": "Age and high pH turn red wine garnet",
+      "chain": [
+        "As a red wine ages, and more so at a higher pH",
+        "anthocyanins combine with tannins and lose their purple tone",
+        "so the colour moves from purple to ruby to garnet"
+      ],
+      "topic": "Wine ageing; tasting: appearance",
+      "level": "L3",
+      "line": "appearance",
+      "sources": [
+        "tasting-sheet.md#1. Appearance"
+      ],
+      "pour": {
+        "region": "napa",
+        "variety": "Cabernet Sauvignon",
+        "style": "classic"
+      }
+    },
+    {
+      "id": "oxidation",
+      "title": "Too much oxygen oxidises the wine",
+      "chain": [
+        "Oxygen exposure in the cellar or a poor seal",
+        "turns ethanol into acetaldehyde and browns the colour",
+        "so the wine smells nutty or of bruised apple and, beyond a limit, is faulty"
+      ],
+      "topic": "Faults",
+      "level": "L3",
+      "line": "fault",
+      "sources": [
+        "aroma-and-faults.md#Faults"
+      ],
+      "pour": {
+        "region": "cote-dor",
+        "variety": "Chardonnay",
+        "style": "rustic"
+      },
+      "reviewBy": "chain"
+    },
+    {
+      "id": "brett",
+      "title": "Brettanomyces gives barnyard notes",
+      "chain": [
+        "High pH, little molecular SO₂ and used barrels",
+        "let Brettanomyces yeast grow after fermentation",
+        "making 4-ethylphenol",
+        "so the wine smells of leather, barnyard or sticking plaster"
+      ],
+      "topic": "Faults",
+      "level": "L3",
+      "line": "aroma:animal",
+      "sources": [
+        "aroma-and-faults.md#Faults",
+        "acid-ph-so2.md#6. Sulphur dioxide"
+      ],
+      "pour": {
+        "region": "napa",
+        "variety": "Cabernet Sauvignon",
+        "style": "rustic"
+      }
+    },
+    {
+      "id": "volatile-acidity",
+      "title": "Volatile acidity gives a vinegar lift",
+      "chain": [
+        "Acetic acid bacteria or stressed yeast, helped by oxygen and low SO₂",
+        "make acetic acid",
+        "so the wine smells of nail varnish or vinegar; above the legal limit it is faulty"
+      ],
+      "topic": "Faults",
+      "level": "L3",
+      "line": "aroma:volatile",
+      "sources": [
+        "aroma-and-faults.md#Faults"
+      ],
+      "pour": {
+        "region": "napa",
+        "variety": "Cabernet Sauvignon",
+        "style": "rustic"
+      },
+      "reviewBy": "chain"
+    },
+    {
+      "id": "molecular-so2-ph",
+      "title": "SO₂ protects less at high pH",
+      "chain": [
+        "Only the molecular form of free SO₂ protects the wine",
+        "its share falls steeply as pH rises",
+        "so high-pH wines need much more SO₂, or they risk spoilage (Brett, VA, oxidation)"
+      ],
+      "topic": "Winemaking: SO₂ and stability",
+      "level": "L3",
+      "line": "fault",
+      "sources": [
+        "acid-ph-so2.md#6. Sulphur dioxide"
+      ],
+      "pour": {
+        "region": "napa",
+        "variety": "Cabernet Sauvignon",
+        "style": "rustic"
+      }
+    },
+    {
+      "id": "thiols-skin-contact",
+      "title": "Skin contact releases tropical thiols",
+      "chain": [
+        "Grape skins hold odourless thiol precursors",
+        "skin contact before pressing extracts more of them",
+        "and yeast release them as grapefruit and passion-fruit aromas"
+      ],
+      "topic": "Winemaking: white winemaking",
+      "level": "L3",
+      "line": "aroma:tropical (thiols)",
+      "sources": [
+        "ripening.md#8. Thiol precursors",
+        "aroma-and-faults.md#Marker compounds"
+      ],
+      "pour": {
+        "region": "mosel",
+        "variety": "Riesling",
+        "style": "dry"
+      }
+    }
+  ]
+}
