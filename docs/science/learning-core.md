@@ -56,7 +56,8 @@ A wrong answer is followed by the right one and its explanation at once; feedbac
   the XP thresholds so that rank measures what is still known, not how much was answered; XP, medals and Vintage cards stay
   as records of play. Rewards tied to mastery rather than volume protect intrinsic motivation [DECI-1999],
   [RYAN-DECI-2000]; gamification works best when its elements inform about competence [SAILER-2020].
-- A v1 study record (the Tasting-practice release) migrates without loss; ranks are recomputed from Known Causes.
+- A v1 study record (the Tasting-practice release) migrates without loss; ranks are recomputed from Known Causes. A v1
+  player who had already reached Taster by XP keeps the blind Flights that rank opened.
 
 ## 4. Sessions: what a day's review contains
 
@@ -71,6 +72,9 @@ A wrong answer is followed by the right one and its explanation at once; feedbac
 - **Wine items.** A mature Cause is checked by a poured Wine: read its site, vintage and winemaking, predict the line, then
   see the sheet. Predicting first, even wrongly, improves learning from the answer [KORNELL-2009], [RICHLAND-2009],
   [PAN-CARPENTER-2023].
+- A skipped question reviews nothing: an unanswered item carries no Causes, so it neither advances nor resets them. In a
+  list of aromas each family's Cause is marked by whether that family was picked.
+- A contrast question never offers a wrong option that is also a real difference between the two glasses.
 - When no Wine can show a due Cause (an early game's locked years, a miscalibrated vintage), the session falls back to a
   chain question for it; a session is never empty.
 
@@ -89,7 +93,8 @@ A wrong answer is followed by the right one and its explanation at once; feedbac
 ## 6. The weekly rhythm
 
 - The goal is five study days in each Monday-to-Sunday week (**UNVERIFIED**). A missed day can be repaired: every five
-  reviews beyond the first five on a day repair one missed day of that week.
+  Causes reviewed beyond the first five on a day repair one missed day of that week. Marked items that review no Cause do
+  not count, so a long Flight does not fill the week by volume.
 - **Why not a daily streak.** Broken streaks make people disengage [SILVERMAN-2023], and habits form over weeks to months
   with large individual spread [LALLY-2010]. A forgiving weekly target keeps the habit without punishing one missed day.
   The Glass of the day still counts its own run of days for those who want it.
@@ -124,7 +129,8 @@ A wrong answer is followed by the right one and its explanation at once; feedbac
   - on this site, a line computed from the player's own Block or Lot by the sim's own rules (`LearnCards.SiteLine`);
   - when to choose what;
   - what the exam wants;
-  - a check question with Confidence, which adds the card's Causes to the review queue;
+  - a check question with Confidence, which puts the card's Causes in the review queue (due the next day). It is never a
+    review itself: the question is fixed, so answering it again must not move a Cause towards Known;
   - the card's sources.
 - **Why at the moment of choice.** Instruction tied to a decision the learner is about to make supports learning in
   simulations and games; unguided discovery does not [WOUTERS-2013B], [KIRSCHNER-2006], [MAYER-2019]. Relating a choice

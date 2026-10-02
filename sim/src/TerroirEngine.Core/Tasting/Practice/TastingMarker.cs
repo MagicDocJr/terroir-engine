@@ -5,7 +5,7 @@ namespace TerroirEngine.Tasting.Practice;
 
 /// <summary>One marked item: the player's answer beside the Tasting sheet's, with its "because".</summary>
 public sealed record MarkItem(string Key, string Label, string Skill, string Yours, string Actual, double Score, string Because,
-    int Confidence = 0, string Case = "no-confidence", IReadOnlyList<string>? Causes = null);
+    int Confidence = 0, string Case = "no-confidence", IReadOnlyList<string>? Causes = null, IReadOnlyDictionary<string, double>? CauseScores = null);
 
 public sealed record MarkResult(string Exercise, IReadOnlyList<MarkItem> Items, double Total, double Max, int Hints)
 {
@@ -92,6 +92,26 @@ public static class TastingMarker
         _ => null,
     };
 
+    /// <summary>A marked item as a study-record event item (skill, score, Confidence, Causes) for PracticeProgress.Apply. An
+    /// unanswered item carries no Causes (a skipped question is not a miss); per-Cause scores, where an item has them, mark
+    /// each Cause on its own.</summary>
+    public static JsonObject EventItem(MarkItem x)
+    {
+        bool answered = x.Yours.Length > 0;
+        var o = new JsonObject
+        {
+            ["skill"] = x.Skill, ["score"] = x.Score, ["confidence"] = x.Confidence > 0 ? x.Confidence : null,
+            ["causes"] = answered && x.Causes is { Count: > 0 } cs ? new JsonArray(cs.Select(id => (JsonNode)JsonValue.Create(id)!).ToArray()) : null,
+        };
+        if (answered && x.CauseScores is { Count: > 0 } sc)
+        {
+            var so = new JsonObject();
+            foreach (var (id, v) in sc) so[id] = v;
+            o["causeScores"] = so;
+        }
+        return o;
+    }
+
     public static IReadOnlyList<string> CausesFor(TastingSheet sheet, string key) => LineFor(key) is string line
         ? sheet.CauseLinks.Where(l => line.EndsWith(':') ? l.Line.StartsWith(line) : l.Line == line).Select(l => l.Cause).Distinct().ToList()
         : Array.Empty<string>();
@@ -148,7 +168,11 @@ public static class TastingMarker
                 yours = string.Join(", ", mine);
                 actual = act.Count == 0 ? "no clear aromas" : string.Join(", ", act);
                 because = string.Join("; ", sh.Aromas.Select(a => $"{a.Family} ({a.Terms}): {a.Because}"));
-                items.Add(new(key, label, skill, yours, actual, score, because, Conf(answers, key), CaseFor(score, Conf(answers, key)), CausesFor(sh, key)));
+                // each aroma family's Cause is right only when that family was picked
+                var perCause = new Dictionary<string, double>();
+                foreach (var l in sh.CauseLinks.Where(l => l.Line.StartsWith("aroma:")))
+                    perCause[l.Cause] = Math.Min(perCause.GetValueOrDefault(l.Cause, 1), mine.Contains(l.Line[6..]) ? 1 : 0);
+                items.Add(new(key, label, skill, yours, actual, score, because, Conf(answers, key), CaseFor(score, Conf(answers, key)), CausesFor(sh, key), perCause));
                 continue;
             }
             if (key.StartsWith("blic."))

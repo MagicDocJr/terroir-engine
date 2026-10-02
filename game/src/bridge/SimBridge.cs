@@ -261,19 +261,17 @@ public partial class SimBridge : Node
         return (rec["seenCards"] as JsonArray ?? new JsonArray()).ToJsonString();
     }
 
-    /// <summary>The card's check question: marks it and adds the card's Causes to the review queue.</summary>
+    /// <summary>The card's check question: marks it and puts the card's Causes in the review queue (never a review itself).</summary>
     public bool LearnCheck(string id, string answer, int confidence)
     {
-        if (_data == null || LearnCards.Find(_data, id) is not { } card) return false;
-        bool right = answer == card.Check.Answer;
-        var ev = new JsonObject
+        if (_data == null) return false;
+        try
         {
-            ["kind"] = "practice", ["date"] = Today().ToString("yyyy-MM-dd"),
-            ["items"] = new JsonArray(new JsonObject { ["skill"] = "causes", ["score"] = right ? 1 : 0, ["confidence"] = confidence > 0 ? confidence : null,
-                ["causes"] = new JsonArray(card.Causes.Select(c => (JsonNode)JsonValue.Create(c)!).ToArray()) }),
-        };
-        SaveRecord(PracticeProgress.Apply(LoadRecord(), ev));
-        return right;
+            var (rec, right) = LearnCards.Check(_data, LoadRecord(), id, answer, Today());
+            SaveRecord(rec);
+            return right;
+        }
+        catch (Exception e) { _lastError = e.ToString(); return false; }
     }
 
     // ------------------------------------------------------------------ predict before reveal on the Estate (learning-core §6)

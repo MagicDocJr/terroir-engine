@@ -90,6 +90,10 @@ public static class StudyRecord
     public static JsonObject Migrate(JsonObject record)
     {
         var r = (JsonObject)record.DeepClone();
+        // ranks moved from XP to Known Causes; a v1 player who had reached Taster keeps the blind Flights it opened
+        int ver = r["version"] is JsonValue vv && vv.TryGetValue<int>(out var vi) ? vi : 1;
+        if (ver < Version && Num(r["xp"], 0) >= TerroirEngine.Tasting.Practice.PracticeProgress.Ranks[TerroirEngine.Tasting.Practice.PracticeProgress.BlindRank].Xp)
+            r["blindKept"] = true;
         if (r["causes"] is not JsonObject) r["causes"] = new JsonObject();
         if (r["rhythm"] is not JsonArray) r["rhythm"] = new JsonArray();
         r["version"] = Version;

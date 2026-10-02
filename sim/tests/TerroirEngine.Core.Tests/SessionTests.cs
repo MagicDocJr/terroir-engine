@@ -153,15 +153,4 @@ public class SessionTests
         var id = PracticeSession.Pour(Fixture.Data, JsonNode.Parse("""{"kind":"practice","exercise":"identify","seed":3}""")!.AsObject(), new JsonObject(), Today, null);
         Assert.Null(id.Json(Fixture.Data)["glasses"]![0]!["wine"]!["context"]);
     }
-
-    [Fact]
-    public void GlassOfTheDay_ShowsADueCause()
-    {
-        var rec = RecordWith(("new-oak-vanilla-toast", 2, false));
-        var s = PracticeSession.Pour(Fixture.Data, JsonNode.Parse("""{"kind":"daily"}""")!.AsObject(), rec, Today, null);
-        Assert.Equal("identify", s.Exercise);
-        Assert.Contains("new-oak-vanilla-toast", s.Flight[0].Sheet.Causes);
-        var plain = PracticeSession.Pour(Fixture.Data, JsonNode.Parse("""{"kind":"daily"}""")!.AsObject(), new JsonObject(), Today, null);
-        Assert.Equal(PracticePours.Daily(Fixture.Data, Today), plain.Specs[0]);
-    }
 }

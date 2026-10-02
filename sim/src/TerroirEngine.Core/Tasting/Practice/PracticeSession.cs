@@ -96,7 +96,7 @@ public sealed class PracticeSession
             if (st.Locked) throw new InvalidOperationException($"stand {id} opens after the {st.UnlockYear} harvest");
             if (st.Tier > OpenTier(data, record, maxVintage)) throw new InvalidOperationException($"stand {id} needs more medals");
             s.Stand = st; s.Exercise = "sheet"; s.Specs = st.Pours.ToList(); s.Shown = st.Shown.ToList();
-            s.Blind = Bool(req["blind"]) && PracticeProgress.Summary(record, today, CauseCatalog.All(data))["rankIndex"]!.GetValue<int>() >= PracticeProgress.BlindRank;
+            s.Blind = Bool(req["blind"]) && PracticeProgress.Summary(StudyRecord.Migrate(record), today, CauseCatalog.All(data))["blindUnlocked"]!.GetValue<bool>();
             if (s.Blind)
             {
                 // blind: the glasses in a seeded secret order, vintages hidden until the reveal
@@ -120,15 +120,10 @@ public sealed class PracticeSession
         switch (s.Kind)
         {
             case "daily":
+                // the same glass for everyone on a date: its Identify questions (grape, Region, vintage warmth) review no Cause,
+                // so seeding it with a due Cause would cost pours without reviewing anything (final review of the learning core)
                 s.Exercise = "identify"; s.Seed = PracticePours.DailySeed(today);
-                // a due Cause seeds the day's glass: the review happens inside the blind glass (learning-core design §4.6)
-                foreach (var id in ReviewScheduler.Due(record, today))
-                    if (CauseCatalog.Find(data, id) is { ReviewBy: "wine" } dc && PracticePours.ForCause(data, dc, s.Seed, maxVintage) is { } dw)
-                    {
-                        s.Focus = id; s.Flight.Add(dw); s.Specs.Add(new PourSpec(dw.Context.PlotId, dw.Context.Vintage, dw.Context.BlockId, dw.Context.Variety, dw.Context.StyleId));
-                        break;
-                    }
-                if (s.Flight.Count == 0) s.Specs.Add(PracticePours.Daily(data, today, maxVintage));
+                s.Specs.Add(PracticePours.Daily(data, today, maxVintage));
                 break;
             case "suggest":
                 var (spec, focus) = PracticePours.Suggest(data, record, s.Seed, maxVintage);
@@ -212,6 +207,17 @@ public sealed class PracticeSession
         return null;
     }
 
+    /// <summary>Three wrong options for "which cause do these two Wines differ in?": Causes of the same line kind first, never
+    /// one that is on only one of the two sheets (that would be a true difference too, and marking it wrong would be unfair).</summary>
+    public static List<string> ContrastDecoys(IReadOnlyList<Cause> cat, Cause c, PouredWine with, PouredWine without, Random rng)
+    {
+        static string Kind(Cause x) => x.Line.Contains(':') ? x.Line[..x.Line.IndexOf(':')] : x.Line;
+        var diff = with.Sheet.Causes.ToHashSet(); diff.SymmetricExceptWith(without.Sheet.Causes);
+        return cat.Where(o => o.Id != c.Id && !diff.Contains(o.Id) && o.Title != c.Title)
+            .Select(o => (o, Same: Kind(o) == Kind(c) ? 0 : 1, R: rng.Next())).OrderBy(x => x.Same).ThenBy(x => x.R)
+            .Select(x => x.o.Title).Distinct().Take(3).ToList();
+    }
+
     private static SessionEntry BuildEntry(GameData data, IReadOnlyList<Cause> cat, SessionItem item, int seed, int? maxVintage)
     {
         var c = cat.First(x => x.Id == item.Cause);
@@ -219,8 +225,7 @@ public sealed class PracticeSession
         {
             var rng = new Random(seed);
             int withGlass = rng.Next(2);
-            var kind = c.Line.Contains(':') ? c.Line[..c.Line.IndexOf(':')] : c.Line;
-            var decoys = cat.Where(o => o.Id != c.Id && (o.Line.Contains(':') ? o.Line[..o.Line.IndexOf(':')] : o.Line) == kind).OrderBy(_ => rng.Next()).Take(3).Select(o => o.Title);
+            var decoys = ContrastDecoys(cat, c, pair.With, pair.Without, rng);
             var e = new SessionEntry { Kind = "contrast", Cause = c.Id, Reason = item.Reason, WithGlass = withGlass };
             e.Wine = withGlass == 0 ? pair.With : pair.Without; e.Wine2 = withGlass == 0 ? pair.Without : pair.With;
             e.Questions.Add(new SessionQuestion
@@ -308,11 +313,6 @@ public sealed class PracticeSession
         ["confidence"] = m.Confidence, ["case"] = m.Case,
     };
 
-    private static JsonObject EventItem(MarkItem x) => new()
-    {
-        ["skill"] = x.Skill, ["score"] = x.Score, ["confidence"] = x.Confidence > 0 ? x.Confidence : null,
-        ["causes"] = x.Causes is { Count: > 0 } cs ? A(cs) : null,
-    };
 
     private static string? AnswerAt(JsonNode? entry, int j, out int confidence)
     {
@@ -359,7 +359,7 @@ public sealed class PracticeSession
         var ev = new JsonObject
         {
             ["kind"] = "practice", ["date"] = today.ToString("yyyy-MM-dd", Ci),
-            ["items"] = new JsonArray(all.Select(x => (JsonNode)EventItem(x)).ToArray()),
+            ["items"] = new JsonArray(all.Select(x => (JsonNode)TastingMarker.EventItem(x)).ToArray()),
         };
         var before = PracticeProgress.Summary(record, today, cat);
         var rec = PracticeProgress.Apply(record, ev);
@@ -395,7 +395,7 @@ public sealed class PracticeSession
         var ev = new JsonObject
         {
             ["kind"] = Kind == "stand" ? "stand" : Kind == "daily" ? "daily" : "practice", ["date"] = today.ToString("yyyy-MM-dd", Ci),
-            ["items"] = new JsonArray(items.Select(x => (JsonNode)EventItem(x)).ToArray()),
+            ["items"] = new JsonArray(items.Select(x => (JsonNode)TastingMarker.EventItem(x)).ToArray()),
             ["hints"] = marks.Sum(m => m.Hints), ["stand"] = Stand?.Id, ["percent"] = percent, ["cards"] = A(cards),
         };
         var before = PracticeProgress.Summary(record, today, cat);

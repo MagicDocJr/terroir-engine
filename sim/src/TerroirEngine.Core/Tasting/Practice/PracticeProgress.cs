@@ -108,13 +108,16 @@ public static class PracticeProgress
             double sc = Math.Clamp(Num(o["score"]), 0, 1);
             marks += sc;
             int conf = double.IsNaN(Num(o["confidence"])) ? 2 : Math.Clamp(Int(o["confidence"]), 1, 3);
-            if (o["causes"] is JsonArray cs)
-                foreach (var id in cs.Select(Str).Where(x => !string.IsNullOrEmpty(x)))
-                {
-                    // half credit counts as right but hard (scheduled like a guess)
-                    var now = (Right: sc >= 0.5, Conf: sc >= 0.5 && sc < 1 ? 1 : conf);
-                    outcomes[id!] = outcomes.TryGetValue(id!, out var was) ? (was.Right && now.Right, Math.Min(was.Conf, now.Conf)) : now;
-                }
+            // per-Cause scores (an aroma list) mark each Cause on its own; otherwise every Cause takes the item's score
+            var perCause = o["causeScores"] is JsonObject cso
+                ? cso.Select(kv => (Id: kv.Key, Sc: Math.Clamp(Num(kv.Value), 0, 1))).Where(x => !double.IsNaN(x.Sc)).ToList()
+                : o["causes"] is JsonArray cs ? cs.Select(Str).Where(x => !string.IsNullOrEmpty(x)).Select(x => (Id: x!, Sc: sc)).ToList() : new();
+            foreach (var (id, csc) in perCause)
+            {
+                // half credit counts as right but hard (scheduled like a guess)
+                var now = (Right: csc >= 0.5, Conf: csc >= 0.5 && csc < 1 ? 1 : conf);
+                outcomes[id] = outcomes.TryGetValue(id, out var was) ? (was.Right && now.Right, Math.Min(was.Conf, now.Conf)) : now;
+            }
             var hist = Arr(skills, skill);
             hist.Add(Math.Round(sc, 2));
             while (hist.Count > HistoryLength) hist.RemoveAt(0);
@@ -162,7 +165,7 @@ public static class PracticeProgress
         var rhythm = Arr(rec, "rhythm");
         var today = rhythm.OfType<JsonObject>().FirstOrDefault(e => Date(e["date"]) == date);
         if (today == null) { today = new JsonObject { ["date"] = date.Value.ToString("yyyy-MM-dd"), ["n"] = 0 }; rhythm.Add(today); }
-        today["n"] = Int(today["n"]) + items.Count;
+        today["n"] = Int(today["n"]) + outcomes.Count;   // Causes reviewed, not marked items: the rhythm rewards review, not volume
         while (rhythm.Count > 60) rhythm.RemoveAt(0);
         rec["xp"] = xp + gained;
         rec["lastGain"] = gained;
@@ -249,7 +252,7 @@ public static class PracticeProgress
             ["lastGain"] = Math.Max(0, Int(rec["lastGain"])),
             ["medals"] = medals, ["medalCount"] = medals.Count, ["unlockedTier"] = UnlockedTier(rec),
             ["tierNeeds"] = new JsonArray(MedalsForTier.Select(n => (JsonNode)JsonValue.Create(n)!).ToArray()),
-            ["blindUnlocked"] = ri >= BlindRank,
+            ["blindUnlocked"] = ri >= BlindRank || rec["blindKept"] is JsonValue bk && bk.TryGetValue<bool>(out var kept) && kept,
             ["cards"] = new JsonArray((rec["cards"] as JsonArray ?? new JsonArray()).Select(Str).Where(s => s != null).Select(s => (JsonNode)JsonValue.Create(s!)!).ToArray()),
             ["dailyDone"] = last == t, ["daysInARow"] = streak, ["bestDaysInARow"] = Math.Max(0, Int(daily?["best"])),
             ["skills"] = new JsonArray(CoreSkills.Select(s => (JsonNode)new JsonObject

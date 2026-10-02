@@ -136,7 +136,8 @@ public static class Predictions
                 ["key"] = key, ["label"] = label, ["yours"] = yours, ["actual"] = actual, ["score"] = score, ["confidence"] = cf,
                 ["case"] = TastingMarker.CaseFor(score, cf), ["because"] = because,
             });
-            events.Add(new JsonObject { ["skill"] = skill, ["score"] = score, ["confidence"] = cf > 0 ? cf : null, ["causes"] = A(causes) });
+            // an unanswered prediction is not a miss: it carries no Causes
+            events.Add(new JsonObject { ["skill"] = skill, ["score"] = score, ["confidence"] = cf > 0 ? cf : null, ["causes"] = A(yours == "" ? Array.Empty<string>() : causes) });
         }
         foreach (var it in items)
         {

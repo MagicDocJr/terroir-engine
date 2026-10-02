@@ -69,8 +69,12 @@ public class PredictionTests
         var recall = Predictions.For(g, w.Id)["recall"]!.AsArray();
         Assert.InRange(recall.Count, 1, 2);
         Assert.Contains(recall, r => r!["choice"]!.GetValue<string>().Contains("New French barriques"));
-        var (result, events) = Predictions.Mark(g, w.Id, new JsonObject());
+        // an answered recall reviews its Cause; a skipped one reviews nothing
+        var given = new JsonArray(recall.Select(r => (JsonNode)JsonValue.Create(r!["options"]![0]!.GetValue<string>())!).ToArray());
+        var (_, events) = Predictions.Mark(g, w.Id, new JsonObject { ["recall"] = given });
         Assert.Contains(events, e => e["causes"]!.AsArray().Any(c => c!.GetValue<string>() == "new-oak-vanilla-toast"));
+        var (_, skipped) = Predictions.Mark(g, w.Id, new JsonObject());
+        Assert.All(skipped, e => Assert.Empty(e["causes"]!.AsArray()));
     }
 
     [Fact]
