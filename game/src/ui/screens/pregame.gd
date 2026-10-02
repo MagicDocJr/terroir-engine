@@ -57,7 +57,7 @@ static func _title(shell) -> Control:
 	col.add_child(tp)
 	var TS = JSON.parse_string(Sim.PracticeSummary())
 	if TS is Dictionary and int(TS.get("xp", 0)) > 0:
-		var rl := UI.label("%s · %d XP · %d medal%s" % [TS["rank"], int(TS["xp"]), int(TS["medalCount"]), "" if int(TS["medalCount"]) == 1 else "s"], 14, UI.GOLD)
+		var rl := UI.label("%s · %d of %d Causes known · %d medal%s" % [TS["rank"], int(TS.get("known", 0)), int(TS.get("catalogSize", 0)), int(TS["medalCount"]), "" if int(TS["medalCount"]) == 1 else "s"], 14, UI.GOLD)
 		rl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; col.add_child(rl)
 	for sv in saves.slice(0, 5):
 		var b := UI.button("Load %s   ·   %s" % [sv["name"], sv["modified"]], false, 16); b.custom_minimum_size = Vector2(360, 46)

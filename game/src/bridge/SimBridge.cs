@@ -165,7 +165,7 @@ public partial class SimBridge : Node
 
     public string PracticeSummary()
     {
-        try { return PracticeProgress.Summary(LoadRecord(), Today()).ToJsonString(); }
+        try { return PracticeProgress.Summary(LoadRecord(), Today(), _data == null ? null : CauseCatalog.All(_data)).ToJsonString(); }
         catch (Exception e) { _lastError = e.ToString(); return "{}"; }
     }
 
