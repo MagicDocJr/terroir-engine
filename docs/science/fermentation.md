@@ -94,6 +94,8 @@ All of these come from the equations and are never rolled:
 - **H₂S risk index:** rises when N falls below the requirement while S is still high, and with high temperature and certain strains. H₂S output feeds `aroma-and-faults.md`. The functional form is a **game simplification** (UNVERIFIED shape).
 
 ## Stopping fermentation for residual sugar
+
+**Textbook cross-check.** Off-dry and medium Riesling is usually made by stopping the fermentation and removing the yeast, or by adding sterile grape juice (sweet reserve) [LBTL p. 31]. Sweet reserve is not used for high-quality Kabinett [UW-2016 p. 108]; it is a producer's choice, not a legal ban (Prädikatswein may not be enriched, but may be sweetened). The game models stopping only (game simplification).
 This is a Cellar decision on white Lots, typical of Mosel Kabinett and feinherb.
 
 Steps and model effects:
@@ -160,3 +162,4 @@ The scripted golden-vintage runs must land inside these ranges.
 - Jolly, N.P., Varela, C., Pretorius, I.S. (2014). Not your ordinary yeast: non-Saccharomyces yeasts in wine production uncovered. *FEMS Yeast Research* 14. Cited from memory, **UNVERIFIED**.
 - [EU-2019/934] Commission Delegated Regulation (EU) 2019/934, Annex I Part D (sweetening): https://www.legislation.gov.uk/eur/2019/934/annex/I/part/D (read 2026-10-02)
 - [UW-2016] Wine & Spirit Education Trust (2016). *Understanding Wines: Explaining Style and Quality*. London: WSET. ISBN 978-1-905819-39-3. A standard textbook, used to cross-check the learn cards and Causes; page numbers are the printed ones. Paraphrased, never quoted.
+- [LBTL] Wine & Spirit Education Trust. *Looking Behind the Label* (introductory course companion). London: WSET. An introductory textbook, used to cross-check the learn cards and Causes; page numbers are the printed ones (PDF page − 5). Paraphrased, never quoted.
