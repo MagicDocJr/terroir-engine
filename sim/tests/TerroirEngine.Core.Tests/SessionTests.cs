@@ -113,7 +113,10 @@ public class SessionTests
         var (result, rec) = s.Mark(Fixture.Data, answers, new JsonObject(), Today);
         var items = result["entries"]!.AsArray().SelectMany(e => e!["items"]!.AsArray()).ToList();
         Assert.All(items, i => Assert.Contains(i!["case"]!.GetValue<string>(), new[] { "sure-right", "sure-wrong" }));
-        Assert.All(items, i => Assert.False(string.IsNullOrEmpty(i!["because"]!.GetValue<string>())));   // explained, right or wrong
+        // explained, right or wrong: a Wine item by its line's "because", a chain item by the full chain shown with it
+        Assert.All(result["entries"]!.AsArray(), e => Assert.True(e!["chain"]!.AsArray().Count >= 2));
+        Assert.All(result["entries"]!.AsArray().Where(e => e!["kind"]!.GetValue<string>() != "chain").SelectMany(e => e!["items"]!.AsArray()),
+            i => Assert.False(string.IsNullOrEmpty(i!["because"]!.GetValue<string>())));
         var states = StudyRecord.States(rec);
         Assert.All(s.Entries, e => Assert.True(states.ContainsKey(e.Cause), e.Cause));
         Assert.All(states.Values, st => Assert.True(st.Due > Today));

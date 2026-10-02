@@ -166,4 +166,22 @@ public class SchedulerTests
         Assert.Equal(640, s["xp"]!.GetValue<int>());
         Assert.Equal(v2.ToJsonString(), StudyRecord.Migrate(v2).ToJsonString());   // idempotent
     }
+
+    [Fact]
+    public void Calibration_AccuracyPerConfidence()
+    {
+        var rec = new JsonObject();
+        JsonObject E(string id, int day, bool right, int conf) => new()
+        {
+            ["kind"] = "practice", ["date"] = D0.AddDays(day).ToString("yyyy-MM-dd"),
+            ["items"] = new JsonArray(new JsonObject { ["skill"] = "acidity", ["score"] = right ? 1 : 0, ["confidence"] = conf, ["causes"] = new JsonArray(id) }),
+        };
+        rec = PracticeProgress.Apply(rec, E("a", 0, true, 3));
+        rec = PracticeProgress.Apply(rec, E("b", 0, false, 3));
+        rec = PracticeProgress.Apply(rec, E("c", 0, true, 1));
+        var cal = PracticeProgress.Summary(rec, D0)["calibration"]!.AsArray();
+        Assert.Equal(0.5, cal[2]!["accuracy"]!.GetValue<double>());
+        Assert.Equal(1.0, cal[0]!["accuracy"]!.GetValue<double>());
+        Assert.Null(cal[1]!["accuracy"]);
+    }
 }

@@ -89,6 +89,8 @@ func _ready() -> void:
 	if "--perf" in args: capture = true; _perf.call_deferred(); return
 	if "--pregame" in args: capture = true; _pregame_shots.call_deferred(); return
 	if "--avatars" in args: capture = true; _avatar_sheet.call_deferred(); return
+	if "--learning" in args:
+		capture = true; Sim.SetRecordPath("user://tasting_record_test.json"); _learning_test.call_deferred(); return
 	if "--practice" in args:
 		capture = true; Sim.SetRecordPath("user://tasting_record_test.json"); _practice_test.call_deferred(); return
 	if "--fuzz" in args: capture = true; _run_fuzz.call_deferred()
@@ -870,7 +872,8 @@ func _fill_from_sheet(gi: int, right_every := 1) -> void:
 	# answers taken from the Wine's own sheet (every right_every-th item; the rest one step off or wrong)
 	var S: Dictionary = state["tp_session"]
 	var G: Dictionary = S["glasses"][gi]
-	var W: Dictionary = G["wine"]; var sh: Dictionary = W["sheet"]
+	var KEY = JSON.parse_string(Sim.PracticeDebugKey())   # harness only: the screens never see the answers before marking
+	var W: Dictionary = KEY["wines"][gi]; var sh: Dictionary = W["sheet"]
 	var pal := {}
 	for p in sh["palate"]: pal[String(p["attribute"])] = String(p["level"]).split(",")[0]
 	var actual := {"clarity": sh["appearance"]["clarity"], "colourIntensity": sh["appearance"]["intensity"], "colour": sh["appearance"]["colour"],
@@ -879,8 +882,11 @@ func _fill_from_sheet(gi: int, right_every := 1) -> void:
 		"finish": sh["palate"].filter(func(x): return x["attribute"] == "Finish")[0]["level"], "quality": sh["quality"], "readiness": sh["readiness"],
 		"variety": W["context"]["variety"], "region": W["context"]["regionName"], "climate": "moderate"}
 	var a: Dictionary = state["tp_answers"]["wines"][gi]
+	var conf := {}
+	a["confidence"] = conf
 	var i := 0
 	for k in G["keys"]:
+		conf[String(k)] = 3 if i % 3 != 2 else 1
 		var key := String(k)
 		if i % right_every == 0:
 			if key == "aromas":
@@ -946,7 +952,9 @@ func _practice_test() -> void:
 		for gi in S["glasses"].size(): _fill_from_sheet(gi, 2)
 		show_screen("fair"); await _shot("practice_11_stand")
 		state["tp_glass"] = S["glasses"].size()
-		for q in S["quiz"]: state["tp_answers"]["quiz"][String(q["topic"])] = "Glass 2"
+		for q in S["quiz"]:
+			state["tp_answers"]["quiz"][String(q["topic"])] = "Glass 2"
+			state["tp_answers"]["quizConfidence"][String(q["topic"])] = 2
 		show_screen("fair"); await _shot("practice_12_quiz")
 		T.mark(self, "fair")
 		var r: Dictionary = state.get("tp_result", {})
@@ -959,6 +967,81 @@ func _practice_test() -> void:
 	show_screen("cellarbook"); await _shot("practice_16_cellar_book")
 	show_screen("title"); await _shot("practice_17_title")
 	print("PRACTICE DONE ok=", ok)
+	get_tree().quit()
+
+# ------------------------------------------------------------------ learning-core harness (--learning)
+## Today's session through the real screen: chain, Wine and contrast entries answered right and wrong with different
+## Confidences, the four-case reveal and the recap, the record's Cause states, then the Progress view.
+func _learning_test() -> void:
+	var T = load("res://src/ui/tasting_ui.gd")
+	var ok := true
+	show_screen("practice"); await _shot("learning_01_lobby")
+	T.start_pour(self, {"kind": "session", "seed": 11}, "practice")
+	if not await _wait_view("answer", "practice"): print("LEARNING FAIL no session"); get_tree().quit(); return
+	var S: Dictionary = state["tp_session"]
+	var kinds := {}
+	for e in S["entries"]: kinds[String(e["kind"])] = true
+	print("LEARNING entries ", S["entries"].size(), " kinds ", kinds.keys())
+	show_screen("practice"); await _shot("learning_02_session")
+	await _shot_scrolled_to_end("learning_03_session_end")
+	var KEY = JSON.parse_string(Sim.PracticeDebugKey())
+	var A: Dictionary = state["tp_answers"]
+	for i in S["entries"].size():
+		var E: Dictionary = S["entries"][i]
+		var e := {"answers": [], "confidence": []}
+		for j in E["questions"].size():
+			var right: String = KEY["entries"][i]["answers"][j]
+			var wrong := right
+			for o in E["questions"][j]["options"]: if String(o) != right: wrong = String(o); break
+			e["answers"].append(right if i % 2 == 0 else wrong)
+			e["confidence"].append([3, 3, 1, 2][i % 4])
+		A["entries"][i] = e
+	show_screen("practice"); await _shot("learning_04_answered")
+	T.mark(self, "practice")
+	var R: Dictionary = state.get("tp_result", {})
+	var cases := {}
+	for e in R.get("entries", []):
+		for it in e["items"]: cases[String(it["case"])] = true
+	print("LEARNING marks ", R.get("total"), "/", R.get("max"), " cases ", cases.keys())
+	if not (cases.has("sure-right") and cases.has("sure-wrong")): ok = false; print("LEARNING FAIL cases")
+	await _shot("learning_05_reveal")
+	await _shot_scrolled_to_end("learning_06_reveal_end")
+	var f := FileAccess.open(Sim.RecordFile(), FileAccess.READ)
+	var rec = JSON.parse_string(f.get_as_text()) if f else {}
+	if f: f.close()   # an open handle would block the next save on Windows
+	var n: int = rec.get("causes", {}).size() if rec is Dictionary else 0
+	print("LEARNING record causes ", n)
+	if n < S["entries"].size(): ok = false; print("LEARNING FAIL record")
+	T.reset(self)
+	# the queue over the next days: sessions on day 1, 4 and 11, everything answered right and sure; by then mature Causes
+	# come back as Wines and contrast pairs, not chains
+	var d0 := Time.get_date_dict_from_system()
+	var base := Time.get_unix_time_from_datetime_dict(d0)
+	var final_kinds := {}
+	for day in [1, 4, 11]:
+		Sim.SetPracticeToday(Time.get_date_string_from_unix_time(base + day * 86400))
+		T.start_pour(self, {"kind": "session", "seed": 20 + day}, "practice")
+		if not await _wait_view("answer", "practice"): ok = false; print("LEARNING FAIL day ", day); break
+		var S2: Dictionary = state["tp_session"]
+		var K2 = JSON.parse_string(Sim.PracticeDebugKey())
+		final_kinds = {}
+		for i in S2["entries"].size():
+			final_kinds[String(S2["entries"][i]["kind"])] = true
+			var conf := []
+			for j in S2["entries"][i]["questions"].size(): conf.append(3)
+			state["tp_answers"]["entries"][i] = {"answers": K2["entries"][i]["answers"], "confidence": conf}
+		if day == 11:
+			show_screen("practice"); await _shot("learning_07_day11_session")
+			await _shot_scrolled_to_end("learning_08_day11_session_end")
+		T.mark(self, "practice")
+		print("LEARNING day ", day, " kinds ", final_kinds.keys(), " known gained ", state.get("tp_result", {}).get("knownGained"))
+		if day == 11: await _shot("learning_09_day11_reveal")
+		T.reset(self)
+	if not (final_kinds.has("wine") or final_kinds.has("contrast")): ok = false; print("LEARNING FAIL no wine items by day 11")
+	state.erase("tp_lobby")
+	show_screen("practice"); await _shot_scrolled_to_end("learning_10_progress")
+	Sim.SetPracticeToday("")
+	print("LEARNING DONE ok=", ok)
 	get_tree().quit()
 
 # ------------------------------------------------------------------ avatar contact sheet (visual check)

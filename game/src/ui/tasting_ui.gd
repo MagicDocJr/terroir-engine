@@ -44,8 +44,11 @@ static func header(shell, L: Dictionary, tab: String) -> Control:
 		b.pressed.connect(func(): shell.show_screen(id))
 		h.add_child(b)
 	h.add_child(UI.spacer())
-	var streak := int(S.get("daysInARow", 0))
-	if streak > 0: h.add_child(UI.chip("◆ %d day%s in a row" % [streak, "" if streak == 1 else "s"], UI.WARN, 14))
+	var R: Dictionary = S.get("rhythm", {})
+	if not R.is_empty():
+		var days := int(R.get("daysThisWeek", 0))
+		h.add_child(UI.chip("◆ %d of %d study days this week" % [days, int(R.get("target", 5))], UI.GOOD if R.get("met", false) else UI.WARN, 14))
+	if int(S.get("catalogSize", 0)) > 0: h.add_child(UI.chip("%d of %d Causes known" % [int(S.get("known", 0)), int(S.get("catalogSize", 0))], UI.GOOD, 14))
 	h.add_child(UI.chip("%d medal%s" % [int(S.get("medalCount", 0)), "" if int(S.get("medalCount", 0)) == 1 else "s"], UI.GOLD, 14))
 	h.add_child(UI.chip("%d Vintage card%s" % [S.get("cards", []).size(), "" if S.get("cards", []).size() == 1 else "s"], UI.SEQ, 14))
 	v.add_child(h)
@@ -59,13 +62,22 @@ static func rank_badge(L: Dictionary) -> Control:
 	var top := UI.hbox(10); v.add_child(top)
 	top.add_child(UI.head(String(S.get("rank", "Novice taster")), 20, UI.GOLD))
 	top.add_child(UI.spacer())
-	top.add_child(UI.num("%d XP" % int(S.get("xp", 0)), 16, UI.INK))
 	var bar := ProgressBar.new(); bar.show_percentage = false; bar.custom_minimum_size = Vector2(260, 8)
-	var lo := float(S.get("rankXp", 0)); var hi = S.get("nextXp", null)
-	bar.min_value = lo; bar.max_value = float(hi) if hi != null else lo + 1.0
-	bar.value = float(S.get("xp", 0)) if hi != null else bar.max_value
-	v.add_child(bar)
-	v.add_child(UI.label(("next: %s at %d XP" % [S.get("nextRank", ""), int(hi)]) if hi != null else "the highest rank", 12, UI.MUTED))
+	if S.get("byKnown", false):
+		# ranks report durable mastery: the share of the Cause catalogue Known (learning-core design §4.3)
+		top.add_child(UI.num("%d %%" % int(round(float(S.get("knownShare", 0)) * 100)), 16, UI.INK))
+		var lo := float(S.get("rankShare", 0)); var hi = S.get("nextShare", null)
+		bar.min_value = lo; bar.max_value = float(hi) if hi != null else 1.0
+		bar.value = float(S.get("knownShare", 0))
+		v.add_child(bar)
+		v.add_child(UI.label(("%d of %d Causes known · next: %s at %d %%" % [int(S.get("known", 0)), int(S.get("catalogSize", 0)), S.get("nextRank", ""), int(round(float(hi) * 100))]) if hi != null else "the highest rank", 12, UI.MUTED))
+	else:
+		top.add_child(UI.num("%d XP" % int(S.get("xp", 0)), 16, UI.INK))
+		var lo := float(S.get("rankXp", 0)); var hi = S.get("nextXp", null)
+		bar.min_value = lo; bar.max_value = float(hi) if hi != null else lo + 1.0
+		bar.value = float(S.get("xp", 0)) if hi != null else bar.max_value
+		v.add_child(bar)
+		v.add_child(UI.label(("next: %s at %d XP" % [S.get("nextRank", ""), int(hi)]) if hi != null else "the highest rank", 12, UI.MUTED))
 	p.tooltip_text = String(S.get("rankLine", ""))
 	p.size_flags_vertical = Control.SIZE_SHRINK_END
 	return p
@@ -80,13 +92,13 @@ static func start_pour(shell, req: Dictionary, owner: String) -> void:
 	shell.state["tp_view"] = "pouring"
 	shell.state["tp_owner"] = owner
 	shell.state["tp_req"] = req
-	for k in ["tp_session", "tp_answers", "tp_result", "tp_glass", "tp_anim_done"]: shell.state.erase(k)
+	for k in ["tp_session", "tp_answers", "tp_result", "tp_glass", "tp_anim_done", "tp_conf_warned"]: shell.state.erase(k)
 	if shell.sfx: shell.sfx.play("pour")
 	shell.show_screen(owner)
 
 static func reset(shell) -> void:
 	Sim.PourDrop()
-	for k in ["tp_job", "tp_view", "tp_owner", "tp_req", "tp_session", "tp_answers", "tp_result", "tp_glass", "tp_anim_done"]: shell.state.erase(k)
+	for k in ["tp_job", "tp_view", "tp_owner", "tp_req", "tp_session", "tp_answers", "tp_result", "tp_glass", "tp_anim_done", "tp_conf_warned"]: shell.state.erase(k)
 
 ## "Pouring…" with a poll timer: when the Flight is ready the owner screen re-renders with the answer view.
 static func pouring_view(shell, owner: String) -> Control:
@@ -94,7 +106,7 @@ static func pouring_view(shell, owner: String) -> Control:
 	var c := CenterContainer.new(); c.custom_minimum_size = Vector2(0, 280); p[1].add_child(c)
 	var v := UI.vbox(14); c.add_child(v)
 	var req: Dictionary = shell.state.get("tp_req", {})
-	var what := "a Flight" if String(req.get("kind", "")) == "stand" else "your glass"
+	var what := "a Flight" if String(req.get("kind", "")) == "stand" else ("today's session" if String(req.get("kind", "")) == "session" else "your glass")
 	var l := UI.head("Pouring %s…" % what, 30, UI.GOLD); l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; v.add_child(l)
 	var s := UI.label("The simulation is growing and making the Wine from that year's real weather. This takes a moment.", 16, UI.INK2, null, true)
 	s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; s.custom_minimum_size = Vector2(520, 0); v.add_child(s)
@@ -117,8 +129,10 @@ static func poll(shell, owner: String) -> void:
 			reset(shell); shell.notify("The pour went wrong: " + String(Sim.LastError()).left(160)); shell.show_screen(owner); return
 		var wines := []
 		for g in S["glasses"]: wines.append({})
+		var entries := []
+		for e in S.get("entries", []): entries.append({"answers": [], "confidence": []})
 		shell.state["tp_session"] = S
-		shell.state["tp_answers"] = {"wines": wines, "quiz": {}}
+		shell.state["tp_answers"] = {"wines": wines, "quiz": {}, "quizConfidence": {}, "entries": entries}
 		shell.state["tp_glass"] = 0
 		shell.state["tp_view"] = "answer"
 		if shell.sfx: shell.sfx.play("clink")
@@ -128,7 +142,7 @@ static func poll(shell, owner: String) -> void:
 	if shell.current == owner: shell.show_screen(owner)
 
 # ------------------------------------------------------------------ what the player sees
-static func colour_of(sheet: Dictionary) -> Color:
+static func colour_of(sheet: Dictionary) -> Color:   # fallback when a wine carries no glassColour
 	var A: Dictionary = sheet.get("appearance", {})
 	var base: Color = {"lemon-green": Color("e4e8a2"), "lemon": Color("ecdf8e"), "gold": Color("e0b84e"), "amber": Color("c3822c"),
 		"purple": Color("4e1a3f"), "ruby": Color("851a2a"), "garnet": Color("86352a"), "tawny": Color("9a5a2a")}.get(String(A.get("colour", "")), Color("d8c889"))
@@ -136,10 +150,10 @@ static func colour_of(sheet: Dictionary) -> Color:
 	return base.lerp(Color("f7f3e6"), k)
 
 ## A wine glass drawn in the Wine's colour (presentation of the sheet's appearance terms).
-static func glass(sheet: Dictionary, size := 1.0) -> Control:
+static func glass(W: Dictionary, size := 1.0) -> Control:
 	var v := UI.vbox(0); v.alignment = BoxContainer.ALIGNMENT_CENTER
 	var bowl := Panel.new()
-	var st := StyleBoxFlat.new(); st.bg_color = colour_of(sheet)
+	var st := StyleBoxFlat.new(); st.bg_color = Color(String(W["glassColour"])) if W.has("glassColour") else colour_of(W.get("sheet", W))
 	st.corner_radius_bottom_left = int(44 * size); st.corner_radius_bottom_right = int(44 * size)
 	st.corner_radius_top_left = int(6 * size); st.corner_radius_top_right = int(6 * size)
 	st.border_width_top = int(10 * size); st.border_color = Color(1, 1, 1, 0.10)
@@ -158,7 +172,7 @@ static func _sheet_view(W: Dictionary, parts: Array) -> Control:
 	if "appearance" in parts:
 		var A: Dictionary = S["appearance"]
 		var h := UI.hbox(18); v.add_child(h)
-		h.add_child(glass(S, 0.8))
+		h.add_child(glass(W, 0.8))
 		var av := UI.vbox(4); av.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(av)
 		av.add_child(UI.label("Appearance", 14, UI.GOLD, UI.f_body_b))
 		av.add_child(UI.kv("Clarity", String(A["clarity"])))
@@ -181,7 +195,7 @@ static func _sheet_view(W: Dictionary, parts: Array) -> Control:
 static func _context_view(W: Dictionary, full: bool) -> Control:
 	var C: Dictionary = W["context"]
 	var v := UI.vbox(6)
-	v.add_child(UI.kv("Producer", String(C["producer"])))
+	if C.get("producer") != null: v.add_child(UI.kv("Producer", str(C["producer"])))
 	v.add_child(UI.kv("Site", "%s, %s" % [C["plotName"], C["regionName"]]))
 	v.add_child(UI.kv("Grape", String(C["variety"])))
 	if full:
@@ -212,11 +226,11 @@ static func shown_panel(G: Dictionary, exercise: String, blind := false) -> Cont
 			p[1].add_child(_sheet_view(W, ["appearance", "nose", "palate"]))
 		_:
 			var h := UI.hbox(20); p[1].add_child(h)
-			h.add_child(glass(W["sheet"], 1.0))
+			h.add_child(glass(W, 1.0))
 			var lv := UI.vbox(6); lv.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(lv)
 			lv.add_child(UI.label("The label says", 14, UI.GOLD, UI.f_body_b))
 			lv.add_child(_context_view(W, false))
-			lv.add_child(UI.kv("Vintage", "?" if blind else str(int(W["context"]["vintage"]))))
+			lv.add_child(UI.kv("Vintage", "?" if blind or W["context"].get("vintage") == null else str(int(W["context"]["vintage"]))))
 			p[1].add_child(UI.label("Name the colour you see, then predict the nose and palate from what you know of the grape, the site and the vintage.", 14, UI.INK2, null, true))
 	return p[0]
 
@@ -301,8 +315,55 @@ static func pickers(shell, owner: String, gi: int, G: Dictionary) -> Control:
 				flow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				flow.add_child(UI.segmented(opts, chosen, pick))
 				row.add_child(flow)
+		var done := false
+		if key.begins_with("blic."): done = a.get("blic", {}).has(key.substr(5))
+		elif key == "aromas": done = a.get("aromas", []).size() > 0
+		else: done = String(a.get(key, "")) != ""
+		if done:
+			var conf: Dictionary = a.get("confidence", {})
+			var set_conf := func(c: int): conf[key] = c; a["confidence"] = conf; shell.show_screen(owner)
+			row.add_child(confidence_row(int(conf.get(key, 0)), set_conf))
 		v.add_child(row)
 	return v
+
+const CONF := ["guess", "think so", "sure"]
+
+## Commit before the reveal: how sure are you? One tap, shown only once an answer is picked (learning-core design §5).
+static func confidence_row(current: int, on_pick: Callable) -> Control:
+	var h := UI.hbox(2)
+	h.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for i in 3:
+		var b := UI.button(CONF[i], false, 13)
+		b.custom_minimum_size = Vector2(68, 30)
+		if current == i + 1:
+			b.add_theme_stylebox_override("normal", UI.sb(UI.SEQ.darkened(0.55), 4, UI.SEQ, 1, 8))
+			b.add_theme_color_override("font_color", UI.SEQ.lightened(0.4))
+		elif current == 0:
+			b.add_theme_color_override("font_color", UI.MUTED)
+		b.tooltip_text = "How sure are you? Being honest here is what makes the review schedule work."
+		var c := i + 1
+		b.pressed.connect(func(): on_pick.call(c))
+		h.add_child(b)
+	return h
+
+## Answers picked without a Confidence (the first Mark press reminds once; the second marks anyway).
+static func missing_confidence(shell) -> int:
+	var A: Dictionary = shell.state.get("tp_answers", {})
+	var n := 0
+	for a in A.get("wines", []):
+		var conf: Dictionary = a.get("confidence", {})
+		for k in a.keys():
+			if k in ["confidence", "hints"]: continue
+			if k == "blic":
+				for crit in a["blic"].keys(): if not conf.has("blic." + crit): n += 1
+			elif k == "aromas":
+				if a["aromas"].size() > 0 and not conf.has("aromas"): n += 1
+			elif String(a[k]) != "" and not conf.has(k): n += 1
+	for t in A.get("quiz", {}).keys(): if not A.get("quizConfidence", {}).has(t): n += 1
+	for e in A.get("entries", []):
+		for j in e.get("answers", []).size():
+			if str(e["answers"][j]) != "" and (j >= e.get("confidence", []).size() or int(e["confidence"][j]) == 0): n += 1
+	return n
 
 ## Hint button: shows the glass's hint line and costs half a mark.
 static func hint_row(shell, owner: String, gi: int, G: Dictionary) -> Control:
@@ -318,9 +379,14 @@ static func hint_row(shell, owner: String, gi: int, G: Dictionary) -> Control:
 	return h
 
 static func mark(shell, owner: String) -> void:
+	var missing := missing_confidence(shell)
+	if missing > 0 and not shell.state.get("tp_conf_warned", false):
+		shell.state["tp_conf_warned"] = true
+		shell.notify("%d answer%s still need%s a guess / think so / sure. Press Mark again to go on without." % [missing, "" if missing == 1 else "s", "s" if missing == 1 else ""])
+		return
 	var raw: String = Sim.PracticeMark(JSON.stringify(shell.state.get("tp_answers", {})))
 	var R = JSON.parse_string(raw)
-	if not (R is Dictionary) or not R.has("glasses"):
+	if not (R is Dictionary) or not (R.has("glasses") or R.has("entries")):
 		shell.notify("Marking failed: " + String(Sim.LastError()).left(160)); return
 	shell.state["tp_result"] = R
 	shell.state["tp_view"] = "reveal"
@@ -334,33 +400,65 @@ static func verdict(score: float) -> Array:
 	if score > 0.0: return ["½" if is_equal_approx(score, 0.5) else "≈", UI.WARN, "close"]
 	return ["✗", UI.CRIT, "wrong"]
 
-## One reveal row per item: yours beside the sheet's, the verdict, and the "because". Rows fade in one by one the first time.
+## One reveal row per item, styled by the four cases of commit-then-reveal (learning-core design §5): a surprise card when you
+## were sure and wrong, the full explanation when you guessed right, a short confirmation (with the "why" one tap away) when you
+## were sure and right. The "because" shows for right answers too. Rows fade in one by one the first time.
 static func item_rows(items: Array, animate: bool, delay0 := 0.0, label_w := 220.0) -> Control:
 	var v := UI.vbox(6)
 	var i := 0
 	for it in items:
+		var case_: String = String(it.get("case", "no-confidence"))
 		var r := UI.vbox(2)
+		var wrap: Control = r
+		if case_ == "sure-wrong":
+			var card := PanelContainer.new()
+			card.add_theme_stylebox_override("panel", UI.sb(Color(UI.CRIT, 0.10), 6, UI.CRIT, 1, 10))
+			card.add_child(r); wrap = card
+			r.add_child(UI.label("Surprise: you were sure. This is the one to remember; it comes back tomorrow.", 13, UI.SERIOUS, UI.f_body_b))
 		var h := UI.hbox(12); r.add_child(h)
 		var vd := verdict(float(it["score"]))
 		var vl := UI.label(vd[0], 18, vd[1], UI.f_body_b); vl.custom_minimum_size = Vector2(24, 0); h.add_child(vl)
 		var nl := UI.label(String(it["label"]), 15, UI.INK2, null, true); nl.custom_minimum_size = Vector2(label_w, 0); h.add_child(nl)
 		var yours := String(it["yours"])
-		var yl := UI.label("you: " + (yours if yours != "" else "—"), 15, vd[1] if yours != "" else UI.MUTED, null, true)
-		yl.custom_minimum_size = Vector2(260, 0); h.add_child(yl)
+		var conf := int(it.get("confidence", 0))
+		var yl := UI.label("you: " + (yours if yours != "" else "—") + ((" (%s)" % CONF[conf - 1]) if conf > 0 and yours != "" else ""), 15, vd[1] if yours != "" else UI.MUTED, null, true)
+		yl.custom_minimum_size = Vector2(280, 0); h.add_child(yl)
 		var al := UI.label(String(it["actual"]), 15, UI.INK, UI.f_body_b, true); al.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(al)
-		if String(it["because"]) != "":
-			var bl := UI.label("because " + String(it["because"]), 13, UI.MUTED, null, true)
+		var because := String(it["because"])
+		if because != "":
+			var bl := UI.label("because " + because, 13, UI.MUTED if case_ != "guess-right" else UI.INK2, null, true)
 			bl.custom_minimum_size = Vector2(700, 0)
-			var m := MarginContainer.new(); m.add_theme_constant_override("margin_left", 36); m.add_child(bl); r.add_child(m)
+			var m := MarginContainer.new(); m.add_theme_constant_override("margin_left", 36); m.add_child(bl)
+			if case_ == "guess-right": r.add_child(UI.label("A guess, and right: here is why, so next time you know.", 13, UI.GOOD))
+			if case_ == "sure-right":
+				m.visible = false
+				var why := UI.button("why ▸", false, 13); why.custom_minimum_size = Vector2(70, 26)
+				why.pressed.connect(func(): m.visible = not m.visible; why.text = "why ▾" if m.visible else "why ▸")
+				h.add_child(why)
+			r.add_child(m)
 		if animate:
-			r.modulate.a = 0.0
+			wrap.modulate.a = 0.0
 			var d := delay0 + 0.07 * i
 			var fade := func():
-				var tw := r.create_tween(); tw.tween_interval(d); tw.tween_property(r, "modulate:a", 1.0, 0.25)
-			r.tree_entered.connect(fade, CONNECT_ONE_SHOT)
-		v.add_child(r)
+				var tw := wrap.create_tween(); tw.tween_interval(d); tw.tween_property(wrap, "modulate:a", 1.0, 0.25)
+			wrap.tree_entered.connect(fade, CONNECT_ONE_SHOT)
+		v.add_child(wrap)
 		i += 1
 	return v
+
+## The end-of-Flight recap: only the misses, a few seconds later (a delayed second look; research track A §3).
+static func recap_panel(R: Dictionary) -> Control:
+	var miss: Array = R.get("recap", [])
+	if miss.is_empty(): return null
+	var p: Array = UI.panel("Worth another look", "%d to remember" % miss.size())
+	for it in miss:
+		var h := UI.hbox(10)
+		var l := UI.label(String(it["label"]), 14, UI.INK2, null, true); l.custom_minimum_size = Vector2(260, 0); h.add_child(l)
+		var a := UI.label(String(it["actual"]), 14, UI.INK, UI.f_body_b, true); a.custom_minimum_size = Vector2(220, 0); h.add_child(a)
+		var b := UI.label(String(it["because"]), 13, UI.MUTED, null, true); b.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(b)
+		p[1].add_child(h)
+	p[1].add_child(UI.label("These come back in the next days with new Wines.", 13, UI.MUTED))
+	return p[0]
 
 static func note_panel(note) -> Control:
 	if note == null: return null
@@ -381,7 +479,11 @@ static func result_banner(R: Dictionary, stand := false) -> Control:
 	p.add_theme_stylebox_override("panel", UI.sb(UI.RAISED, 8, MEDAL_COL.get(str(medal), UI.GOLD) if medal != null else UI.LINE, 2 if medal != null else 1, 18))
 	var h := UI.hbox(28); p.add_child(h)
 	h.add_child(UI.tile("Your marks", "%s / %d" % [_n(float(R["total"])), int(R["max"])], "%d %%" % int(round(float(R["percent"])))))
-	h.add_child(UI.tile("Experience", "+%d XP" % int(R.get("xpGained", 0)), String(R["summary"].get("rank", "")), UI.GOLD))
+	var Sm: Dictionary = R["summary"]
+	if Sm.get("byKnown", false):
+		h.add_child(UI.tile("Causes known", "%d / %d" % [int(Sm.get("known", 0)), int(Sm.get("catalogSize", 0))], "%s · +%d XP" % [Sm.get("rank", ""), int(R.get("xpGained", 0))], UI.GOLD))
+	else:
+		h.add_child(UI.tile("Experience", "+%d XP" % int(R.get("xpGained", 0)), String(Sm.get("rank", "")), UI.GOLD))
 	if stand:
 		var best = R.get("bestMedal", null)
 		h.add_child(UI.tile("Medal", String(medal).capitalize() if medal != null else "none this time",
@@ -390,6 +492,7 @@ static func result_banner(R: Dictionary, stand := false) -> Control:
 	var extra := UI.vbox(4); extra.custom_minimum_size = Vector2(300, 0); extra.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(extra)
 	if R.get("rankUp", false): extra.add_child(UI.label("Rank up: you are now a %s!" % R["summary"]["rank"], 17, UI.GOLD, UI.f_body_b, true))
 	if R.get("tierUp", false): extra.add_child(UI.label("New stands are open at the Wine Fair.", 16, UI.GOOD, UI.f_body_b, true))
+	if int(R.get("knownGained", 0)) > 0: extra.add_child(UI.label("+%d Cause%s now known for good." % [int(R["knownGained"]), "" if int(R["knownGained"]) == 1 else "s"], 15, UI.GOOD, UI.f_body_b, true))
 	for c in R.get("newCardNames", []): extra.add_child(UI.label("New Vintage card: " + String(c), 14, UI.SEQ, null, true))
 	return p
 

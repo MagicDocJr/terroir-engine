@@ -112,7 +112,7 @@ public static class PracticeProgress
                 foreach (var id in cs.Select(Str).Where(x => !string.IsNullOrEmpty(x)))
                 {
                     // half credit counts as right but hard (scheduled like a guess)
-                    var now = (Right: sc >= 0.5, Conf: sc >= 1 ? conf : 1);
+                    var now = (Right: sc >= 0.5, Conf: sc >= 0.5 && sc < 1 ? 1 : conf);
                     outcomes[id!] = outcomes.TryGetValue(id!, out var was) ? (was.Right && now.Right, Math.Min(was.Conf, now.Conf)) : now;
                 }
             var hist = Arr(skills, skill);
@@ -243,6 +243,7 @@ public static class PracticeProgress
             ["skills"] = new JsonArray(CoreSkills.Select(s => (JsonNode)new JsonObject
             {
                 ["skill"] = s, ["avg"] = skills.TryGetValue(s, out var v) ? Math.Round(v.Avg, 2) : null, ["n"] = skills.TryGetValue(s, out var w) ? w.N : 0,
+                ["history"] = (rec["skills"] as JsonObject)?[s] is JsonArray ha ? ha.DeepClone() : new JsonArray(),
             }).ToArray()),
             ["weakest"] = weak,
             ["stats"] = (rec["stats"] as JsonObject)?.DeepClone() ?? new JsonObject(),
@@ -251,8 +252,15 @@ public static class PracticeProgress
             ["due"] = ReviewScheduler.Due(rec, t).Count,
             ["rhythm"] = new JsonObject { ["daysThisWeek"] = rhythm.Days, ["elapsed"] = rhythm.Elapsed, ["target"] = RhythmTarget, ["met"] = rhythm.Days >= RhythmTarget },
             ["examDate"] = Str(rec["examDate"]),
+            // calibration: how often answers at each Confidence were right (learning-core design §5)
+            ["calibration"] = new JsonArray(new[] { 1, 2, 3 }.Select(cf =>
+            {
+                var hs = states.Values.SelectMany(x => x.History).Where(h => h.Confidence == cf).ToList();
+                return (JsonNode)new JsonObject { ["confidence"] = cf, ["n"] = hs.Count, ["accuracy"] = hs.Count == 0 ? null : Math.Round(hs.Count(h => h.Right) / (double)hs.Count, 2) };
+            }).ToArray()),
             ["daysToExam"] = Date(rec["examDate"]) is DateOnly ed ? ed.DayNumber - t.DayNumber : null,
-            ["coverage"] = catalog == null ? null : new JsonArray(catalog.GroupBy(c => c.Topic).Select(g => (JsonNode)new JsonObject
+            // coverage by area (the topic up to its first ':' or ';'): six rows, not one per fine topic
+            ["coverage"] = catalog == null ? null : new JsonArray(catalog.GroupBy(c => c.Topic.Split(':', ';')[0].Trim()).Select(g => (JsonNode)new JsonObject
             {
                 ["topic"] = g.Key,
                 ["known"] = g.Count(c => states.TryGetValue(c.Id, out var st) && st.Known),

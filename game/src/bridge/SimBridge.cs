@@ -153,7 +153,10 @@ public partial class SimBridge : Node
         File.Move(tmp, RecordPath, true);
     }
     private int? MaxVintage() => _game == null ? null : PracticeSession.MaxVintageFor(_game.Date);
-    private static DateOnly Today() => DateOnly.FromDateTime(DateTime.Now);
+    private static DateOnly? _todayOverride;
+    private static DateOnly Today() => _todayOverride ?? DateOnly.FromDateTime(DateTime.Now);
+    /// <summary>Harness only: play sessions on chosen dates ("" returns to the real date).</summary>
+    public void SetPracticeToday(string date) => _todayOverride = DateOnly.TryParse(date, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : null;
 
     public string PracticeSummary()
     {
@@ -200,6 +203,21 @@ public partial class SimBridge : Node
     }
 
     public void PourDrop() { _pourTaskId = 0; _session = null; }
+
+    /// <summary>Harness only (scripts/practice.sh, learning.sh): the poured Wines and the session's answers. The screens never
+    /// call it; they get only what they may show until the reveal.</summary>
+    public string PracticeDebugKey()
+    {
+        if (_session == null) return "{}";
+        return new JsonObject
+        {
+            ["wines"] = new JsonArray(_session.Flight.Select(p => (JsonNode)PracticeJson.Poured(p)).ToArray()),
+            ["entries"] = new JsonArray(_session.Entries.Select(e => (JsonNode)new JsonObject
+            {
+                ["answers"] = new JsonArray(e.Questions.Select(q => (JsonNode)JsonValue.Create(q.Answer)!).ToArray()),
+            }).ToArray()),
+        }.ToJsonString();
+    }
 
     /// <summary>Marks the poured Flight once, updates and saves the study record, and returns the reveal.</summary>
     public string PracticeMark(string answersJson)

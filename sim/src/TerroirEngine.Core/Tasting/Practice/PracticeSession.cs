@@ -169,7 +169,7 @@ public sealed class PracticeSession
             e.Questions.Add(new SessionQuestion
             {
                 Prompt = $"Step {b.Index + 1} of the chain", Options = b.Options, Answer = b.Answer,
-                Because = ChainText(c), Skill = SessionComposer.SkillFor(c.Line),
+                Because = "", Skill = SessionComposer.SkillFor(c.Line),   // the reveal shows the whole chain above its items
             });
         return e;
     }

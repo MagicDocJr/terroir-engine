@@ -104,7 +104,7 @@ static func _stand(shell) -> Control:
 		var G: Dictionary = glasses[i]
 		var c := UI.card(i == gi, 12); c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var cv := UI.vbox(4); c.add_child(cv)
-		cv.add_child(T.glass(G["wine"]["sheet"], 0.55))
+		cv.add_child(T.glass(G["wine"], 0.55))
 		var t := UI.head("Glass %d" % (i + 1), 18, UI.GOLD if i == gi else UI.INK); t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; cv.add_child(t)
 		var sl := UI.label(String(G["shown"]), 15, UI.INK2); sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; cv.add_child(sl)
 		var done := T.answered(shell, i, G)
@@ -136,7 +136,12 @@ static func _stand(shell) -> Control:
 			var topic: String = q["topic"]
 			qp[1].add_child(UI.label(String(q["text"]), 17, UI.INK, UI.f_body_b, true))
 			var pick := func(o): answers["quiz"][topic] = o; shell.show_screen("fair")
-			qp[1].add_child(UI.segmented(q["options"], String(answers["quiz"].get(topic, "")), pick, 120))
+			var qrow := UI.hbox(16); qp[1].add_child(qrow)
+			qrow.add_child(UI.segmented(q["options"], String(answers["quiz"].get(topic, "")), pick, 120))
+			if String(answers["quiz"].get(topic, "")) != "":
+				var qconf: Dictionary = answers.get("quizConfidence", {})
+				var set_qc := func(c: int): qconf[topic] = c; answers["quizConfidence"] = qconf; shell.show_screen("fair")
+				qrow.add_child(T.confidence_row(int(qconf.get(topic, 0)), set_qc))
 		v.add_child(qp[0])
 	var bar := UI.hbox(12); v.add_child(bar)
 	if gi < n:
@@ -161,7 +166,7 @@ static func _reveal(shell) -> Control:
 		var g: Dictionary = R["glasses"][i]
 		var p: Array = UI.panel("Glass %d · %s" % [i + 1, String(g["label"])], "%s · %s" % [g["producer"], g["style"]])
 		var h := UI.hbox(18); p[1].add_child(h)
-		h.add_child(T.glass(S["glasses"][i]["wine"]["sheet"], 0.6))
+		h.add_child(T.glass(g["wine"], 0.6))
 		var col := UI.vbox(8); col.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(col)
 		col.add_child(UI.label("%s / %d marks · %s" % [T._n(float(g["total"])), int(g["max"]), String(g["climate"])], 14, UI.INK2, null, true))
 		col.add_child(T.item_rows(g["items"], animate, delay))
@@ -172,6 +177,8 @@ static func _reveal(shell) -> Control:
 	var qp: Array = UI.panel("Vintage quiz", "the evidence is the weather record and the Wines themselves")
 	qp[1].add_child(T.item_rows(R["quiz"], animate, delay, 420.0))
 	v.add_child(qp[0])
+	var rp = T.recap_panel(R)
+	if rp != null: v.add_child(rp)
 	var bar := UI.hbox(12); v.add_child(bar)
 	var again := UI.button("Taste this stand again", false, 16)
 	var req: Dictionary = shell.state.get("tp_req", {})

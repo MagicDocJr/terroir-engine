@@ -10,6 +10,7 @@ public static class PracticeJson
     {
         var c = p.Context;
         var w = Snapshot.WineObj(p.Wine);
+        w["glassColour"] = GlassColour(p.Sheet);
         w["context"] = new JsonObject
         {
             ["region"] = c.RegionId, ["regionName"] = c.RegionName, ["plot"] = c.PlotId, ["plotName"] = c.PlotName, ["block"] = c.BlockId,
