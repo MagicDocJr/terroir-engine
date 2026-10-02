@@ -88,6 +88,7 @@ u_ctrl ∈ [0,1]  (the controller opens the glycol valve when T > setpoint + dea
 All of these come from the equations and are never rolled:
 - **Sluggish:** the rate |dS/dt| stays below 1 g/L/day for 3 days while S > 10 g/L. Typical causes: T < 12 °C (low μ_max, β_max), low YAN, high sugar.
 - **Stuck:** |dS/dt| < 0.2 g/L/day with S > 2 g/L after the active phase. Typical causes: T > ~32 °C combined with high ethanol (k_d spikes), N exhausted early, very high initial sugar (> 260 g/L).
+- **Textbook cross-check:** yeast die and fermentations stick above about 35 °C, and 20–32 °C is the usual range for reds [UW-2016 pp. 48, 63]. The game's ethanol-dependent inactivation lowers that point as alcohol builds, so game text says "32–35 °C, sooner once alcohol builds".
 - Bisson (1999) reviews the causes: nutrient limitation, ethanol and temperature stress, and toxic substances. She also describes the physiological mechanism, a loss of hexose transport capacity. The kinetic model captures that mechanism through β and the inactivation of X.
 - **Recovery actions:** re-inoculation with an acclimatised yeast starter, nutrient addition (limited effect once ethanol is high), warming or cooling towards 20–22 °C. Success depends on the state variables.
 - **H₂S risk index:** rises when N falls below the requirement while S is still high, and with high temperature and certain strains. H₂S output feeds `aroma-and-faults.md`. The functional form is a **game simplification** (UNVERIFIED shape).
@@ -158,3 +159,4 @@ The scripted golden-vintage runs must land inside these ranges.
 - Weingesetz §20. https://www.gesetze-im-internet.de/weing_1994/__20.html
 - Jolly, N.P., Varela, C., Pretorius, I.S. (2014). Not your ordinary yeast: non-Saccharomyces yeasts in wine production uncovered. *FEMS Yeast Research* 14. Cited from memory, **UNVERIFIED**.
 - [EU-2019/934] Commission Delegated Regulation (EU) 2019/934, Annex I Part D (sweetening): https://www.legislation.gov.uk/eur/2019/934/annex/I/part/D (read 2026-10-02)
+- [UW-2016] Wine & Spirit Education Trust (2016). *Understanding Wines: Explaining Style and Quality*. London: WSET. ISBN 978-1-905819-39-3. A standard textbook, used to cross-check the learn cards and Causes; page numbers are the printed ones. Paraphrased, never quoted.

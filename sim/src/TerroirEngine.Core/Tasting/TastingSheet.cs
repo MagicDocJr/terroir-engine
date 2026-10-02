@@ -143,8 +143,8 @@ public static class TastingSheetGenerator
         double vaLimit = red ? 1.20 : 1.08;
         if (b.Acetic > vaLimit) s.Faults.Add($"Volatile acidity {b.Acetic:0.00} g/L exceeds the EU legal limit ({vaLimit} g/L): vinegar, nail varnish.");
         else if (b.Acetic > 0.75) fam.Add(("Secondary", "volatile", "nail varnish lift", 1.0, $"volatile acidity {b.Acetic:0.00} g/L"));
-        if (b.H2sIndex > 1.0) s.Faults.Add("Reduction: rotten egg / struck match (H₂S) — the yeast ran short of nitrogen and the wine was not aerated.");
-        else if (b.H2sIndex > 0.5) fam.Add(("Secondary", "reductive", "struck match, flint", 1.0, "slight reduction (H₂S) from a nitrogen-poor fermentation"));
+        if (b.H2sIndex > 1.0) s.Faults.Add("Reduction: rotten egg / drains (H₂S) — the yeast ran short of nitrogen and the wine was not aerated.");
+        else if (b.H2sIndex > 0.5) fam.Add(("Secondary", "reductive", "flint", 1.0, "slight reduction (H₂S) from a nitrogen-poor fermentation"));
         if (b.FourEp > 425) s.Faults.Add($"Brettanomyces taint (4-EP {b.FourEp:0} µg/L): sticking plaster, barnyard, sweaty saddle.");
         if (b.Acetaldehyde > 100) s.Faults.Add($"Oxidised: acetaldehyde {b.Acetaldehyde:0} mg/L — bruised apple, flat, browning.");
         if (b.MustyIndex > 0.06) s.Faults.Add("Musty, mouldy notes from powdery-mildew-infected grapes.");

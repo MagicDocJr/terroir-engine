@@ -12,8 +12,8 @@
     {
       "steps": [
         "Fermenting sugar releases heat, about 1.3 °C per °Brix without cooling",
-        "a big, uncooled red tank can climb past 32 °C",
-        "yeast die and the fermentation can stick with sugar left"
+        "an uncooled red tank can pass 32–35 °C",
+        "yeast die, sooner with more alcohol, and the fermentation sticks with sugar left"
       ],
       "sources": [
         "fermentation.md#Heat and tank temperature",
@@ -26,13 +26,13 @@
   "check": {
     "question": "A Napa Cabernet Lot of 25 °Brix starts fermenting at 20 °C with the cooling switched off. What is the main risk?",
     "options": [
-      "The tank overheats past 32 °C and the fermentation sticks",
+      "The tank overheats past 32–35 °C and the fermentation sticks",
       "Nothing harmful: the heat just extracts deeper colour and tannin",
       "The warmth speeds the yeast so it ferments dry in two days",
       "Malolactic conversion starts mid-ferment and adds butter"
     ],
-    "answer": "The tank overheats past 32 °C and the fermentation sticks",
-    "why": "Without cooling, fermenting 25 °Brix could add over 30 °C; above about 32 °C yeast die fast, and the fermentation can stop with sugar left."
+    "answer": "The tank overheats past 32–35 °C and the fermentation sticks",
+    "why": "Without cooling, fermenting 25 °Brix could add over 30 °C; past about 32–35 °C, and sooner once alcohol has built up, yeast die and the fermentation can stop with sugar left."
   },
   "sources": [
     "fermentation.md#Heat and tank temperature",

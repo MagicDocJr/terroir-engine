@@ -1,7 +1,7 @@
 {
   "id": "green-harvest",
   "title": "Green harvest and bud load",
-  "what": "Cutting bunches at véraison (about 20 % or 40 %) to lighten the crop; fewer buds at winter pruning is the cheaper, earlier lever.",
+  "what": "Cutting bunches shortly after véraison (about 20 % or 40 %) to lighten the crop; fewer buds at winter pruning, within reason, is the cheaper, earlier lever.",
   "chains": [
     {
       "cause": "yield-concentration"
@@ -29,7 +29,7 @@
       "Nothing: the vine compensates with bigger berries"
     ],
     "answer": "Cost crop and income for little gain in ripeness",
-    "why": "At 0.8–1.2 m² per kg the leaves already ripen the crop fully, so more leaf per kg adds little; the bunches cut are simply lost."
+    "why": "At 0.8–1.2 m² per kg the leaves already ripen the crop fully, so more leaf per kg adds little; the bunches cut are simply lost, and the vine may partly refill the crop with bigger, more dilute berries."
   },
   "sources": [
     "canopy-and-yield.md#2.2 Leaf area to fruit ratio",

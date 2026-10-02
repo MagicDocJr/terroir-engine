@@ -27,7 +27,7 @@ public static class CellarOptions
         new("Nutrients", new[] { "Add DAP if YAN < 150 mg/L", "None" },
             "Yeast need nitrogen. Below ~140–150 mg/L YAN, fermentations become sluggish and yeast release H₂S (rotten egg)."),
         new("Temperature", new[] { "16 °C", "14 °C", "18 °C", "Cellar ambient" },
-            "Cool fermentations (14–16 °C) keep fruity esters in whites; warm ones (26–30 °C) extract colour and tannin in reds. Above ~32 °C yeast die and fermentation sticks.", WhiteOnly: true, LockedAfterFermentStart: false),
+            "Cool fermentations (14–16 °C) keep fruity esters in whites; warm ones (26–30 °C) extract colour and tannin in reds. Above ~32–35 °C, sooner once alcohol builds, yeast die and fermentation sticks.", WhiteOnly: true, LockedAfterFermentStart: false),
         new("Red temperature", new[] { "26 °C", "22 °C", "30 °C", "Uncontrolled" },
             "Reds ferment warmer to extract colour and tannin; 30 °C extracts most but risks a stuck fermentation if cooling can't keep up.", RedOnly: true, LockedAfterFermentStart: false),
         new("Chaptalisation", new[] { "None", "+1 % vol", "+2 % vol" },
@@ -298,7 +298,7 @@ public static class WineryModel
         if (lot.MaxTempC > 32 && lot.Log.All(l => !l.Contains("heat")))
         {
             lot.Log.Add($"{Dates.Short(date)}: fermentation overheated to {lot.MaxTempC:0} °C — yeast are dying (heat).");
-            events.Add(new VineEvent(date, lot.BlockId, "ferment-hot", $"Lot {lot.Id} reached {lot.MaxTempC:0} °C. Above ~32 °C yeast die fast; the fermentation may stick.", 3) { LotId = lot.Id });
+            events.Add(new VineEvent(date, lot.BlockId, "ferment-hot", $"Lot {lot.Id} reached {lot.MaxTempC:0} °C. Past ~32–35 °C, sooner once alcohol builds, yeast die; the fermentation may stick.", 3) { LotId = lot.Id });
         }
         if (lot.Sugar <= 2) { EndFermentationPhase(lot, date, events, pressedEarly: false); return; }
         if (lot.Phase == LotPhase.Fermenting && lot.PhaseDay > 5 && rate < 1.0 && lot.Sugar > 4)

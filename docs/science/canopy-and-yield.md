@@ -112,6 +112,7 @@ The training system is a Planting choice: it lays out the vine's permanent wood 
 - **Bud fruitfulness by position.** The basal (non-count) buds of *Vitis vinifera* cultivars are often not fruitful, and in French cultivars (Chardonnay, Pinot noir, Cabernet franc, Merlot) bud fertility was greater at positions 4–10 than at positions 1–3 (Hickey & Hatch 2021, summarising recent research). Spur pruning keeps only basal buds, so a variety whose basal buds bear poorly is cane-pruned.
 - **Law.** Côte d'Or village and Premier Cru rules allow Guyot simple or spur/cordon pruning, with at most 8 buds per vine (law doc §3).
 - **Ripening capacity does not depend on the system's name.** All three are single canopies, which need 0.8–1.2 m² of leaf per kg of fruit to ripen it fully (§2.2, Kliewer & Dokoozlian 2005). Horizontally divided canopies, not offered in the game, need less.
+- **Textbook cross-check.** A cordon is easier to mechanise but slower to establish; cane pruning needs a large skilled workforce [UW-2016 p. 34]. Staking canes up a single stake opens the fruit to light and air, and on the steepest slopes kit is hauled by winch [UW-2016 p. 108].
 
 **Game model.** The training system sets (1) the maximum buds per vine (Einzelpfahl 26, Guyot 16, Cordon 24; design values from the §3.1 ranges, `UNVERIFIED`), (2) whether machine harvesting is possible (never on Einzelpfahl or on slopes of 30 % or more, a game threshold more cautious than the 60 % direct-traction limit; economy doc §4.3) and (3) the planting cost (economy doc §3). **Game simplification:** bud fruitfulness by position and differences in canopy microclimate between systems are not modelled; for the same leaf area and crop, Guyot and Cordon vines ripen alike.
 
@@ -236,6 +237,8 @@ After a decision the estate's vineyard crew (two or three people: 12 / 16 / 24 h
 
 Cluster thinning raises the leaf area per kg of fruit, so it helps ripening only where the vine is over-cropped: once the ratio is inside the 0.8–1.2 m²/kg range of §2.2, more leaf per kg adds little. In a three-year Finger Lakes Riesling trial (thinned to 1, 1.5 or 2 clusters per shoot, against unthinned vines), thinning raised soluble solids at harvest (18.2 °Brix unthinned vs 22.3 °Brix at one cluster per shoot in 2008), but had little or no effect on berry size, pH, titratable acidity, pruning weight or cluster light exposure. Consumers sorted the low-crop wines apart by aroma in 2008 and 2009. The grower's net return fell sharply: grape prices would have had to rise by up to 143 % to recoup the loss (Preszler, Schmit & Vanden Heuvel 2013).
 
+**Textbook cross-check.** Thinning is done shortly after véraison. Mistimed, the vine can enlarge the remaining berries, which partly restores the yield and dilutes the flavour, and a firm link between low yield and quality is hard to show [UW-2016 p. 37]. Too few buds push vigour; too many leave the crop unripe [UW-2016 p. 37].
+
 **Game model:** thinning at véraison removes 20 % or 40 % of the berries per vine (§3.7), which raises the leaf-area-to-fruit ratio and so `ripeningCapacity`, up to its cap of 1.1 (§2.2). Thinning is also a legal tool: Côte d'Or village and Premier Cru wines have yield limits (law doc §3).
 
 ## 4. Water stress
@@ -336,3 +339,4 @@ Staff level scales efficiency (Junior −10 %, Senior +10 %, `UNVERIFIED`).
 - Olejnizak S. Diploma thesis, Fachhochschule Mainz (Geoinformatik und Vermessung), on terracing in steep-slope viticulture. https://www.landentwicklung.de/fileadmin/sites/Landentwicklung/Dateien/Forschung/Diplomarbeit_Stephan_Olejnizak.pdf (1,600 h/ha terraced steep slope vs 400 h/ha direct traction; 60 % slope limit for direct traction)
 - Coulure and millerandage summaries: https://en.wikipedia.org/wiki/Coulure (definitions and weather causes; a tertiary source to replace with a primary one, see open questions)
 - Standard references, cited from memory: Keller M., *The Science of Grapevines* (3rd ed., 2020); Smart R., Robinson M., *Sunlight into Wine* (1991); Robinson J., Harding J., Vouillamoz J., *Wine Grapes* (2012).
+- [UW-2016] Wine & Spirit Education Trust (2016). *Understanding Wines: Explaining Style and Quality*. London: WSET. ISBN 978-1-905819-39-3. A standard textbook, used to cross-check the learn cards and Causes; page numbers are the printed ones. Paraphrased, never quoted.
