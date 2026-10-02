@@ -176,3 +176,26 @@ public class QualitySpreadTests
         Assert.True(Share("Very good") + Share("Outstanding") <= 0.45, report);
     }
 }
+
+/// <summary>The absolute climate class beside the game's relative one (Tasting sheet 2 spec §3.4; UW-2016 p. 30).</summary>
+public class ClimateClassTests
+{
+    [Fact]
+    public void Climate_AbsoluteClassBesideRelative()
+    {
+        var (mosel, moselGst) = VintageFacts.RegionClass(Fixture.Data, "mosel");
+        var (napa, napaGst) = VintageFacts.RegionClass(Fixture.Data, "napa");
+        Assert.Equal("cool", mosel);
+        Assert.True(moselGst <= 16.5, $"{moselGst}");
+        Assert.Contains(napa, new[] { "moderate", "warm" });
+        Assert.True(napaGst > moselGst);
+        var f = VintageFacts.For(Fixture.Data, "mosel", 2018);
+        Assert.InRange(f.Gst, 12, 20);
+        var (rel, because) = TastingMarker.VintageClimate(Fixture.Data, "mosel", 2018);
+        Assert.Equal("warm", rel);   // 2018 was a hot year on the Mosel
+        Assert.Contains("cool climate", because);
+        var card = PracticeSession.CardJson(Fixture.Data, "mosel", 2018);
+        Assert.Equal("cool", (string?)card["climateClass"]);
+        Assert.Contains("warm year", (string?)card["climateLine"]);
+    }
+}

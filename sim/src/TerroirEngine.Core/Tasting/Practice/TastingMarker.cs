@@ -138,7 +138,9 @@ public static class TastingMarker
     {
         var f = VintageFacts.For(data, regionId, vintage, upTo);
         string c = f.GddRank <= f.RecordYears / 3.0 ? "warm" : f.GddRank > f.RecordYears * 2 / 3.0 ? "cool" : "moderate";
-        return (c, $"{vintage}: {f.Gdd:0} growing-degree days, {Ord(f.GddRank)} warmest of the {f.RecordYears} years in the {data.Region(regionId).Name} record ({f.RecordFrom}–{f.RecordTo}); the warmest third counts as warm, the coolest third as cool");
+        var (cls, gst) = VintageFacts.RegionClass(data, regionId, upTo);
+        return (c, $"{vintage}: {f.Gdd:0} growing-degree days, {Ord(f.GddRank)} warmest of the {f.RecordYears} years in the {data.Region(regionId).Name} record ({f.RecordFrom}–{f.RecordTo}); the warmest third counts as warm, the coolest third as cool. "
+            + $"On the absolute scale the {data.Region(regionId).Name} is a {cls} climate (average April–October {gst:0.0} °C; this year {f.Gst:0.0} °C)");
     }
 
     private static string Ord(int n) => n + (n % 100 is 11 or 12 or 13 ? "th" : (n % 10) switch { 1 => "st", 2 => "nd", 3 => "rd", _ => "th" });

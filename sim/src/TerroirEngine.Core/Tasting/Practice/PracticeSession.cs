@@ -490,9 +490,11 @@ public sealed class PracticeSession
     {
         var f = VintageFacts.For(data, regionId, year, upTo);
         var (climate, because) = TastingMarker.VintageClimate(data, regionId, year, upTo);
+        var (cls, gst) = VintageFacts.RegionClass(data, regionId, upTo);
         return new JsonObject
         {
             ["region"] = regionId, ["regionName"] = data.Region(regionId).Name, ["year"] = year, ["climate"] = climate, ["climateBecause"] = because,
+            ["climateClass"] = cls, ["regionGst"] = gst, ["gst"] = f.Gst, ["climateLine"] = $"a {climate} year for the {data.Region(regionId).Name}, in a {cls} climate",
             ["gdd"] = f.Gdd, ["gddRank"] = f.GddRank, ["recordYears"] = f.RecordYears, ["summerTmax"] = f.SummerTmax, ["autumnRain"] = f.AutumnRainMm,
             ["hotDays"] = f.HotDays, ["frostNight"] = f.SpringFrostDate.ToString("d MMMM", Ci), ["frostC"] = Math.Round(f.SpringFrostC, 1),
             ["note"] = NoteJson(data, regionId, year),

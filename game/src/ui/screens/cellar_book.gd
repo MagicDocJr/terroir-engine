@@ -63,6 +63,7 @@ static func _card(C: Dictionary) -> Control:
 	top.add_child(UI.head(str(int(C["year"])), 30, UI.INK))
 	top.add_child(UI.spacer())
 	top.add_child(UI.chip(climate + " year", col, 13, true))
+	if C.get("climateLine") != null: v.add_child(UI.label(String(C["climateLine"]).capitalize().substr(0, 1) + String(C["climateLine"]).substr(1) + " (average April–October %.1f °C)." % float(C["regionGst"]), 13, UI.INK2, null, true))
 	v.add_child(_row("Growing-degree days", "%d · %d of %d, warmest first" % [int(C["gdd"]), int(C["gddRank"]), int(C["recordYears"])]))
 	v.add_child(_row("Summer maximum", "%.1f °C" % float(C["summerTmax"])))
 	v.add_child(_row("Hot days (≥ 30 °C)", str(int(C["hotDays"]))))

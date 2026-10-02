@@ -9,8 +9,17 @@ namespace TerroirEngine.Tasting.Practice;
 /// (maximum ≥ 30 °C), the coldest spring night (Apr–May), and where the year's degree-days rank in the record (1 = warmest).
 /// The grid cell is the Region's reference weather, not a particular slope (frost lies colder in low spots).</summary>
 public sealed record VintageFacts(string RegionId, int Year, double Gdd, double SummerTmax, double AutumnRainMm, int HotDays,
-    double SpringFrostC, DateOnly SpringFrostDate, int GddRank, int RecordYears, int RecordFrom, int RecordTo)
+    double SpringFrostC, DateOnly SpringFrostDate, int GddRank, int RecordYears, int RecordFrom, int RecordTo, double Gst = 0)
 {
+    /// <summary>The Region's absolute climate class from its average growing-season temperature (April–October mean) over the
+    /// record years: cool ≤ 16.5 °C, moderate to 18.5, warm to 21, hot above (UW-2016 p. 30). Game simplification: the
+    /// Region's ERA5 grid cell stands for its vineyards. Inside a game the average stops at upTo (ADR 0002).</summary>
+    public static (string Class, double MeanGst) RegionClass(GameData data, string regionId, int? upTo = null)
+    {
+        double m = Math.Round(Record(data, regionId, upTo).Average(f => f.Gst), 1);
+        return (m <= 16.5 ? "cool" : m <= 18.5 ? "moderate" : m <= 21 ? "warm" : "hot", m);
+    }
+
     public const int FirstRecordYear = 1995;
 
     private static readonly ConcurrentDictionary<string, WeatherArchive> Archives = new();
@@ -52,10 +61,11 @@ public sealed record VintageFacts(string RegionId, int Year, double Gdd, double 
 
     private static VintageFacts Compute(WeatherArchive arc, string regionId, int y)
     {
-        double gdd = 0, tmaxSum = 0, rain = 0; int n = 0, hot = 0;
+        double gdd = 0, tmaxSum = 0, rain = 0, tmeanSum = 0; int n = 0, hot = 0, days = 0;
         for (var d = new DateOnly(y, 4, 1); d <= new DateOnly(y, 10, 31); d = d.AddDays(1))
         {
             var w = arc.Get(d);
+            tmeanSum += (w.Tmax + w.Tmin) / 2; days++;
             gdd += Math.Max(0, (w.Tmax + w.Tmin) / 2 - 10);
             if (d.Month is >= 6 and <= 8) { tmaxSum += w.Tmax; n++; if (w.Tmax >= 30) hot++; }
             if (d.Month is 9 or 10) rain += w.Precip;
@@ -64,6 +74,6 @@ public sealed record VintageFacts(string RegionId, int Year, double Gdd, double 
         double frostC = double.MaxValue;
         for (var d = new DateOnly(y, 4, 1); d <= new DateOnly(y, 5, 31); d = d.AddDays(1))
             if (arc.Get(d).Tmin < frostC) { frostC = arc.Get(d).Tmin; arcFrost = d; }
-        return new VintageFacts(regionId, y, Math.Round(gdd), Math.Round(tmaxSum / n, 1), Math.Round(rain), hot, frostC, arcFrost, 0, 0, 0, 0);
+        return new VintageFacts(regionId, y, Math.Round(gdd), Math.Round(tmaxSum / n, 1), Math.Round(rain), hot, frostC, arcFrost, 0, 0, 0, 0, Math.Round(tmeanSum / days, 1));
     }
 }
