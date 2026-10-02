@@ -49,7 +49,7 @@ static func build(D: Dictionary, shell) -> Control:
 	q[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var qh := UI.hbox(24)
 	qh.add_child(UI.tile("Quality", String(S["quality"]), "", UI.GOLD))
-	qh.add_child(UI.tile("Readiness", String(S["readiness"]), ""))
+	qh.add_child(UI.tile("Readiness", String(S["readiness"]) if String(S["readiness"]) != "" else "not judged (faulty)", ""))
 	qh.add_child(UI.tile("Price", "€%.2f" % float(W["price"]), "per bottle · %s total" % UI.euro(int(W["revenue"]))))
 	q[1].add_child(qh)
 	# quality as an argument: for, against, and why not the level above (Tasting sheet 2)
@@ -57,7 +57,7 @@ static func build(D: Dictionary, shell) -> Control:
 		if S["qualityFor"].size() > 0: q[1].add_child(UI.label("For: " + "; ".join(S["qualityFor"]), 15, UI.GOOD, null, true))
 		if S["qualityAgainst"].size() > 0: q[1].add_child(UI.label("Against: " + "; ".join(S["qualityAgainst"]), 15, UI.SERIOUS, null, true))
 		if String(S.get("qualityNotHigher", "")) != "": q[1].add_child(UI.label(String(S["qualityNotHigher"]) + ".", 15, UI.INK2, null, true))
-		if float(S.get("windowYears", 0)) > 0: q[1].add_child(UI.label("Drinking window: about %d years from the harvest." % int(round(float(S["windowYears"]))), 13, UI.MUTED))
+		if String(S.get("readinessBecause", "")) != "": q[1].add_child(UI.label("Readiness: " + String(S["readinessBecause"]) + ".", 13, UI.MUTED, null, true))
 	else:
 		q[1].add_child(UI.label(String(S["qualityBecause"]), 15, UI.INK2, null, true))
 	var bl := UI.hbox(18)
@@ -100,7 +100,7 @@ static func build(D: Dictionary, shell) -> Control:
 		h.tooltip_text = String(a["because"]); h.mouse_filter = Control.MOUSE_FILTER_PASS
 		np[1].add_child(h)
 		np[1].add_child(UI.label("because " + String(a["because"]), 13, UI.MUTED, null, true))
-	if S.get("simple", false): np[1].add_child(UI.label("Simple: few aromas, all from the grape.", 14, UI.INK2, null, true))
+	if S.get("simple", false): np[1].add_child(UI.label("Simple: few aromas, mostly fruit; nothing from oak, lees or age.", 14, UI.INK2, null, true))
 	if String(S.get("fruitRipeness", "")) != "":
 		np[1].add_child(UI.kv("Fruit ripeness", String(S["fruitRipeness"])))
 		np[1].add_child(UI.label("because " + String(S.get("fruitRipenessBecause", "")), 13, UI.MUTED, null, true))

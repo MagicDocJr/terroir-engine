@@ -90,7 +90,7 @@ or the exam materials.
 - **Recalibration.**
   - Thresholds are tuned so that random practice pours spread roughly: Outstanding about 10–15 %, Very good 20–30 %,
     Good 25–35 %, Acceptable 20–30 %, Poor ≥ 3 % (**UNVERIFIED** target, for the Level 3 reviewer to confirm). Result over
-    150 pours: 13 / 24 / 33 / 27 / 3 %.
+    150 pours after the final review: 7 / 29 / 33 / 27 / 3 %.
   - Today: 61 % are Very good or better, and Cabernet is almost always so.
   - The levers are the intensity and length thresholds (positive only at medium(+) with support, or pronounced/long), the
     complexity rule, and the integration tests.

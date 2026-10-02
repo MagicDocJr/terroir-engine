@@ -192,7 +192,7 @@ static func _sheet_view(W: Dictionary, parts: Array) -> Control:
 		for f in S.get("faults", []): v.add_child(UI.label("⚠ " + String(f), 14, UI.CRIT, null, true))
 		for a in S["aromas"]:
 			v.add_child(UI.kv(String(a["family"]), "%s  (%s)" % [a["terms"], a["intensity"]]))
-		if S.get("simple", false): v.add_child(UI.kv("Overall", "simple: few aromas, all from the grape"))
+		if S.get("simple", false): v.add_child(UI.kv("Overall", "simple: few aromas, mostly fruit; nothing from oak, lees or age"))
 		if String(S.get("fruitRipeness", "")) != "": v.add_child(UI.kv("Fruit ripeness", String(S["fruitRipeness"])))
 	if "palate" in parts:
 		v.add_child(UI.label("Palate", 14, UI.GOLD, UI.f_body_b))

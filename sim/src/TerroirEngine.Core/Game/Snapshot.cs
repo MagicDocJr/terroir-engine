@@ -371,7 +371,7 @@ public static class Snapshot
                 ["faults"] = Arr(s.Faults.Select(f => (JsonNode)f)),
                 ["quality"] = s.Quality, ["qualityBecause"] = s.QualityBecause, ["readiness"] = s.Readiness,
                 ["qualityFor"] = Arr(s.QualityFor.Select(x => (JsonNode)x)), ["qualityAgainst"] = Arr(s.QualityAgainst.Select(x => (JsonNode)x)), ["qualityNotHigher"] = s.QualityNotHigher,
-                ["windowYears"] = s.WindowYears, ["fruitRipeness"] = s.FruitRipeness, ["fruitRipenessBecause"] = s.FruitRipenessBecause, ["simple"] = s.Simple,
+                ["windowYears"] = s.WindowYears, ["readinessBecause"] = s.ReadinessBecause, ["fruitRipeness"] = s.FruitRipeness, ["fruitRipenessBecause"] = s.FruitRipenessBecause, ["simple"] = s.Simple,
                 ["flavours"] = Arr(s.Flavours.Select(x => (JsonNode)x)),
                 ["observations"] = Arr(s.Observations.Select(o => (JsonNode)new JsonObject { ["term"] = o.Term, ["because"] = o.Because })),
                 ["blic"] = Arr(s.Blic.Select(b => (JsonNode)new JsonObject { ["criterion"] = b.Criterion, ["met"] = b.Met, ["why"] = b.Why })),

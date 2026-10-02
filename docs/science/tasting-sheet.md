@@ -36,7 +36,8 @@ From the other models:
 - **Development:** youthful / developing / fully developed / tired. Tired means older than the Wine's drinking window
   (§4).
 - **Simple:** a nose of very few aromas [UW-2016 p. 4]: nothing from oak, lees, malolactic or age (fermentation esters
-  allowed), at most one clear family besides the fruit, and no fault. In the aroma-list answer "simple" counts as a family:
+  allowed), at most one clear family besides the fruit, and no fault: few aromas, mostly fruit. In the aroma-list answer
+"simple" counts as a family:
   right on a simple nose, wrong otherwise. About 9 % of random practice pours, all young unoaked Chardonnay (game
   calibration).
 - **Fruit ripeness** (unripe / fresh / ripe / dried or cooked): from harvest ripeness; noble rot reads dried, sunburn
@@ -83,7 +84,8 @@ The **quality level** is assessed on four criteria. The game computes each as pa
 2. **Length:** passes at a long finish, or at medium(+) carried by pronounced flavour (intense wines generally have a long
    finish [UW-2016 p. 9]).
 3. **Intensity:** passes if flavour intensity is at least "medium(+)".
-4. **Complexity:** passes if ≥ 3 clearly perceived families (the fruit counted once) across ≥ 2 categories.
+4. **Complexity:** layers across categories: ≥ 4 clearly perceived families (the fruit counted once) across ≥ 2
+   categories, or 3 with a clear note of age (tertiary) [UW-2016 p. 9; thresholds game calibration, UNVERIFIED].
 
 | Criteria met (none can be a fault) | Quality level |
 |---|---|
@@ -101,16 +103,21 @@ from evidence. The sheet therefore also writes the **argument**: *For* (the crit
 
 **Calibration of the spread** (Tasting sheet 2, 2026-10-02): over 150 random practice pours the verdict was 61 % Very good
 or better; after fixing three inflations (the oak family summed four compounds' strengths, the split fruit counted twice,
-the finish leaned on body and tannin) it is Outstanding 13 %, Very good 24 %, Good 33 %, Acceptable 27 %, Poor 3 %. The
+the finish leaned on body and tannin) and requiring layers for complexity, it is Outstanding 7 %, Very good 29 %, Good
+33 %, Acceptable 27 %, Poor 3 %. The
 target bands are **UNVERIFIED**, for the Level 3 reviewer; `TerroirEngine.Cli qualitysweep [n]` reports the spread per
-variety. Known gap: Riesling's finish barely varies (the nose model is narrow), so a Riesling never reaches Outstanding.
+variety. Known gaps: Riesling's finish barely varies (the nose model is narrow), so a Riesling never reaches Outstanding;
+the extracted Pinot Noir style (riper, longer maceration, new oak) is reliably Outstanding while classic and light are
+Good, so per grape the verdict follows the style more than it should (guarded by a test, backlog).
 
 **Readiness for drinking:** too young / can drink now, has potential for ageing / drink now, not for (further) ageing /
 too old [UW-2016 pp. 9–10]. A drinking window comes from structure carried by concentration:
 window = 1.5 + 5 × (acid + tannin + sugar parts) × (0.4 + 0.15 × flavour-intensity step), 2–20 years (**UNVERIFIED**
 design values). Too old beyond 1.3 × the window; drink now beyond 0.7 × the window or when the window is under 6 years; too
 young under a quarter of the window with firm tannin (≥ 1000 mg/L) or high sugar with high acid. A faulty Wine has no
-readiness. Earlier text, kept for its reasoning: It's estimated from structure (acidity, tannin, RS, extract, intensity) vs development. Riesling with high acidity and RS ages well; low-acid, low-extract wines don't. **Game heuristic**, UNVERIFIED.
+readiness. The sheet explains the verdict: the window, what structure sets it, and the age at tasting.
+- **Fruit ripeness with age:** a fully developed or tired Wine, or a red with bottle-age character, reads "dried or
+  cooked" [UW-2016 p. 4]. Earlier text, kept for its reasoning: It's estimated from structure (acidity, tannin, RS, extract, intensity) vs development. Riesling with high acidity and RS ages well; low-acid, low-extract wines don't. **Game heuristic**, UNVERIFIED.
 
 ## 5. "Why" links (causal trail)
 - Every sheet line is `{descriptor, evidence: [compound or measurement with value], causes: [event IDs]}`.

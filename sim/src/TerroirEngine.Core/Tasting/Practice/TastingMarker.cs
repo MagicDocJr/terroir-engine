@@ -200,11 +200,13 @@ public static class TastingMarker
                 score = mine.Count == 0 ? 0 : union == 0 ? 1 : Math.Round((double)inter / union, 2);
                 yours = string.Join(", ", mine);
                 actual = act.Count == 0 ? "no clear aromas" : string.Join(", ", act);
-                because = string.Join("; ", sh.Aromas.Select(a => $"{a.Family} ({a.Terms}): {a.Because}")) + (sh.Simple ? "; simple: few aroma families, all from the grape" : "");
+                because = string.Join("; ", sh.Aromas.Select(a => $"{a.Family} ({a.Terms}): {a.Because}")) + (sh.Simple ? "; simple: few aromas, mostly fruit, nothing from oak, lees or age" : "");
                 // each aroma family's Cause is right only when that family was picked
                 var perCause = new Dictionary<string, double>();
                 foreach (var l in sh.CauseLinks.Where(l => l.Line.StartsWith("aroma:")))
                     perCause[l.Cause] = Math.Min(perCause.GetValueOrDefault(l.Cause, 1), mine.Contains(l.Line[6..]) ? 1 : 0);
+                // the ripeness Cause sits on every fruit family: naming any of them shows the fruit character
+                if (perCause.ContainsKey("ripeness-fruit-character")) perCause["ripeness-fruit-character"] = mine.Any(TastingSheet.IsFruit) ? 1 : 0;
                 items.Add(new(key, label, skill, yours, actual, score, because, Conf(answers, key), CaseFor(score, Conf(answers, key)), CausesFor(sh, key), perCause));
                 continue;
             }
@@ -238,7 +240,7 @@ public static class TastingMarker
                 "flavourIntensity" => (sh.FlavourIntensity, PalBecause("Flavour intensity")),
                 "finish" => (sh.Finish, PalBecause("Finish")),
                 "quality" => (sh.Quality, sh.QualityBecause),
-                "readiness" => (sh.Readiness, sh.QualityBecause),
+                "readiness" => (sh.Readiness, sh.ReadinessBecause),
                 "variety" => (c.Variety, $"{c.Variety} from {c.PlotName}, {c.RegionName}"),
                 "region" => (c.RegionName, $"{c.PlotName}, {c.RegionName}"),
                 "climate" => VintageClimate(data, c.RegionId, c.Vintage, upTo),

@@ -40,6 +40,8 @@ public sealed class TastingSheet
     public string QualityNotHigher = "";
     /// <summary>The drinking window in years from the harvest (structure-based; UNVERIFIED design values).</summary>
     public double WindowYears;
+    /// <summary>Why the readiness verdict: the window, what sets it, and the Wine's age (empty for a faulty Wine).</summary>
+    public string ReadinessBecause = "";
     /// <summary>The raw scores behind the scale words (calibration and the qualitysweep report only; never shown).</summary>
     public double NoseScore, FlavourScore, FinishScore, BodyScore;
     public List<string> Chemistry { get; } = new();
@@ -276,7 +278,10 @@ public static class TastingSheetGenerator
         var clear = fam.Where(f => f.p >= 1.25).ToList();   // clearly perceived families only
         int families = clear.Select(a => TastingSheet.IsFruit(a.family) ? "fruit" : a.family).Distinct().Count();
         int cats = clear.Select(a => a.cat).Distinct().Count();
-        bool complexity = families >= 3 && cats >= 2;
+        // complexity: layers across categories — three clear families need a fourth, or a clear note of age, to count
+        // (UW-2016 p. 9; game calibration, UNVERIFIED)
+        bool agedNote = clear.Any(f => f.cat == "Tertiary");
+        bool complexity = cats >= 2 && (families >= 4 || (families >= 3 && agedNote));
         s.Blic.Add(("Balance", balance, balWhy));
         s.Blic.Add(("Length", length, $"finish is {s.Finish}" + (s.Finish == "medium(+)" && !length ? ", not carried by pronounced flavour" : "")));
         s.Blic.Add(("Intensity", inten, $"flavour intensity is {s.FlavourIntensity}"));
@@ -305,6 +310,23 @@ public static class TastingSheetGenerator
             ageYears > 0.7 * s.WindowYears || s.WindowYears < 6 ? "drink now, not for (further) ageing" :
             ageYears < 0.25 * s.WindowYears && firm ? "too young" : "can drink now, has potential for ageing";
         if (!faulty && ageYears > s.WindowYears) s.Development = "tired";
+        var shape = new List<string>();
+        if (acidScore > 7) shape.Add("acidity"); if (red && b.TotalTannin >= 600) shape.Add("tannin"); if (rs >= 20) shape.Add("sugar");
+        s.ReadinessBecause = faulty ? "" :
+            $"drinking window about {s.WindowYears:0} years from the harvest ({(shape.Count == 0 ? "little structure" : string.Join(", ", shape) + " to age on")}, with {s.FlavourIntensity} flavour intensity); tasted at {ageYears:0.#} years: "
+            + s.Readiness switch
+            {
+                "too old" => "well past the window, the decline now dominates",
+                "too young" => "early in a long window, with firm structure still to soften",
+                "drink now, not for (further) ageing" => s.WindowYears < 6 ? "a wine for drinking young" : "late in its window, further age will not improve it",
+                _ => "drinking well now, with years still to gain",
+            };
+        // age dries the fruit: a fully developed or tired Wine, or a red with bottle-age character, reads dried fruit (UW-2016 p. 4)
+        if (!faulty && !driedCooked && (s.Development is "fully developed" or "tired" || s.Aromas.Any(a => a.Family == "bottle age")))
+        {
+            s.FruitRipeness = "dried or cooked";
+            s.FruitRipenessBecause += "; years in bottle have turned the fruit towards dried fruit";
+        }
 
         // ---------------- other observations (noted, not marked)
         if (red && ageYears >= 4 && b.TotalTannin >= 700) s.Observations.Add(("deposit", "tannin and pigment bind and drop out after years in bottle"));
