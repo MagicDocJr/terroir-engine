@@ -21,7 +21,7 @@
       ]
     }
   ],
-  "choose": "Steel or an old Fuder keeps Riesling's fruit in front: a Fuder has half a barrique's wood surface per litre. New barriques give vanilla, toast and oak tannin; each reuse gives less. Heavier toast shifts the oak towards smoke and toast.",
+  "choose": "Steel or an old Fuder keeps Riesling's fruit in front: a Fuder has far less wood surface per litre. New barriques give vanilla, toast and oak tannin; each reuse gives less. Heavier toast shifts the oak towards smoke and toast.",
   "exam": "Expect 'describe the effects of new oak' or 'why use old casks?'. Separate flavour, tannin and slow oxygen, and say which matters for the style.",
   "check": {
     "question": "Your Côte d'Or Chardonnay from first-fill French barriques shows only faint oak. You want clearly more vanilla and toast, but no coconut. What do you change?",
@@ -32,7 +32,7 @@
       "Longer in the old Fuder"
     ],
     "answer": "New French barriques",
-    "why": "Each reuse leaves a barrel with fewer oak compounds, so new French oak gives more vanillin and toasty notes; American oak adds coconut-like lactone, and an old Fuder gives little oak at all."
+    "why": "Each reuse leaves a barrel with fewer oak compounds, so a new barrel gives far more vanilla and toast than a first-fill one. French oak is subtler and spicier; American adds sweet vanilla and coconut; an old Fuder gives little oak."
   },
   "sources": [
     "extraction-and-oak.md#Vessel parameters",

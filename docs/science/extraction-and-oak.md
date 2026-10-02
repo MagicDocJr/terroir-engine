@@ -53,6 +53,7 @@ k_i     = k_i,ref · θ_i^((T − 25)/10) · g_i(E) · M_i
   Magnitudes are UNVERIFIED.
 
   **Evidence (Pinot Noir).** Cool-climate Pinot Noir was microvinified destemmed, with 100 % of the stems added back, and with 30 %, 60 % and 100 % whole bunches. The stems-added, 60 % and 100 % wines had significantly more tannin and monomeric phenolics but less anthocyanin, and more compounds with green/vegetative, spicy, woody and medicinal aromas (IBMP, IPMP, eugenol, ethyl cinnamate, phenol). The 30 % whole-bunch wine showed no significant rise in methoxypyrazines, and the tannin rise is reported only for the stems-added, 60 % and 100 % wines (Wimalasiri et al. 2021). The potassium/pH and intracellular-fermentation effects listed above remain uncited.
+  **Textbook cross-check.** Uncrushed berries partly ferment inside the berry, which gives fresher, brighter fruit and a silkier texture, and the stems must be ripe, or their tannin tastes bitter and green [UW-2016 p. 64]. The game models only the stem side (game simplification, labelled on the learn card).
 
 **Pressing:** free-run vs press fraction. The press fraction is higher in tannin and K⁺ and lower in acid. It's blendable (the Blending decision).
 
@@ -126,6 +127,7 @@ Thresholds are listed in `aroma-and-faults.md`.
   - Lees-aged white wines are more stable against protein haze (a mannoprotein fragment, MP32) and tartrate crystals.
   - Lees fix some wood aromas (volatile phenols, oak lactones), and yeast enzymes transform vanillin, so lees limit the "woody" character of barrel-aged wine.
   - Winemakers credit lees with "body" and "roundness", but a direct effect of the yeast polysaccharides on roundness has never been shown conclusively.
+  - Textbook teaching is plainer: fine-lees contact and stirring give a richer, rounder texture [UW-2016 pp. 49, 61–62]. The learn card and Cause name texture as the practical effect and say its mechanism is still debated.
 - **Model:** `body += a · lees_months · (1 + b·stir)`. Reduction risk ∝ lees_depth × months × (1 − stir). Coefficients UNVERIFIED (**game simplification**).
 
 ## 4. Fining and filtration
@@ -179,3 +181,4 @@ When a red Lot starts fermenting, the Cellar master posts a cap-management **Tas
 - Fornairon-Bonnefond, C., Camarasa, C., Moutounet, M., Salmon, J.-M. (2002). New trends on yeast autolysis and wine ageing on lees: a bibliographic review. *Journal International des Sciences de la Vigne et du Vin* 36(2):49–69. doi:10.20870/oeno-one.2002.36.2.974
 - Chatonnet, P. et al., cooperage and toasting studies (1990s). Cited from memory, **UNVERIFIED**.
 - del Alamo-Sanza, M., Nevares, I., barrel oxygen transmission studies. Cited from memory, **UNVERIFIED**.
+- [UW-2016] Wine & Spirit Education Trust (2016). *Understanding Wines: Explaining Style and Quality*. London: WSET. ISBN 978-1-905819-39-3. A standard textbook, used to cross-check the learn cards and Causes; page numbers are the printed ones. Paraphrased, never quoted.

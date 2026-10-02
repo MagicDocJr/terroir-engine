@@ -92,9 +92,9 @@
       "id": "yield-concentration",
       "title": "Crop load sets concentration",
       "chain": [
-        "On an over-cropped vine (under about 0.8 m² of leaf per kg of fruit)",
-        "fewer bunches share the leaves' sugar among less fruit",
-        "so the grapes ripen further and the wine gains flavour intensity"
+        "A vine's crop against its leaf area (full ripening from about 1 m² per kg)",
+        "too many bunches spread the leaves' sugar thin; few bunches share it",
+        "so an over-cropped vine gives dilute wine, a light crop more flavour intensity"
       ],
       "topic": "Grape growing: yield and vine management",
       "level": "L3",
@@ -309,11 +309,11 @@
     },
     {
       "id": "whole-bunch-stems",
-      "title": "Whole bunches add stem tannin and green, spicy notes",
+      "title": "Stems in the vat add tannin and spice, or green notes if unripe",
       "chain": [
         "Fermenting with whole bunches or added stems",
         "brings stem tannin and stem aroma compounds (methoxypyrazines, eugenol) into the wine",
-        "so it gains tannin and, most from unripe stems, green, spicy, stalky notes"
+        "so ripe stems add tannin and spice; unripe stems add bitter, green, stalky notes"
       ],
       "topic": "Winemaking: red winemaking",
       "level": "L3",
@@ -333,7 +333,7 @@
       "chain": [
         "Fermenting white wine cool (about 14–16 °C)",
         "makes the yeast form more fruity esters, and fewer escape with the CO₂",
-        "so the young wine smells of banana and pear drops"
+        "so the young wine smells fresh and fruity; very cold ferments add pear-drop notes"
       ],
       "topic": "Winemaking: white winemaking; fermentation",
       "level": "L3",
@@ -356,7 +356,7 @@
         "A must low in yeast-assimilable nitrogen (below about 140–150 mg/L)",
         "starves the yeast",
         "which ferment slowly and release hydrogen sulphide (H₂S)",
-        "so the wine smells reduced (struck match, rotten egg)"
+        "so the wine smells reduced (rotten egg, drains)"
       ],
       "topic": "Winemaking: fermentation; faults",
       "level": "L3",
@@ -396,7 +396,7 @@
       "id": "chaptalisation",
       "title": "Chaptalisation raises alcohol",
       "chain": [
-        "Adding sugar to the must before fermentation (where the law allows)",
+        "Adding non-grape sugar before or during fermentation (where the law allows)",
         "gives the yeast more sugar to convert",
         "so the wine has more alcohol than the grapes alone would give"
       ],
@@ -475,11 +475,11 @@
     },
     {
       "id": "lees-bread-texture",
-      "title": "Lees ageing adds stability and subtle bread notes",
+      "title": "Lees ageing adds richness and subtle bread notes",
       "chain": [
         "Ageing on fine lees, stirred now and then (bâtonnage)",
         "dead yeast break down slowly (autolysis), releasing mannoproteins and savoury compounds",
-        "so the wine is more stable and can gain subtle bread or biscuit notes (strongest in sparkling wine)"
+        "so the wine feels richer and rounder, is more stable and can gain subtle bread or biscuit notes"
       ],
       "topic": "Winemaking: maturation on lees",
       "level": "L3",
@@ -518,7 +518,7 @@
       "id": "old-oak-texture",
       "title": "Old barrels add little oak flavour",
       "chain": [
-        "Used barrels have given up most of their oak compounds",
+        "Barrels used several times have given up most of their oak compounds",
         "but still let a little oxygen through the wood",
         "so the wine develops gently, with softer tannin in reds and little oak flavour"
       ],
@@ -624,7 +624,7 @@
       "title": "Volatile acidity gives a vinegar lift",
       "chain": [
         "Acetic acid bacteria or stressed yeast, helped by oxygen and low SO₂",
-        "make acetic acid",
+        "make acetic acid and its ester, ethyl acetate",
         "so the wine smells of nail varnish or vinegar; above the legal limit it is faulty"
       ],
       "topic": "Faults",
@@ -666,7 +666,7 @@
       "chain": [
         "Grape skins hold odourless thiol precursors",
         "skin contact before pressing extracts more of them",
-        "and yeast release them as grapefruit and passion-fruit aromas"
+        "and yeast release them as grapefruit and passion-fruit aromas, most marked in Sauvignon Blanc"
       ],
       "topic": "Winemaking: white winemaking",
       "level": "L3",
@@ -686,7 +686,7 @@
       "title": "Steep slopes mean hand labour",
       "chain": [
         "A slope too steep for tractors",
-        "leaves every task, from pruning to picking, to hand labour, whatever the trellis",
+        "leaves most tasks, from pruning to picking, to hand work or winch-hauled kit, whatever the trellis",
         "so a hectare needs two to five times the hours of tractor-worked land"
       ],
       "topic": "Grape growing: site and training",

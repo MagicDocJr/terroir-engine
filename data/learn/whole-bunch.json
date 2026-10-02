@@ -17,8 +17,8 @@
       ]
     }
   ],
-  "choose": "Choose 100 % whole bunch for a firmer, spicier Pinot Noir with more structure, accepting paler colour, and green, herbal notes if the stems are unripe. 30 % gives a subtler version. Fully destemmed keeps the most colour and no stem character.",
-  "exam": "Questions ask how and why whole-bunch fermentation changes a red, usually Pinot Noir. Name each effect (tannin, colour, aroma) and tie it to the style.",
+  "choose": "100 % whole bunch gives a spicier, more structured Pinot Noir: the stems add tannin, and the uncrushed berries ferment partly inside the skin, which brightens the red fruit. Unripe stems taste bitter and green. 30 % gives a subtler version; fully destemmed keeps the most colour.",
+  "exam": "Questions ask how and why whole-bunch fermentation changes a red, usually Pinot Noir. Name each effect (stem tannin, fermentation inside the berry, aroma, colour), say why the stems must be ripe, and tie it to the style.",
   "check": {
     "question": "Cool year: Pinot Noir seeds 50 % ripe, stems green. What does 100 % whole bunch add, compared with destemmed?",
     "options": [
@@ -37,5 +37,5 @@
   "causes": [
     "whole-bunch-stems"
   ],
-  "simplification": "Game simplification: the game does not lower colour for whole bunches; stem tannin rises with the whole-bunch share, and stalky notes come from unripe stems, judged by the seeds' ripeness."
+  "simplification": "Game simplification: the game does not lower colour for whole bunches or model the fresher fruit from fermentation inside the berry; stem tannin rises with the whole-bunch share, and stalky notes come from unripe stems, judged by the seeds' ripeness."
 }

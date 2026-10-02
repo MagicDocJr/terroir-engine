@@ -197,7 +197,7 @@ public static class LearnCards
         };
         string grape = f.BlockVariety switch
         {
-            "Cabernet Sauvignon" => " For Cabernet Sauvignon, only removal before véraison lowers the green-pepper pyrazines.",
+            "Cabernet Sauvignon" => " For Cabernet Sauvignon, removal before véraison does most to lower the green-pepper pyrazines.",
             "Riesling" => " For Riesling, early sun on the bunches builds the petrol note's precursors.",
             _ => "",
         };

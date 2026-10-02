@@ -58,6 +58,8 @@ Each fault has a formation model and a detection rule. A fault above its rejecti
 | **Refermentation in bottle** | CO₂, haze | any visible haze or spritz | residual sugar > 4 g/L + viable yeast (no sterile filtration) + low molecular SO₂ | `fermentation.md` (derived) |
 | **Tartrate crystals** | KHT | visible deposit | KHT unstable and chilled | `acid-ph-so2.md` (derived) |
 
+**Descriptors (textbook cross-check).** Reduction reads as rotten egg, boiled cabbage or drains, and very low levels can add pleasant complexity; an acrid smell of a just-extinguished match points to excess SO₂, not to H₂S. Volatile acidity reads as vinegar or nail-varnish remover [UW-2016 p. 4]. The game names the reduction fault "rotten egg / drains" and slight reduction "flint".
+
 **Deterministic TCA:** spec A7 requires faults to emerge, not be rolled. TCA is inherently a per-bottle event, so it's modelled as an expected **proportion of affected bottles** tied to closure choice and cork grade. It reduces sale value by that fraction and is reported in the P&L, not as a random tasting outcome. **Game simplification.**
 
 ## Inputs and outputs
@@ -99,3 +101,4 @@ Each fault has a formation model and a detection rule. A fault above its rejecti
 - UC Davis Waterhouse Lab, "Oak Lactones". https://waterhouse.ucdavis.edu/whats-in-wine/oak-lactones
 - Regulation (EU) 2019/934, Annex I Part C (maximum volatile acidity). https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32019R0934
 - "State-of-the-Art Knowledge about 2,4,6-Trichloroanisole (TCA) and Strategies to Avoid Cork Taint in Wine", IntechOpen. https://www.intechopen.com/chapters/81659
+- [UW-2016] Wine & Spirit Education Trust (2016). *Understanding Wines: Explaining Style and Quality*. London: WSET. ISBN 978-1-905819-39-3. A standard textbook, used to cross-check the learn cards and Causes; page numbers are the printed ones. Paraphrased, never quoted.
