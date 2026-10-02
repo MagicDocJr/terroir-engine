@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using TerroirEngine.Learning;
 
 namespace TerroirEngine.Tasting.Practice;
 
@@ -11,7 +12,7 @@ namespace TerroirEngine.Tasting.Practice;
 /// Fair earns roughly 250 XP at half marks.</summary>
 public static class PracticeProgress
 {
-    public const int Version = 1, HistoryLength = 20, XpPerMark = 10, HintXp = 5, DailyBonus = 25;
+    public const int Version = StudyRecord.Version, HistoryLength = 20, XpPerMark = 10, HintXp = 5, DailyBonus = 25;
 
     public static readonly (string Name, int Xp, string Line)[] Ranks =
     {
@@ -22,6 +23,10 @@ public static class PracticeProgress
         ("Fair judge", 12000, "Your verdicts would hold up on any panel."),
     };
     public const int BlindRank = 2;
+    /// <summary>Ranks by the share of the Cause catalogue the player Knows (learning-core design §4.3): rewards report
+    /// durable mastery, never volume. XP stays as a quiet tally (and ranks a record when no catalogue is given).</summary>
+    public static readonly double[] RankShare = { 0, 0.15, 0.40, 0.70, 0.95 };
+    public const int RhythmTarget = 5, RepairReviews = 5;
     private static readonly string[] MedalOrder = { "bronze", "silver", "gold" };
     private static readonly Dictionary<string, int> MedalBonus = new() { ["bronze"] = 20, ["silver"] = 40, ["gold"] = 80 };
     /// <summary>Stand tiers open with medals: tier 1 after the first medal, tier 2 after three.</summary>
@@ -84,7 +89,7 @@ public static class PracticeProgress
     /// A malformed event returns the record unchanged.</summary>
     public static JsonObject Apply(JsonObject record, JsonObject ev)
     {
-        var rec = (JsonObject)record.DeepClone();
+        var rec = StudyRecord.Migrate(record);
         string? kind = Str(ev["kind"]);
         var date = Date(ev["date"]);
         rec["lastGain"] = 0;
@@ -96,11 +101,20 @@ public static class PracticeProgress
         int xp = Math.Max(0, Int(rec["xp"]));
         var skills = Obj(rec, "skills");
         double marks = 0;
+        var outcomes = new Dictionary<string, (bool Right, int Conf)>();   // per Cause: the worst outcome in this event
         foreach (var it in items)
         {
             if (it is not JsonObject o || Str(o["skill"]) is not { Length: > 0 } skill || double.IsNaN(Num(o["score"]))) continue;
             double sc = Math.Clamp(Num(o["score"]), 0, 1);
             marks += sc;
+            int conf = double.IsNaN(Num(o["confidence"])) ? 2 : Math.Clamp(Int(o["confidence"]), 1, 3);
+            if (o["causes"] is JsonArray cs)
+                foreach (var id in cs.Select(Str).Where(x => !string.IsNullOrEmpty(x)))
+                {
+                    // half credit counts as right but hard (scheduled like a guess)
+                    var now = (Right: sc >= 0.5, Conf: sc >= 1 ? conf : 1);
+                    outcomes[id!] = outcomes.TryGetValue(id!, out var was) ? (was.Right && now.Right, Math.Min(was.Conf, now.Conf)) : now;
+                }
             var hist = Arr(skills, skill);
             hist.Add(Math.Round(sc, 2));
             while (hist.Count > HistoryLength) hist.RemoveAt(0);
@@ -142,9 +156,38 @@ public static class PracticeProgress
         }
         var stats = Obj(rec, "stats");
         stats[kind == "stand" ? "flights" : "glasses"] = Int(stats[kind == "stand" ? "flights" : "glasses"]) + 1;
+        var states = StudyRecord.States(rec);
+        var exam = Date(rec["examDate"]);
+        foreach (var (id, o) in outcomes) StudyRecord.Put(rec, ReviewScheduler.Review(states.GetValueOrDefault(id), id, o.Right, o.Conf, date.Value, exam));
+        var rhythm = Arr(rec, "rhythm");
+        var today = rhythm.OfType<JsonObject>().FirstOrDefault(e => Date(e["date"]) == date);
+        if (today == null) { today = new JsonObject { ["date"] = date.Value.ToString("yyyy-MM-dd"), ["n"] = 0 }; rhythm.Add(today); }
+        today["n"] = Int(today["n"]) + items.Count;
+        while (rhythm.Count > 60) rhythm.RemoveAt(0);
         rec["xp"] = xp + gained;
         rec["lastGain"] = gained;
         return rec;
+    }
+
+    /// <summary>Sets (or clears, with null) the exam date the review schedule works towards.</summary>
+    public static JsonObject SetExamDate(JsonObject record, DateOnly? exam)
+    {
+        var rec = StudyRecord.Migrate(record);
+        if (exam is DateOnly d) rec["examDate"] = d.ToString("yyyy-MM-dd"); else rec.Remove("examDate");
+        return rec;
+    }
+
+    /// <summary>The weekly rhythm (Monday to Sunday): days studied, plus missed days repaired by an extra set of reviews
+    /// (every 5 beyond the first 5 on a day) later in the week. A new week starts fresh and quietly.</summary>
+    public static (int Days, int Elapsed) Rhythm(JsonObject rec, DateOnly today)
+    {
+        var monday = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
+        int elapsed = today.DayNumber - monday.DayNumber + 1;
+        var week = (rec["rhythm"] as JsonArray ?? new JsonArray()).OfType<JsonObject>()
+            .Select(e => (D: Date(e["date"]), N: Int(e["n"]))).Where(e => e.D >= monday && e.D <= today).ToList();
+        int days = week.Select(e => e.D).Distinct().Count();
+        int repairs = week.Sum(e => Math.Max(0, e.N - RepairReviews) / RepairReviews);
+        return (Math.Min(elapsed, days + Math.Min(elapsed - days, repairs)), elapsed);
     }
 
     // ------------------------------------------------------------------------------------------------ summary
@@ -169,10 +212,13 @@ public static class PracticeProgress
 
     public static int UnlockedTier(JsonObject rec) => Array.FindLastIndex(MedalsForTier, n => MedalCount(rec) >= n);
 
-    public static JsonObject Summary(JsonObject rec, DateOnly? today = null)
+    public static JsonObject Summary(JsonObject rec, DateOnly? today = null, IReadOnlyList<Cause>? catalog = null)
     {
         int xp = Math.Max(0, Int(rec["xp"]));
-        int ri = RankIndex(xp);
+        var states = StudyRecord.States(rec);
+        int known = catalog == null ? states.Values.Count(x => x.Known) : catalog.Count(c => states.TryGetValue(c.Id, out var st) && st.Known);
+        double share = catalog == null || catalog.Count == 0 ? 0 : (double)known / catalog.Count;
+        int ri = catalog == null ? RankIndex(xp) : Array.FindLastIndex(RankShare, x => share >= x);
         var medals = new JsonObject();
         if (rec["medals"] is JsonObject m) foreach (var (k, v) in m) if (MedalOrder.Contains(Str(v))) medals[k] = Str(v);
         var daily = rec["daily"] as JsonObject;
@@ -181,6 +227,7 @@ public static class PracticeProgress
         int streak = last != null && (last == t || last.Value.AddDays(1) == t) ? Math.Max(0, Int(daily!["streak"])) : 0;
         var skills = Skills(rec);
         string? weak = Weakest(rec);
+        var rhythm = Rhythm(rec, t);
         return new JsonObject
         {
             ["xp"] = xp, ["rank"] = Ranks[ri].Name, ["rankLine"] = Ranks[ri].Line, ["rankIndex"] = ri,
@@ -199,6 +246,19 @@ public static class PracticeProgress
             }).ToArray()),
             ["weakest"] = weak,
             ["stats"] = (rec["stats"] as JsonObject)?.DeepClone() ?? new JsonObject(),
+            ["known"] = known, ["knownShare"] = Math.Round(share, 3), ["catalogSize"] = catalog?.Count ?? 0, ["byKnown"] = catalog != null,
+            ["rankShare"] = RankShare[ri], ["nextShare"] = ri + 1 < RankShare.Length ? RankShare[ri + 1] : null,
+            ["due"] = ReviewScheduler.Due(rec, t).Count,
+            ["rhythm"] = new JsonObject { ["daysThisWeek"] = rhythm.Days, ["elapsed"] = rhythm.Elapsed, ["target"] = RhythmTarget, ["met"] = rhythm.Days >= RhythmTarget },
+            ["examDate"] = Str(rec["examDate"]),
+            ["daysToExam"] = Date(rec["examDate"]) is DateOnly ed ? ed.DayNumber - t.DayNumber : null,
+            ["coverage"] = catalog == null ? null : new JsonArray(catalog.GroupBy(c => c.Topic).Select(g => (JsonNode)new JsonObject
+            {
+                ["topic"] = g.Key,
+                ["known"] = g.Count(c => states.TryGetValue(c.Id, out var st) && st.Known),
+                ["learning"] = g.Count(c => states.TryGetValue(c.Id, out var st) && !st.Known),
+                ["notSeen"] = g.Count(c => !states.ContainsKey(c.Id)),
+            }).ToArray()),
         };
     }
 }
