@@ -31,7 +31,8 @@ public sealed class TastingSheet
     /// <summary>A nose of very few aromas: nothing from oak, lees, malolactic or age (fermentation esters allowed), at most one clear
     /// family besides the fruit, and no fault.</summary>
     public bool Simple;
-    /// <summary>Flavour characteristics: the nose families felt on the palate (medium or above, without smell-only notes).</summary>
+    /// <summary>Flavour characteristics: the nose families felt on the palate (the fruit always, the rest at medium or above,
+    /// without smell-only notes).</summary>
     public List<string> Flavours { get; } = new();
     /// <summary>The quality argument: the criteria met and missed with their evidence, and why the Wine is not a level higher.</summary>
     public List<string> QualityFor { get; } = new();
@@ -217,7 +218,7 @@ public static class TastingSheetGenerator
         s.Simple = s.Faults.Count == 0 && s.Aromas.All(a => a.Category == "Primary" || a.Family == "fermentation")
             && s.Aromas.Where(a => a.Intensity != "light" && !TastingSheet.IsFruit(a.Family)).Select(a => a.Family).Distinct().Count() <= 1;
         foreach (var a in s.Aromas)
-            if (a.Intensity != "light" && a.Family is not ("volatile" or "reductive") && !s.Flavours.Contains(a.Family)) s.Flavours.Add(a.Family);
+            if ((a.Intensity != "light" || TastingSheet.IsFruit(a.Family)) && a.Family is not ("volatile" or "reductive") && !s.Flavours.Contains(a.Family)) s.Flavours.Add(a.Family);
         if (s.Flavours.Count == 0 && s.Aromas.FirstOrDefault(a => a.Family is not ("volatile" or "reductive")) is { } top) s.Flavours.Add(top.Family);
         bool tertiary = s.Aromas.Any(a => a.Category == "Tertiary");
         s.Development = ageYears > 6 ? "fully developed" : (tertiary && ageYears > 1) || ageYears > 3 ? "developing" : "youthful";

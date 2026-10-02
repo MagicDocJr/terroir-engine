@@ -52,7 +52,14 @@ static func build(D: Dictionary, shell) -> Control:
 	qh.add_child(UI.tile("Readiness", String(S["readiness"]), ""))
 	qh.add_child(UI.tile("Price", "€%.2f" % float(W["price"]), "per bottle · %s total" % UI.euro(int(W["revenue"]))))
 	q[1].add_child(qh)
-	q[1].add_child(UI.label(String(S["qualityBecause"]), 15, UI.INK2, null, true))
+	# quality as an argument: for, against, and why not the level above (Tasting sheet 2)
+	if S.has("qualityFor") and String(S["quality"]) != "Faulty":
+		if S["qualityFor"].size() > 0: q[1].add_child(UI.label("For: " + "; ".join(S["qualityFor"]), 15, UI.GOOD, null, true))
+		if S["qualityAgainst"].size() > 0: q[1].add_child(UI.label("Against: " + "; ".join(S["qualityAgainst"]), 15, UI.SERIOUS, null, true))
+		if String(S.get("qualityNotHigher", "")) != "": q[1].add_child(UI.label(String(S["qualityNotHigher"]) + ".", 15, UI.INK2, null, true))
+		if float(S.get("windowYears", 0)) > 0: q[1].add_child(UI.label("Drinking window: about %d years from the harvest." % int(round(float(S["windowYears"]))), 13, UI.MUTED))
+	else:
+		q[1].add_child(UI.label(String(S["qualityBecause"]), 15, UI.INK2, null, true))
 	var bl := UI.hbox(18)
 	for b in S["blic"]:
 		var bv := UI.vbox(2); bv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -69,6 +76,9 @@ static func build(D: Dictionary, shell) -> Control:
 	ap[1].add_child(UI.kv("Intensity", String(A["intensity"])))
 	ap[1].add_child(UI.kv("Colour", String(A["colour"])))
 	if String(A["because"]) != "": ap[1].add_child(UI.label("because " + String(A["because"]), 13, UI.MUTED, null, true))
+	for o in S.get("observations", []):
+		ap[1].add_child(UI.kv("Other", String(o["term"])))
+		ap[1].add_child(UI.label("because " + String(o["because"]), 13, UI.MUTED, null, true))
 	c1.add_child(ap[0])
 	var np: Array = UI.panel("Nose", "")
 	var N: Dictionary = S["nose"]
@@ -90,6 +100,10 @@ static func build(D: Dictionary, shell) -> Control:
 		h.tooltip_text = String(a["because"]); h.mouse_filter = Control.MOUSE_FILTER_PASS
 		np[1].add_child(h)
 		np[1].add_child(UI.label("because " + String(a["because"]), 13, UI.MUTED, null, true))
+	if S.get("simple", false): np[1].add_child(UI.label("Simple: few aromas, all from the grape.", 14, UI.INK2, null, true))
+	if String(S.get("fruitRipeness", "")) != "":
+		np[1].add_child(UI.kv("Fruit ripeness", String(S["fruitRipeness"])))
+		np[1].add_child(UI.label("because " + String(S.get("fruitRipenessBecause", "")), 13, UI.MUTED, null, true))
 	c1.add_child(np[0])
 	var c2 := UI.vbox(16); c2.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(c2)
 	var pp: Array = UI.panel("Palate", "")
@@ -99,6 +113,7 @@ static func build(D: Dictionary, shell) -> Control:
 		h.add_child(UI.label(String(p["level"]), 16, UI.INK, UI.f_body_b))
 		pp[1].add_child(h)
 		if String(p["because"]) != "": pp[1].add_child(UI.label("because " + String(p["because"]), 13, UI.MUTED, null, true))
+	if S.get("flavours", []).size() > 0: pp[1].add_child(UI.kv("Flavours", ", ".join(S["flavours"])))
 	c2.add_child(pp[0])
 	var lg: Array = UI.panel("Legal category", String(W["category"]))
 	for note in W["legalNotes"]: lg[1].add_child(UI.label("·  " + String(note), 14, UI.INK2, null, true))

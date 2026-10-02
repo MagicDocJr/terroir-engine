@@ -73,6 +73,7 @@ public class SheetTwoTests
             Assert.All(s.Flavours, f => Assert.Contains(f, s.Aromas.Select(a => a.Family)));
             Assert.DoesNotContain("volatile", s.Flavours);
             Assert.DoesNotContain("reductive", s.Flavours);
+            Assert.Contains(s.Flavours, f => TastingSheet.IsFruit(f));   // the fruit is always felt on the palate
         }
     }
 

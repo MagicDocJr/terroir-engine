@@ -924,7 +924,7 @@ func _fill_from_sheet(gi: int, right_every := 1) -> void:
 	var actual := {"clarity": sh["appearance"]["clarity"], "colourIntensity": sh["appearance"]["intensity"], "colour": sh["appearance"]["colour"],
 		"noseIntensity": sh["nose"]["intensity"], "development": sh["nose"]["development"], "sweetness": pal.get("Sweetness", ""), "acidity": pal.get("Acidity", ""),
 		"tannin": pal.get("Tannin", ""), "alcohol": pal.get("Alcohol", ""), "body": pal.get("Body", ""), "flavourIntensity": sh["palate"].filter(func(x): return x["attribute"] == "Flavour intensity")[0]["level"] if true else "",
-		"finish": sh["palate"].filter(func(x): return x["attribute"] == "Finish")[0]["level"], "quality": sh["quality"], "readiness": sh["readiness"],
+		"finish": sh["palate"].filter(func(x): return x["attribute"] == "Finish")[0]["level"], "quality": sh["quality"], "readiness": sh["readiness"], "fruitRipeness": sh.get("fruitRipeness", ""),
 		"variety": W["context"]["variety"], "region": W["context"]["regionName"], "climate": "moderate"}
 	var a: Dictionary = state["tp_answers"]["wines"][gi]
 	var conf := {}
@@ -937,7 +937,10 @@ func _fill_from_sheet(gi: int, right_every := 1) -> void:
 			if key == "aromas":
 				var fams := []
 				for ar in sh["aromas"]: if not (String(ar["family"]) in fams): fams.append(String(ar["family"]))
+				if sh.get("simple", false): fams.append("simple")
 				a["aromas"] = fams
+			elif key == "flavours":
+				a["flavours"] = sh.get("flavours", []).duplicate()
 			elif key.begins_with("blic."):
 				var crit := key.substr(5)
 				for b in sh["blic"]: if String(b["criterion"]) == crit: a["blic"] = a.get("blic", {}); a["blic"][crit] = b["met"]

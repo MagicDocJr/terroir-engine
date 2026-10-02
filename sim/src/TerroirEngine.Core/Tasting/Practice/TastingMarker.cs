@@ -184,7 +184,7 @@ public static class TastingMarker
                     : new List<string>();
                 int fi = mineF.Intersect(actF).Count(), fu = mineF.Union(actF).Count();
                 score = mineF.Count == 0 ? 0 : fu == 0 ? 1 : Math.Round((double)fi / fu, 2);
-                because = "the nose families felt on the palate, at medium or above (smell-only notes such as volatile or reductive stay on the nose)";
+                because = "the nose families felt on the palate: the fruit always, the rest at medium or above (smell-only notes such as volatile or reductive stay on the nose)";
                 items.Add(new(key, label, skill, string.Join(", ", mineF), actF.Count == 0 ? "no clear flavours" : string.Join(", ", actF), score, because, Conf(answers, key), CaseFor(score, Conf(answers, key))));
                 continue;
             }
