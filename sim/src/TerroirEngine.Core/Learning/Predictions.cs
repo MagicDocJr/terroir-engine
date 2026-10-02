@@ -28,6 +28,9 @@ public static class Predictions
 
     public static void Reveal(GameSession g, string wineId) => g.Apply(new Command { Type = "flag", A = "revealed_" + wineId });
 
+    /// <summary>The aroma family that stands out besides the fruit (the fruit is always there, so asking for it is trivial).</summary>
+    public static Descriptor? LeadAroma(TastingSheet sh) => sh.Aromas.FirstOrDefault(a => !TastingSheet.IsFruit(a.Family)) ?? sh.Aromas.FirstOrDefault();
+
     private static readonly string[] Quality = { "Faulty", "Poor", "Acceptable", "Good", "Very good", "Outstanding" };
 
     private static (List<Item> Items, List<Recall> Recall) Build(GameSession g, Wine w)
@@ -42,11 +45,11 @@ public static class Predictions
             new("acidity", "Predict the acidity", TastingMarker.Scale("acidity")!.ToList(), true, Level("Acidity"), Because("Acidity"), "acidity", TastingMarker.CausesFor(sh, "acidity")),
             new("alcohol", "Predict the alcohol", TastingMarker.Scale("alcohol")!.ToList(), true, Level("Alcohol"), Because("Alcohol"), "alcohol", TastingMarker.CausesFor(sh, "alcohol")),
         };
-        var lead = sh.Aromas.FirstOrDefault(a => a.Family is not ("fruit" or "red and black fruit")) ?? sh.Aromas.FirstOrDefault();
+        var lead = LeadAroma(sh);
         if (lead != null)
         {
             var present = sh.Aromas.Select(a => a.Family).ToHashSet();
-            var decoys = (w.Blend.Red ? TastingMarker.AromaFamiliesRed : TastingMarker.AromaFamiliesWhite).Where(f => !present.Contains(f)).OrderBy(_ => rng.Next()).Take(3);
+            var decoys = (w.Blend.Red ? TastingMarker.AromaFamiliesRed : TastingMarker.AromaFamiliesWhite).Where(f => !present.Contains(f) && !TastingMarker.NotADecoy(f)).OrderBy(_ => rng.Next()).Take(3);
             items.Add(new("aroma", "Which aroma family, besides the fruit, will stand out on the nose?", decoys.Append(lead.Family).OrderBy(_ => rng.Next()).ToList(), false,
                 lead.Family, $"{lead.Family} ({lead.Terms}): {lead.Because}", "nose",
                 sh.CauseLinks.Where(l => l.Line == "aroma:" + lead.Family).Select(l => l.Cause).ToList()));

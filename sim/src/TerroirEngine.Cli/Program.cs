@@ -170,6 +170,26 @@ if (cmd == "pour")
     Console.WriteLine($"  {p.Wine.Legal!.Label} · {p.Sheet.Quality} · {string.Join(" / ", p.Sheet.Palate.Select(x => x.Attribute + " " + x.Level))}");
 }
 
+if (cmd == "qualitysweep")
+{
+    // qualitysweep [n]: the quality spread over n random practice pours, per variety, with the four criteria and the raw scores
+    int n = args.Length > 1 ? int.Parse(args[1]) : 150;
+    var rows = new List<(string Variety, TerroirEngine.Tasting.TastingSheet Sheet)>();
+    for (int seed = 1; seed <= n; seed++)
+    {
+        try { var p = TerroirEngine.Tasting.Practice.TastingLab.Pour(data, TerroirEngine.Tasting.Practice.PracticePours.Random(data, seed), seed); rows.Add((p.Context.Variety, p.Sheet)); }
+        catch (InvalidOperationException) { }
+    }
+    string Spread(IEnumerable<string> xs) => string.Join(", ", xs.GroupBy(x => x).OrderBy(g => g.Key).Select(g => $"{g.Key} {g.Count()}"));
+    Console.WriteLine($"{rows.Count} pours · quality: {Spread(rows.Select(r => r.Sheet.Quality))}");
+    foreach (var g in rows.GroupBy(r => r.Variety))
+    {
+        Console.WriteLine($"  {g.Key} ({g.Count()}): {Spread(g.Select(r => r.Sheet.Quality))}");
+        Console.WriteLine($"    met: " + string.Join(" ", new[] { "Balance", "Length", "Intensity", "Complexity" }.Select((c, i) => $"{c} {g.Count(r => r.Sheet.Blic[i].Met)}")));
+        Console.WriteLine($"    finish: {Spread(g.Select(r => r.Sheet.Finish))} · flavour: {Spread(g.Select(r => r.Sheet.FlavourIntensity))} · readiness: {Spread(g.Select(r => r.Sheet.Readiness))}");
+    }
+}
+
 if (cmd == "fair")
 {
     // fair [standId|-] [seed] [maxVintage]: list the Wine Fair stands, or pour one and print its Flight and quiz

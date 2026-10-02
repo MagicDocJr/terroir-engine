@@ -188,8 +188,14 @@ public sealed class PracticeSession
         if (c.Line == "appearance")
             return new SessionQuestion
             {
-                Prompt = "Predict the colour", Options = (w.Context.Red ? new[] { "purple", "ruby", "garnet", "tawny" } : new[] { "lemon-green", "lemon", "gold", "amber" }).ToList(),
+                Prompt = "Predict the colour", Options = (w.Context.Red ? TastingSheet.ColoursRed : TastingSheet.ColoursWhite).ToList(),
                 Answer = sh.Colour, Ordered = true, Because = sh.AppearanceBecause + ". " + because, Skill = "appearance",
+            };
+        if (c.Line == "aroma:fruit")   // the fruit's ripeness, on its own scale
+            return new SessionQuestion
+            {
+                Prompt = "Predict the fruit's ripeness", Options = TastingSheet.FruitRipenessScale.ToList(), Answer = sh.FruitRipeness, Ordered = true,
+                Because = sh.FruitRipenessBecause + ". " + because, Skill = "nose",
             };
         if (c.Line.StartsWith("aroma:"))
         {
@@ -197,7 +203,7 @@ public sealed class PracticeSession
             var d = sh.Aromas.FirstOrDefault(a => a.Family == fam);
             if (d == null) return null;
             var present = sh.Aromas.Select(a => a.Family).ToHashSet();
-            var pool = (w.Context.Red ? TastingMarker.AromaFamiliesRed : TastingMarker.AromaFamiliesWhite).Where(f => !present.Contains(f)).OrderBy(_ => rng.Next()).Take(3);
+            var pool = (w.Context.Red ? TastingMarker.AromaFamiliesRed : TastingMarker.AromaFamiliesWhite).Where(f => !present.Contains(f) && !TastingMarker.NotADecoy(f)).OrderBy(_ => rng.Next()).Take(3);
             return new SessionQuestion
             {
                 Prompt = "Which of these will you find on the nose?", Options = pool.Append(fam).OrderBy(_ => rng.Next()).ToList(),
@@ -280,7 +286,7 @@ public sealed class PracticeSession
             glasses.Add(new JsonObject
             {
                 ["shown"] = Shown[i], ["wine"] = PracticeJson.Shown(p, Exercise, Blind, Stand != null), ["options"] = TastingMarker.Options(data, p.Context.Red),
-                ["keys"] = A(TastingMarker.Keys(Exercise, p.Context.Red)), ["hint"] = Hint(p, Exercise),
+                ["keys"] = A(TastingMarker.KeysFor(p, Exercise)), ["hint"] = Hint(p, Exercise),
             });
         }
         var ex = Exercise == "session" ? ("session", "Today's session", "Causes due for review, your weak spot and something new, each checked a different way.") : ExerciseList.First(e => e.Id == Exercise);
@@ -490,9 +496,11 @@ public sealed class PracticeSession
     {
         var f = VintageFacts.For(data, regionId, year, upTo);
         var (climate, because) = TastingMarker.VintageClimate(data, regionId, year, upTo);
+        var (cls, gst) = VintageFacts.RegionClass(data, regionId, upTo);
         return new JsonObject
         {
             ["region"] = regionId, ["regionName"] = data.Region(regionId).Name, ["year"] = year, ["climate"] = climate, ["climateBecause"] = because,
+            ["climateClass"] = cls, ["regionGst"] = gst, ["gst"] = f.Gst, ["climateLine"] = $"a {climate} year for the {data.Region(regionId).Name}, in a {cls} climate",
             ["gdd"] = f.Gdd, ["gddRank"] = f.GddRank, ["recordYears"] = f.RecordYears, ["summerTmax"] = f.SummerTmax, ["autumnRain"] = f.AutumnRainMm,
             ["hotDays"] = f.HotDays, ["frostNight"] = f.SpringFrostDate.ToString("d MMMM", Ci), ["frostC"] = Math.Round(f.SpringFrostC, 1),
             ["note"] = NoteJson(data, regionId, year),

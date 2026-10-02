@@ -178,6 +178,11 @@ static func _sheet_view(W: Dictionary, parts: Array) -> Control:
 		av.add_child(UI.kv("Clarity", String(A["clarity"])))
 		av.add_child(UI.kv("Intensity", String(A["intensity"])))
 		av.add_child(UI.kv("Colour", String(A["colour"])))
+		var obs: Array = S.get("observations", [])
+		if obs.size() > 0:
+			var terms := []
+			for o in obs: terms.append(String(o["term"]) if o is Dictionary else String(o))
+			av.add_child(UI.kv("Other", ", ".join(terms)))
 	if "nose" in parts:
 		var N: Dictionary = S["nose"]
 		v.add_child(UI.label("Nose", 14, UI.GOLD, UI.f_body_b))
@@ -187,9 +192,13 @@ static func _sheet_view(W: Dictionary, parts: Array) -> Control:
 		for f in S.get("faults", []): v.add_child(UI.label("⚠ " + String(f), 14, UI.CRIT, null, true))
 		for a in S["aromas"]:
 			v.add_child(UI.kv(String(a["family"]), "%s  (%s)" % [a["terms"], a["intensity"]]))
+		if S.get("simple", false): v.add_child(UI.kv("Overall", "simple: few aromas, mostly fruit; nothing from oak, lees or age"))
+		if String(S.get("fruitRipeness", "")) != "": v.add_child(UI.kv("Fruit ripeness", String(S["fruitRipeness"])))
 	if "palate" in parts:
 		v.add_child(UI.label("Palate", 14, UI.GOLD, UI.f_body_b))
 		for p in S["palate"]: v.add_child(UI.kv(String(p["attribute"]), String(p["level"])))
+		var fl: Array = S.get("flavours", [])
+		if fl.size() > 0: v.add_child(UI.kv("Flavours", ", ".join(fl)))
 	return v
 
 static func _context_view(W: Dictionary, full: bool) -> Control:
@@ -238,7 +247,7 @@ static func shown_panel(G: Dictionary, exercise: String, blind := false) -> Cont
 const LABELS := {"clarity": "Clarity", "colourIntensity": "Colour intensity", "colour": "Colour", "noseIntensity": "Nose intensity",
 	"development": "Development", "aromas": "Aroma families", "sweetness": "Sweetness", "acidity": "Acidity", "tannin": "Tannin",
 	"alcohol": "Alcohol", "body": "Body", "flavourIntensity": "Flavour intensity", "finish": "Finish", "quality": "Quality",
-	"readiness": "Readiness", "variety": "Grape variety", "region": "Region", "climate": "Vintage: cool, moderate or warm"}
+	"readiness": "Readiness", "fruitRipeness": "Fruit ripeness", "flavours": "Flavour characteristics", "variety": "Grape variety", "region": "Region", "climate": "Vintage: cool, moderate or warm"}
 
 static func _answers(shell, gi: int) -> Dictionary:
 	var A: Dictionary = shell.state.get("tp_answers", {"wines": [], "quiz": {}})
@@ -252,8 +261,8 @@ static func answered(shell, gi: int, G: Dictionary) -> int:
 		var key := String(k)
 		if key.begins_with("blic."):
 			if a.get("blic", {}).has(key.substr(5)): n += 1
-		elif key == "aromas":
-			if a.get("aromas", []).size() > 0: n += 1
+		elif key in ["aromas", "flavours"]:
+			if a.get(key, []).size() > 0: n += 1
 		elif String(a.get(key, "")) != "": n += 1
 	return n
 
@@ -275,22 +284,23 @@ static func pickers(shell, owner: String, gi: int, G: Dictionary) -> Control:
 			var set_blic := func(o):
 				var bl: Dictionary = a.get("blic", {}); bl[crit] = (o == "met"); a["blic"] = bl; shell.show_screen(owner)
 			row.add_child(UI.segmented(["met", "not met"], chosen, set_blic, 110))
-		elif key == "aromas":
+		elif key in ["aromas", "flavours"]:
 			var flow := HFlowContainer.new(); flow.add_theme_constant_override("h_separation", 6); flow.add_theme_constant_override("v_separation", 6)
 			flow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			var picked: Array = a.get("aromas", [])
-			for f in O.get("aromas", []):
+			var picked: Array = a.get(key, [])
+			for f in O.get(key, []):
 				var fam := String(f)
 				var on := fam in picked
 				var b := UI.button(("✓ " if on else "") + fam, false, 14)
 				if on:
 					b.add_theme_stylebox_override("normal", UI.sb(UI.GOLD.darkened(0.62), 4, UI.GOLD, 1, 10))
 					b.add_theme_color_override("font_color", UI.GOLD.lightened(0.35))
+				var mk := key
 				b.pressed.connect(func():
-					var cur: Array = a.get("aromas", [])
+					var cur: Array = a.get(mk, [])
 					if fam in cur: cur.erase(fam)
 					else: cur.append(fam)
-					a["aromas"] = cur; shell.show_screen(owner))
+					a[mk] = cur; shell.show_screen(owner))
 				flow.add_child(b)
 			row.add_child(flow)
 		else:
@@ -317,7 +327,7 @@ static func pickers(shell, owner: String, gi: int, G: Dictionary) -> Control:
 				row.add_child(flow)
 		var done := false
 		if key.begins_with("blic."): done = a.get("blic", {}).has(key.substr(5))
-		elif key == "aromas": done = a.get("aromas", []).size() > 0
+		elif key in ["aromas", "flavours"]: done = a.get(key, []).size() > 0
 		else: done = String(a.get(key, "")) != ""
 		if done:
 			var conf: Dictionary = a.get("confidence", {})
@@ -356,8 +366,8 @@ static func missing_confidence(shell) -> int:
 			if k in ["confidence", "hints"]: continue
 			if k == "blic":
 				for crit in a["blic"].keys(): if not conf.has("blic." + crit): n += 1
-			elif k == "aromas":
-				if a["aromas"].size() > 0 and not conf.has("aromas"): n += 1
+			elif k in ["aromas", "flavours"]:
+				if a[k].size() > 0 and not conf.has(k): n += 1
 			elif String(a[k]) != "" and not conf.has(k): n += 1
 	for t in A.get("quiz", {}).keys(): if not A.get("quizConfidence", {}).has(t): n += 1
 	for e in A.get("entries", []):
