@@ -28,6 +28,8 @@ public partial class SimBridge : Node
             // editor/dev: data/ above the project; exported build: data/ next to the .exe
             string start = OS.HasFeature("editor") ? ProjectSettings.GlobalizePath("res://") : System.IO.Path.GetDirectoryName(OS.GetExecutablePath())!;
             _data = new GameData(GameData.LocateDataRoot(start));
+            var d = _data;
+            Task.Run(() => { try { LearnCards.OakTable(d); } catch { } });   // warm the oak card's visual (about a second of pours)
         }
         catch (Exception e) { _lastError = e.Message; GD.PushError("Terroir: could not load game data: " + e.Message); }
     }
@@ -220,6 +222,45 @@ public partial class SimBridge : Node
                 ["answers"] = new JsonArray(e.Questions.Select(q => (JsonNode)JsonValue.Create(q.Answer)!).ToArray()),
             }).ToArray()),
         }.ToJsonString();
+    }
+
+    // ------------------------------------------------------------------ learn cards (learning-core §7)
+    /// <summary>contextJson: {plot?, block?, lot?}. Returns the card for the drawer and remembers it was opened.</summary>
+    public string LearnCard(string id, string contextJson)
+    {
+        if (_data == null) return "{}";
+        try
+        {
+            var ctx = JsonNode.Parse(string.IsNullOrEmpty(contextJson) ? "{}" : contextJson) as JsonObject ?? new JsonObject();
+            var rec = LoadRecord();
+            var card = LearnCards.Card(_data, id, ctx, rec, _game);
+            if (card == null) return "{}";
+            var seen = rec["seenCards"] as JsonArray ?? new JsonArray();
+            if (!seen.Any(x => x?.GetValue<string>() == id)) { seen.Add(id); rec["seenCards"] = seen.DeepClone(); SaveRecord(rec); }
+            return card.ToJsonString();
+        }
+        catch (Exception e) { _lastError = e.ToString(); GD.PushError("Terroir: learn card failed: " + e); return "{}"; }
+    }
+
+    public string LearnSeenList()
+    {
+        var rec = LoadRecord();
+        return (rec["seenCards"] as JsonArray ?? new JsonArray()).ToJsonString();
+    }
+
+    /// <summary>The card's check question: marks it and adds the card's Causes to the review queue.</summary>
+    public bool LearnCheck(string id, string answer, int confidence)
+    {
+        if (_data == null || LearnCards.Find(_data, id) is not { } card) return false;
+        bool right = answer == card.Check.Answer;
+        var ev = new JsonObject
+        {
+            ["kind"] = "practice", ["date"] = Today().ToString("yyyy-MM-dd"),
+            ["items"] = new JsonArray(new JsonObject { ["skill"] = "causes", ["score"] = right ? 1 : 0, ["confidence"] = confidence > 0 ? confidence : null,
+                ["causes"] = new JsonArray(card.Causes.Select(c => (JsonNode)JsonValue.Create(c)!).ToArray()) }),
+        };
+        SaveRecord(PracticeProgress.Apply(LoadRecord(), ev));
+        return right;
     }
 
     // ------------------------------------------------------------------ predict before reveal on the Estate (learning-core §6)

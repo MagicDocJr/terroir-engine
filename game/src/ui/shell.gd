@@ -55,6 +55,9 @@ var play_timer: Timer
 var sfx: Node
 var _screen_cache := {}          # screen id → {node, ver, ret}: built screens reused while the game state is unchanged
 var _chrome_ver := 0             # bumps whenever a new snapshot is shown
+var learn_layer: Control = null   # the open learn drawer (one at a time)
+var _learn_open := ["", {}]
+var _learn_seen_cache = null
 
 func _ready() -> void:
 	theme = UI.make_theme()
@@ -210,6 +213,7 @@ func start_game(setup_json: Dictionary) -> void:
 
 # ------------------------------------------------------------------ navigation
 func show_screen(id: String) -> void:
+	if id != current: close_learn()
 	if not SCREENS.has(id): id = "inbox"
 	if not Sim.HasGame() and not (id in PREGAME) and not (id in TASTING): id = "title"
 	if id != current and sfx: sfx.play("page")
@@ -296,7 +300,10 @@ func _restore_scroll(n: Node, pos: int) -> void:
 	if s != null: s.scroll_vertical = pos
 
 func _unhandled_input(e: InputEvent) -> void:
-	if capture or not (e is InputEventKey and e.pressed and not e.echo): return
+	if not (e is InputEventKey and e.pressed and not e.echo): return
+	if learn_layer != null and is_instance_valid(learn_layer) and e.physical_keycode == KEY_ESCAPE:
+		close_learn(); get_viewport().set_input_as_handled(); return
+	if capture: return
 	if view3d != null and view3d.visible: return
 	if current in PREGAME or not Sim.HasGame(): return
 	var k: int = e.physical_keycode
@@ -317,6 +324,35 @@ func _unhandled_input(e: InputEvent) -> void:
 	elif k == KEY_P: toggle_play()
 	elif k == KEY_M: notify("Sound " + ("on" if sfx.toggle() else "off") + ".")
 	elif k == KEY_ENTER or k == KEY_KP_ENTER: advance(continue_days(), true)
+
+# ------------------------------------------------------------------ learn cards (learning-core design §7)
+func learn_seen() -> Array:
+	if _learn_seen_cache == null:
+		var a = JSON.parse_string(Sim.LearnSeenList())
+		_learn_seen_cache = a if a is Array else []
+	return _learn_seen_cache
+
+## Opens a learn card in the side drawer, replacing any open one. ctx: {plot?, block?, lot?}.
+func open_learn(card_id: String, ctx := {}) -> void:
+	var keep_state: bool = String(_learn_open[0]) == card_id
+	close_learn()
+	if not keep_state:
+		state.erase("learn_full")
+	var J = JSON.parse_string(Sim.LearnCard(card_id, JSON.stringify(ctx)))
+	if not (J is Dictionary) or not J.has("id"):
+		notify("That card isn't written yet."); return
+	_learn_open = [card_id, ctx]
+	_learn_seen_cache = null
+	learn_layer = load("res://src/ui/learn_drawer.gd").build(self, J)
+	add_child(learn_layer)
+	if sfx: sfx.play("page")
+
+func reopen_learn() -> void:
+	if String(_learn_open[0]) != "": open_learn(String(_learn_open[0]), _learn_open[1])
+
+func close_learn() -> void:
+	if learn_layer != null and is_instance_valid(learn_layer): learn_layer.queue_free()
+	learn_layer = null
 
 # ------------------------------------------------------------------ 3D
 ## kind "" (Tab or the 3D button) resumes where you left the 3D view; a named place ("vineyard", "hall", "cellar") goes there.
@@ -668,6 +704,10 @@ func _run_capture() -> void:
 				in_window[b["id"]] = int(in_window.get(b["id"], 0)) + 1
 				if not ripeness_shot:
 					_build_chrome(); show_screen("ripeness"); await _shot("%s_08_ripeness" % prefix)
+					# learn cards with a real Block in front of the player (site lines from the game's own data)
+					for card in ["harvest-date", "green-harvest", "leaf-removal"]:
+						open_learn(card, {"block": "A"}); await _shot("%s_card_%s" % [prefix, card])
+					close_learn()
 					await _shot3d("%s_08b_3d_vineyard" % prefix, "vineyard")
 					show_screen("inbox"); await _shot("%s_09_inbox_ripening" % prefix)
 					ripeness_shot = true
@@ -680,6 +720,11 @@ func _run_capture() -> void:
 	await _shot3d("%s_10b_3d_hall" % prefix, "hall")
 	Sim.Advance(20, false); D = JSON.parse_string(Sim.Snapshot()); _build_chrome()
 	show_screen("winery"); await _shot("%s_11_winery_later" % prefix)
+	var lots0: Array = D.get("lots", [])
+	if lots0.size() > 0:
+		for card in ["fermentation-temperature", "yeast-nitrogen", "malolactic", "oak", "lees", "whole-bunch", "stopping-for-sweetness"]:
+			open_learn(card, {"lot": String(lots0[0]["id"])}); await _shot("%s_card_%s" % [prefix, card])
+		close_learn()
 	show_screen("estate"); await _shot("%s_12_estate" % prefix)
 	# age and bottle every Lot as it becomes ready
 	guard = 0
@@ -1041,6 +1086,16 @@ func _learning_test() -> void:
 	state.erase("tp_lobby")
 	show_screen("practice"); await _shot_scrolled_to_end("learning_10_progress")
 	Sim.SetPracticeToday("")
+	# every learn card in the drawer, with a Block's context (pre-game: no Lot), plus the turntable in winter
+	var ids := ["training-system", "rootstock", "harvest-date", "leaf-removal", "green-harvest", "whole-bunch", "fermentation-temperature",
+		"yeast-nitrogen", "malolactic", "oak", "lees", "stopping-for-sweetness"]
+	for id in ids:
+		open_learn(id, {"plot": "cotedor-village", "block": "A"})
+		if learn_layer == null: ok = false; print("LEARNING FAIL card ", id); continue
+		await _shot("learning_card_%s" % id)
+	state["learn_season"] = "Winter"; state["learn_training"] = "Einzelpfahl"
+	open_learn("training-system", {"plot": "mosel-terrassen", "block": "A"}); await _shot("learning_card_training_winter")
+	close_learn()
 	print("LEARNING DONE ok=", ok)
 	get_tree().quit()
 

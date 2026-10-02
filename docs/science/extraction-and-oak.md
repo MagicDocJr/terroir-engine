@@ -52,6 +52,8 @@ k_i     = k_i,ref · θ_i^((T − 25)/10) · g_i(E) · M_i
 
   Magnitudes are UNVERIFIED.
 
+  **Evidence (Pinot Noir).** Cool-climate Pinot Noir was microvinified destemmed, with 100 % of the stems added back, and with 30 %, 60 % and 100 % whole bunches. The stems-added, 60 % and 100 % wines had significantly more tannin and monomeric phenolics but less anthocyanin, and more compounds with green/vegetative, spicy, woody and medicinal aromas (IBMP, IPMP, eugenol, ethyl cinnamate, phenol). The 30 % whole-bunch wine showed no significant rise in methoxypyrazines, and the tannin rise is reported only for the stems-added, 60 % and 100 % wines (Wimalasiri et al. 2021). The potassium/pH and intracellular-fermentation effects listed above remain uncited.
+
 **Pressing:** free-run vs press fraction. The press fraction is higher in tannin and K⁺ and lower in acid. It's blendable (the Blending decision).
 
 ### Units and ranges
@@ -89,6 +91,16 @@ A Fuder therefore extracts roughly half as fast per litre as a barrique, and it'
 
 **Fill (barrel age):** extraction potential per fill: new 1.0, 1st fill 0.5, 2nd fill 0.3, neutral (3rd+) 0.1. UNVERIFIED **game simplification**.
 
+### Oak evidence: size, reuse, toast and oxygen
+From the review by Carpena et al. (2020) and the studies it cites:
+- Large barrels exchange fewer compounds with the wine, because they have less wood surface per volume of wine.
+- Use exhausts a barrel. The compounds most depleted are furanic aldehydes, phenolic alcohols and aldehydes (vanillin among them) and oak lactones; even after only 6–9 months, wines aged in new and in once-used barrels differ clearly in most oak compounds. A barrel's oxygen transfer also falls with each use as the wood's pores clog.
+- Toasting adds smoky flavour as its intensity rises, by breaking down carbohydrates (to furanic compounds) and lignin (to volatile phenols). Data on light toasting and lactones are contradictory. In French, American and Spanish oak, toasting strongly raised volatile phenols, furanic aldehydes and phenyl ketones, while its effect on oak lactones depended on species and origin (Cadahía et al. 2003).
+- American oak (*Q. alba*) is the classic source of whisky (oak) lactones, which give coconut and woody aromas.
+- Barrels let a little oxygen in (first estimates 15–45 mg/L a year). This natural micro-oxygenation drives polymerisation and condensation of flavonoids, stabilising colour and modifying astringency.
+
+**Game model note:** the toast multipliers in the Winery model (vanillin highest at medium-plus, oak lactone lower at heavy toast, guaiacol and furfural rising with toast) follow these directions; their sizes are `UNVERIFIED`.
+
 ### Model
 For each oak compound j:
 ```
@@ -107,6 +119,13 @@ Thresholds are listed in `aroma-and-faults.md`.
 - **Fine lees contact** (weeks to months): releases mannoproteins and polysaccharides. That adds body and roundness, reduces perceived astringency and oak tannin, and consumes oxygen (it protects against oxidation), with a reduction risk (H₂S) if the lees are not stirred.
 - **Bâtonnage** (stirring, e.g. weekly): increases the release rate and cuts the reduction risk, but adds some oxidative exposure.
 - **Autolysis aromas** ("bread, biscuit, brioche") build up over months. They're strongest in sparkling wine; subtle in still wine.
+- **Evidence (review by Fornairon-Bonnefond et al. 2002):**
+  - Dead yeast in the lees break down by autolysis, slowly under wine conditions (in traditional-method sparkling wine only after a 6–12 month lag). They release peptides, amino acids, polysaccharides (mainly mannoproteins), lipids and nucleic acids; stirred lees release even more mannoproteins.
+  - Lees are strongly reductive: wine kept on its total lees soon develops reduced, sulphury smells unless it is clarified, and this is harder to manage in large vats than in barrels. Stirring re-balances a barrel's redox potential by dissolving oxygen, preventing both reduction near the lees and oxidation at the surface.
+  - Lees consume oxygen (up to about 4 mg/L in a model wine with 4 % lees) and act as antioxidants, also in reds.
+  - Lees-aged white wines are more stable against protein haze (a mannoprotein fragment, MP32) and tartrate crystals.
+  - Lees fix some wood aromas (volatile phenols, oak lactones), and yeast enzymes transform vanillin, so lees limit the "woody" character of barrel-aged wine.
+  - Winemakers credit lees with "body" and "roundness", but a direct effect of the yeast polysaccharides on roundness has never been shown conclusively.
 - **Model:** `body += a · lees_months · (1 + b·stir)`. Reduction risk ∝ lees_depth × months × (1 − stir). Coefficients UNVERIFIED (**game simplification**).
 
 ## 4. Fining and filtration
@@ -154,5 +173,9 @@ When a red Lot starts fermenting, the Cellar master posts a cap-management **Tas
 - Sacchi, K.L., Bisson, L.F., Adams, D.O. (2005). A review of the effect of winemaking techniques on phenolic extraction in red wines. *Am. J. Enol. Vitic.* 56(3):197–206. doi:10.5344/ajev.2005.56.3.197. https://www.ajevonline.org/content/56/3/197.article-info
 - UC Davis Waterhouse Lab, "Oak Lactones" (What's in wine). https://waterhouse.ucdavis.edu/whats-in-wine/oak-lactones (threshold figures taken from the indexed page text; the direct fetch was blocked, re-check)
 - Waterhouse, A.L., Sacks, G.L., Jeffery, D.W. (2016). *Understanding Wine Chemistry*. Wiley. Standard text for phenolics and oak chemistry; specific numbers not transcribed here are marked UNVERIFIED.
+- Wimalasiri, P.M., Olejar, K.J., Harrison, R., Hider, R.C., Tian, B. (2021). Whole bunch fermentation and the use of grape stems: effect on phenolic and volatile aroma composition of *Vitis vinifera* cv. Pinot Noir wine. *Australian Journal of Grape and Wine Research* 28(3):395–406. doi:10.1111/ajgw.12535
+- Carpena, M., Pereira, A.G., Prieto, M.A., Simal-Gandara, J. (2020). Wine aging technology: fundamental role of wood barrels. *Foods* 9(9):1160. doi:10.3390/foods9091160 (open access, PMC7555037)
+- Cadahía, E., Fernández de Simón, B., Jalocha, J. (2003). Volatile compounds in Spanish, French, and American oak woods after natural seasoning and toasting. *J. Agric. Food Chem.* 51:5923–5932. doi:10.1021/jf0302456
+- Fornairon-Bonnefond, C., Camarasa, C., Moutounet, M., Salmon, J.-M. (2002). New trends on yeast autolysis and wine ageing on lees: a bibliographic review. *Journal International des Sciences de la Vigne et du Vin* 36(2):49–69. doi:10.20870/oeno-one.2002.36.2.974
 - Chatonnet, P. et al., cooperage and toasting studies (1990s). Cited from memory, **UNVERIFIED**.
 - del Alamo-Sanza, M., Nevares, I., barrel oxygen transmission studies. Cited from memory, **UNVERIFIED**.

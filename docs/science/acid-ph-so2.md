@@ -74,6 +74,9 @@ dMal/dt = − v · B · Mal / (K_M + Mal)
 - **Duration** under good conditions: ~2–8 weeks (UNVERIFIED).
 - **Blocking MLF** (typical for Riesling): keep it cold, add SO₂ early, and sterile-filter before bottling. Partial MLF is allowed by stopping it when Mal reaches a target.
 - **Sensory outputs** to `aroma-and-faults.md`: diacetyl (buttery), a softer acid perception, and loss of some primary fruit freshness.
+- **Why winemakers use it (evidence).** MLF deacidifies the wine, modifies its flavour and brings microbial stability. *Oenococcus oeni* tolerates the harsh wine environment but can be a difficult and sometimes unreliable organism to work with in the winery (Bartowsky 2005).
+- **Diacetyl (evidence).** Diacetyl (buttery) comes from the bacteria's citric acid metabolism; it is an intermediate that can be reduced further to acetoin and 2,3-butanediol. Bacterial strain, pH, temperature, citric acid, SO₂, aeration and contact with yeast lees all change how much remains (Bartowsky & Henschke 2004). Citric acid is broken down later than malic acid, so diacetyl peaks as the malic acid runs out; that peak depends strongly on oxygen and redox potential, and SO₂ binds diacetyl reversibly (Nielsen & Richelieu 1999).
+- **Game simplification:** a spontaneous MLF starts after a 12-day lag, runs slower and makes slightly more acetic acid and more diacetyl than an inoculated one. The larger diacetyl factor for spontaneous MLF is a design choice, not a sourced effect, and SO₂ binding of diacetyl is not modelled.
 
 ## 5. KHT (cream of tartar) stability
 ```
@@ -133,4 +136,7 @@ free SO₂ needed = target molecular × (1 + 10^(pH − 1.81))
 - UC Davis Viticulture & Enology, Titratable Acidity (method page). https://wineserver.ucdavis.edu/industry-info/enology/methods-and-techniques/winery-lab-techniques/titratable-acidity
 - Waterhouse, A.L., Sacks, G.L., Jeffery, D.W. (2016). *Understanding Wine Chemistry*, Chapter "Acids". Wiley. https://onlinelibrary.wiley.com/doi/abs/10.1002/9781118730720.ch3 (standard text; specific values cited from memory are marked UNVERIFIED above)
 - Regulation (EU) 2019/934 (authorised oenological practices; SO₂ and VA limits). https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32019R0934 (the SO₂ limit numbers quoted above are UNVERIFIED against the annex text)
+- Bartowsky, E.J. (2005). *Oenococcus oeni* and malolactic fermentation – moving into the molecular arena. *Australian Journal of Grape and Wine Research* 11(2):174–187. doi:10.1111/j.1755-0238.2005.tb00286.x
+- Bartowsky, E.J., Henschke, P.A. (2004). The 'buttery' attribute of wine—diacetyl—desirability, spoilage and beyond. *International Journal of Food Microbiology* 96(3):235–252. doi:10.1016/j.ijfoodmicro.2004.05.013
+- Nielsen, J.C., Richelieu, M. (1999). Control of flavor development in wine during and after malolactic fermentation by *Oenococcus oeni*. *Applied and Environmental Microbiology* 65(2):740–745. doi:10.1128/aem.65.2.740-745.1999
 - Wine Spectator, "Do California winemakers ever add sugar to their wine? Is that legal?" https://www.winespectator.com/articles/do-california-winemakers-ever-add-sugar-to-their-wine-is-that-legal

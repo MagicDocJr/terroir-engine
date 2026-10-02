@@ -1,0 +1,42 @@
+{
+  "id": "lees",
+  "title": "Lees and bâtonnage",
+  "what": "What happens to the fine yeast sediment after fermentation: leave the wine on it, rack the wine off it, or keep it and stir it back up (bâtonnage).",
+  "chains": [
+    {
+      "cause": "lees-bread-texture"
+    },
+    {
+      "steps": [
+        "Lees settled and left unstirred",
+        "are strongly reductive",
+        "so sulphury, reduced smells build up; stirring mixes in oxygen and prevents them"
+      ],
+      "sources": [
+        "extraction-and-oak.md#3. Lees ageing and bâtonnage"
+      ]
+    }
+  ],
+  "choose": "Keep stirred fine lees for a barrel-aged Burgundy-style Chardonnay: lees absorb oxygen, soften the woody character and, over months, add subtle bread or biscuit notes. Winemakers credit lees with body; research has not proven it. Rack off for a pure, fruit-led Riesling, or when the wine smells reduced.",
+  "exam": "Questions ask how lees ageing and stirring change a white wine. Give autolysis → mannoproteins → stability, the subtle bread note, the reduction risk and stirring, and a region.",
+  "check": {
+    "question": "A Chardonnay sits unstirred on heavy lees in a large steel tank and starts to smell of struck match. What helps most?",
+    "options": [
+      "Stir the lees or rack the wine off them",
+      "Add SO₂: it binds the struck-match smell",
+      "Leave it: struck match always fades on lees",
+      "Move it into new oak to mask the smell"
+    ],
+    "answer": "Stir the lees or rack the wine off them",
+    "why": "Settled lees are strongly reductive. Stirring mixes oxygen back in and racking removes the source; SO₂ or masking leaves the cause in place."
+  },
+  "sources": [
+    "extraction-and-oak.md#3. Lees ageing and bâtonnage",
+    "aroma-and-faults.md#Faults"
+  ],
+  "visual": "none",
+  "causes": [
+    "lees-bread-texture"
+  ],
+  "simplification": "Game simplification: unstirred lees only slow the fading of H₂S already formed; haze and tartrate stability are not modelled; the game adds body for months on lees, which research has not proven."
+}

@@ -94,7 +94,7 @@ static func build(D: Dictionary, shell) -> Control:
 	var bid2: String = B["id"]
 	var done: bool = B["harvested"] or B["picking"]
 	_choice(cp[1], "Winter pruning (bud load)", ["Low", "Balanced", "High"], B["budLoad"], func(x): Sim.Command("flag", "pruning_ok", "", "", "", ""); shell.apply("block", bid2, "budload", x, "Block %s pruned to a %s bud load. Your crew prunes it this way." % [bid2, x.to_lower()]),
-		"%.0f buds per vine now. Fewer buds → fewer, better-ripened bunches; more buds → bigger crop, slower ripening. Only matters before budburst." % float(B["budsPerVine"]), done)
+		"%.0f buds per vine now. Fewer buds → fewer, better-ripened bunches; more buds → bigger crop, slower ripening. Only matters before budburst." % float(B["budsPerVine"]), done, shell, "green-harvest", {"block": bid2})
 	if not ("pruning_ok" in D.get("flags", [])) and String(B["stage"]) == "Dormant":
 		var keep := UI.button("Keep the Mentor's pruning for all Blocks", true, 14)
 		keep.pressed.connect(func():
@@ -102,17 +102,18 @@ static func build(D: Dictionary, shell) -> Control:
 			shell.apply("flag", "pruning_ok", "", "", "Pruning settled: the crew prunes every Block as the Mentor planned."))
 		cp[1].add_child(keep)
 	_choice(cp[1], "Leaf removal side", ["None", "Morning", "Afternoon", "Both"], B["leafSide"], func(x): shell.apply("block", bid2, "leafside", x, "Block %s: leaf removal on the %s side." % [bid2, x.to_lower()]),
-		"Opening the morning side dries bunches (less rot) with little sunburn risk; the afternoon side is hotter — more colour and TDN, more sunburn.", done)
+		"Opening the morning side dries bunches (less rot) with little sunburn risk; the afternoon side is hotter — more colour and TDN, more sunburn.", done, shell, "leaf-removal", {"block": bid2})
 	_choice(cp[1], "Leaf removal timing", ["Early", "Late"], B["leafTiming"], func(x): shell.apply("block", bid2, "leaftiming", x, "Block %s: leaf removal timing set to %s." % [bid2, x.to_lower()]),
-		"Early (fruit set to bunch closure) lets the berries acclimatise to the sun; late (around véraison) bares berries grown in shade, the classic sunburn case.", done)
+		"Early (fruit set to bunch closure) lets the berries acclimatise to the sun; late (around véraison) bares berries grown in shade, the classic sunburn case.", done, shell, "leaf-removal", {"block": bid2})
 	var thin := {"0": "None", "1": "Drop ~20 %", "2": "Drop ~40 %"}
 	var inv := {"None": "0", "Drop ~20 %": "1", "Drop ~40 %": "2"}
 	var cur_thin: String = thin.get(str(int(B.get("thinning", 0))), "None")
 	_choice(cp[1], "Green harvest (crop thinning)", ["None", "Drop ~20 %", "Drop ~40 %"], cur_thin, func(x): shell.apply("block", bid2, "thinning", inv[x], "Block %s: green harvest set to %s." % [bid2, x.to_lower()]),
-		"Cutting off bunches at véraison concentrates the rest and ripens them faster. Costs crop — and in the Côte d'Or can keep you inside the AOC yield limit.", done)
+		"Cutting off bunches at véraison concentrates the rest and ripens them faster. Costs crop — and in the Côte d'Or can keep you inside the AOC yield limit.", done, shell, "green-harvest", {"block": bid2})
 	c2.add_child(cp[0])
 	# harvest
 	var hp: Array = UI.panel("Harvest Block %s" % B["id"], "")
+	(hp[1].get_child(0) as HBoxContainer).add_child(load("res://src/ui/learn_drawer.gd").link(shell, "harvest-date", {"block": String(B["id"])}))
 	if B["harvested"]:
 		hp[1].add_child(UI.label("Picked on %s → Lot %s in the Winery." % [B["harvestDate"], B["lotId"]], 16, UI.INK))
 		var gb := UI.button("Open the Winery"); gb.pressed.connect(func(): shell.state["lot_sel"] = String(B["lotId"]); shell.show_screen("winery")); hp[1].add_child(gb)
@@ -161,13 +162,14 @@ static func build(D: Dictionary, shell) -> Control:
 static func _leaf(n: int) -> String:
 	return "%d%s leaf" % [n, "st" if n == 1 else ("nd" if n == 2 else ("rd" if n == 3 else "th"))]
 
-static func _choice(parent: Control, title: String, opts: Array, cur: String, f: Callable, why: String, locked := false) -> void:
+static func _choice(parent: Control, title: String, opts: Array, cur: String, f: Callable, why: String, locked := false, shell = null, card := "", ctx := {}) -> void:
 	var h := UI.hbox(12)
 	var l := UI.label(title, 15, UI.INK2); l.custom_minimum_size = Vector2(250, 0); h.add_child(l)
 	var seg := UI.segmented(opts, cur, f, 110)
 	if locked:
 		for b in seg.get_children(): (b as Button).disabled = true
 	h.add_child(seg)
+	if shell != null and card != "": h.add_child(load("res://src/ui/learn_drawer.gd").link(shell, card, ctx))
 	h.tooltip_text = why
 	parent.add_child(h)
 	parent.add_child(UI.label(why, 13, UI.MUTED, null, true))

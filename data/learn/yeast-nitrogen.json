@@ -1,0 +1,42 @@
+{
+  "id": "yeast-nitrogen",
+  "title": "Yeast nutrients (YAN)",
+  "what": "Whether to top up the must's yeast-assimilable nitrogen (YAN) with diammonium phosphate (DAP) before fermentation, or leave it as it is.",
+  "chains": [
+    {
+      "cause": "low-yan-h2s"
+    },
+    {
+      "steps": [
+        "A low-nitrogen must",
+        "also cuts the yeast's ester production",
+        "so the wine is less fruity as well as at risk of reduction"
+      ],
+      "sources": [
+        "fermentation.md#Yeast-assimilable nitrogen (YAN)"
+      ]
+    }
+  ],
+  "choose": "Measure, then decide: below about 140–150 mg/L, add DAP. Adding by default is no free insurance: excess nitrogen drives a hotter ferment with more volatile acidity and microbial instability. If H₂S appears, aerate early; copper fining removes what persists. Intermediate YAN gives the best balance.",
+  "exam": "Questions ask why nutrients are added or how a fault arises. Explain low nitrogen → stressed yeast → H₂S → a reduced, rotten-egg smell, and name the remedy.",
+  "check": {
+    "question": "A must at 22 °Brix has YAN 95 mg/L, and the cellar skips nutrients. What is the most likely result?",
+    "options": [
+      "A sluggish fermentation and a rotten-egg (H₂S) smell",
+      "Extra fruity esters from slower yeast",
+      "A clean wine: yeast only run short above 25 °Brix",
+      "A faster fermentation that finishes early"
+    ],
+    "answer": "A sluggish fermentation and a rotten-egg (H₂S) smell",
+    "why": "95 mg/L is far below the roughly 140 mg/L threshold. Nitrogen-starved yeast ferment slowly, release H₂S and make fewer esters."
+  },
+  "sources": [
+    "fermentation.md#Yeast-assimilable nitrogen (YAN)",
+    "aroma-and-faults.md#Faults"
+  ],
+  "visual": "none",
+  "causes": [
+    "low-yan-h2s"
+  ],
+  "simplification": "Game simplification: the nitrogen need rises 25 mg/L per °Brix above 20 (a heuristic), and the DAP option tops a must up only when it is short, so over-feeding is not modelled."
+}

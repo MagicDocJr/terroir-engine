@@ -1,0 +1,45 @@
+{
+  "id": "green-harvest",
+  "title": "Green harvest and bud load",
+  "what": "Cutting bunches at véraison (about 20 % or 40 %) to lighten the crop; fewer buds at winter pruning is the cheaper, earlier lever.",
+  "chains": [
+    {
+      "cause": "yield-concentration"
+    },
+    {
+      "steps": [
+        "Above about 1 m² of leaf per kg",
+        "the leaves already ripen the whole crop",
+        "so thinning adds little and only costs fruit"
+      ],
+      "sources": [
+        "canopy-and-yield.md#2.2 Leaf area to fruit ratio",
+        "canopy-and-yield.md#3.8 Green harvest"
+      ]
+    }
+  ],
+  "choose": "Thin an over-cropped vine, or a crop above the appellation's yield limit; Côte d'Or village and Premier Cru rules also cap pruning at 8 buds per vine. In a Riesling trial thinning raised sugar but barely moved acid or pH, and cut grower income sharply.",
+  "exam": "Questions probe yield against quality: why lower yields can raise concentration, and why not automatically. Link crop load → leaf per kg → sugar and flavour, then cost and law.",
+  "check": {
+    "question": "A balanced Pinot Noir Block carries about 1.2 m² of leaf per kg of fruit and sits well under its AOC yield. What will dropping 40 % of the bunches mostly do?",
+    "options": [
+      "Cost crop and income for little gain in ripeness",
+      "Raise the sugar sharply",
+      "Lower the acidity sharply",
+      "Nothing: the vine compensates with bigger berries"
+    ],
+    "answer": "Cost crop and income for little gain in ripeness",
+    "why": "At 0.8–1.2 m² per kg the leaves already ripen the crop fully, so more leaf per kg adds little; the bunches cut are simply lost."
+  },
+  "sources": [
+    "canopy-and-yield.md#2.2 Leaf area to fruit ratio",
+    "canopy-and-yield.md#3.1 Bud load at pruning",
+    "canopy-and-yield.md#3.8 Green harvest",
+    "law.md#Rules that bite in the simulation"
+  ],
+  "visual": "ripening-capacity",
+  "causes": [
+    "yield-concentration"
+  ],
+  "simplification": "Game simplification: the game ripens a crop fully only from about 1 m² of leaf per kg, the middle of the published 0.8–1.2 range, and the Tasting sheet links flavour intensity to yield per hectare alone, so thinning raises it in the game even on a balanced vine."
+}

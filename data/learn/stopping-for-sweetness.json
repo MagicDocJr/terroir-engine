@@ -1,0 +1,47 @@
+{
+  "id": "stopping-for-sweetness",
+  "title": "Stopping for sweetness",
+  "what": "For a white Lot: ferment dry, or stop the yeast partway at about 15, 35 or 60 g/L of sugar by chilling the tank and adding SO₂.",
+  "chains": [
+    {
+      "cause": "stopped-ferment-sweetness"
+    },
+    {
+      "steps": [
+        "Sugar left in the wine with any live yeast",
+        "can start fermenting again in the bottle",
+        "so the wine must be sterile-filtered, or it turns spritzy and hazy"
+      ],
+      "sources": [
+        "fermentation.md#Stopping fermentation for residual sugar",
+        "aroma-and-faults.md#Faults"
+      ]
+    }
+  ],
+  "choose": "It suits high-acid Riesling. Kabinett needs 73 °Oe and may not be chaptalised, so the sugar you keep is the grapes' own. Each 16.8 g/L kept is about 1 % vol less alcohol. Acidity offsets sweetness: EU label terms raise the dry and medium-dry limits for high-acid wines.",
+  "exam": "Expect 'how is sweetness kept in German Riesling?'. Name this method and what it leaves (sugar, lower alcohol), why it suits a high-acid grape; adding sweet reserve is the other common route.",
+  "check": {
+    "question": "Your 80 °Oe Riesling (about 183 g/L of sugar) should end light, about 9 % vol, with clear sweetness. Which plan?",
+    "options": [
+      "Stop at about 35 g/L by chilling and SO₂, then sterile-filter",
+      "Ferment dry: the acidity will read as sweetness",
+      "Stop at about 15 g/L and skip sterile filtration",
+      "Chaptalise first so more sugar is left"
+    ],
+    "answer": "Stop at about 35 g/L by chilling and SO₂, then sterile-filter",
+    "why": "Fermenting 148 of 183 g/L gives about 8.8 % vol and keeps 35 g/L of sweetness; any sugar left needs sterile filtration, and a Prädikat wine may not be chaptalised."
+  },
+  "sources": [
+    "fermentation.md#Stopping fermentation for residual sugar",
+    "fermentation.md#Conventions and conversions",
+    "law.md#Categories (lowest to highest)",
+    "aroma-and-faults.md#Faults",
+    "extraction-and-oak.md#4. Fining and filtration",
+    "fermentation.md#Stopping fermentation for residual sugar"
+  ],
+  "visual": "none",
+  "causes": [
+    "stopped-ferment-sweetness"
+  ],
+  "simplification": "Game simplification: the Lot stops exactly at the chosen sugar level; a real, fast-fermenting tank overshoots by a few g/L while it cools."
+}

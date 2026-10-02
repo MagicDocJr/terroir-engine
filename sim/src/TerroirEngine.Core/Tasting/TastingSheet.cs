@@ -123,7 +123,8 @@ public static class TastingSheetGenerator
         {
             var t = new List<string>();
             if (b.Vanillin > 60) t.Add("vanilla");
-            if (b.OakLactone > (red ? 74 : 20)) t.Add(b.Choices["Vessel"] == 5 || b.OakLactone > (red ? 300 : 80) ? "coconut" : "cedar, sweet spice");
+            // coconut is the American-oak signature (whisky lactone, extraction-and-oak.md "Oak evidence"); French oak below a very high lactone level reads as cedar and sweet spice
+            if (b.OakLactone > (red ? 74 : 20)) t.Add(b.Choices["Vessel"] == 5 || b.OakLactone > (red ? 300 : 250) ? "coconut" : "cedar, sweet spice");
             if (b.Guaiacol > 10) t.Add("smoke, toast");
             if (b.Eugenol > 6) t.Add("clove");
             if (b.Furfural > 15000) t.Add("caramel");

@@ -62,6 +62,9 @@ Found while building or reviewing; not urgent, but not to be forgotten. Remove a
 - Replay checkpoints if long games load slowly (10 Vintages load in 0.6 s today).
 
 ### Screens
+- Learn cards (2026-10-02): 12 cards cover the decision points with the most teaching value. Still without a card: planting density, row orientation, clone choice, irrigation, spray programme, sorting, pressing, cold soak, pump-over/punch-down, fining and filtration, sulphur at bottling, blending, closure, bottle ageing, plus regions and grape varieties (about 18). Each must pass the same gate (author, validator, independent rubric review); do not add a card that cannot earn its place.
+- Learn card oak visual: the table shows what each vessel gives at the default toast; let it follow the Lot's toast choice once the sim exposes toast per vessel row.
+- Tasting sheet wording: the whole-bunch "because" names unripe stems, but the stalky family threshold is computed from seed ripeness (brown seeds stand in for lignified stems). Align the wording, or model stem lignification separately.
 
 ### Build and review
 - The Napa screenshot run logs Godot "RID allocations leaked at exit" (text-shaping buffers) when it quits; harmless at exit, but check it is not a leak during play.

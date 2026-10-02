@@ -323,9 +323,11 @@ static func _planting(shell) -> Control:
 		ov.tooltip_text = var_notes.get(pc["variety"], ""); row.add_child(ov)
 		var orr := UI.option(rs_items, pc["rootstock"], func(x): pc["rootstock"] = x; shell.show_screen("planting"), 170)
 		orr.tooltip_text = rs_notes.get(pc["rootstock"], ""); row.add_child(orr)
+		row.add_child(load("res://src/ui/learn_drawer.gd").link(shell, "rootstock", {"plot": P["id"], "block": bid}))
 		var tr_items := []
 		for t in P["training"]: tr_items.append(t)
 		row.add_child(UI.option(tr_items, pc["training"], func(x): pc["training"] = x, 150))
+		row.add_child(load("res://src/ui/learn_drawer.gd").link(shell, "training-system", {"plot": P["id"], "block": bid}))
 		var steep_plot: bool = float(P["slope"]) >= 30
 		var rows_items := [["DownSlope", "Rows downhill"]] if steep_plot else [["NorthSouth", "Rows N–S"], ["EastWest", "Rows E–W"]]
 		if steep_plot: pc["rows"] = "DownSlope"

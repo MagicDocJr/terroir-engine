@@ -90,12 +90,11 @@
     },
     {
       "id": "yield-concentration",
-      "title": "Low yields concentrate flavour",
+      "title": "Crop load sets concentration",
       "chain": [
-        "Fewer bunches per vine (low bud load, green harvest)",
-        "share the vine's leaf area and sugar between less fruit",
-        "so each berry is more concentrated",
-        "and the wine has more flavour intensity"
+        "On an over-cropped vine (under about 0.8 m² of leaf per kg of fruit)",
+        "fewer bunches share the leaves' sugar among less fruit",
+        "so the grapes ripen further and the wine gains flavour intensity"
       ],
       "topic": "Grape growing: yield and vine management",
       "level": "L3",
@@ -310,11 +309,11 @@
     },
     {
       "id": "whole-bunch-stems",
-      "title": "Whole bunches add stem tannin and lift",
+      "title": "Whole bunches add stem tannin and green, spicy notes",
       "chain": [
-        "Fermenting with whole bunches",
-        "adds stem tannin and potassium and some intact-berry (carbonic) fruit",
-        "so the wine gets a fresh herbal lift; with unripe stems it tastes green"
+        "Fermenting with whole bunches or added stems",
+        "brings stem tannin and stem aroma compounds (methoxypyrazines, eugenol) into the wine",
+        "so it gains tannin and, most from unripe stems, green, spicy, stalky notes"
       ],
       "topic": "Winemaking: red winemaking",
       "level": "L3",
@@ -333,13 +332,14 @@
       "title": "A cool fermentation keeps fruity esters",
       "chain": [
         "Fermenting white wine cool (about 14–16 °C)",
-        "keeps the fruity esters the yeast make from escaping",
+        "makes the yeast form more fruity esters, and fewer escape with the CO₂",
         "so the young wine smells of banana and pear drops"
       ],
       "topic": "Winemaking: white winemaking; fermentation",
       "level": "L3",
       "line": "aroma:fermentation",
       "sources": [
+        "fermentation.md#Fermentation temperature and aroma",
         "fermentation.md#Heat and tank temperature",
         "aroma-and-faults.md#Marker compounds"
       ],
@@ -378,7 +378,7 @@
       "chain": [
         "Chilling the wine and adding SO₂ partway through fermentation",
         "stops the yeast before all the sugar is used",
-        "so the wine keeps residual sugar and lower alcohol (the Mosel Kabinett way)"
+        "so the wine keeps residual sugar and lower alcohol (a traditional Mosel method)"
       ],
       "topic": "Winemaking: sweet wines",
       "level": "L3",
@@ -457,9 +457,8 @@
       "id": "mlf-diacetyl",
       "title": "Malolactic conversion adds buttery notes",
       "chain": [
-        "Malolactic bacteria make diacetyl as a by-product",
-        "especially in a spontaneous conversion",
-        "so the wine smells of butter and cream"
+        "Malolactic bacteria break down citric acid, making diacetyl as a by-product",
+        "so the wine can smell of butter and cream"
       ],
       "topic": "Winemaking: malolactic conversion",
       "level": "L3",
@@ -476,11 +475,11 @@
     },
     {
       "id": "lees-bread-texture",
-      "title": "Lees ageing adds bread and texture",
+      "title": "Lees ageing adds stability and subtle bread notes",
       "chain": [
-        "Leaving the wine on its fine lees, stirred (bâtonnage)",
-        "lets dead yeast cells break down (autolysis) and release mannoproteins",
-        "so the wine gains bready, biscuity notes and a rounder texture"
+        "Ageing on fine lees, stirred now and then (bâtonnage)",
+        "dead yeast break down slowly (autolysis), releasing mannoproteins and savoury compounds",
+        "so the wine is more stable and can gain subtle bread or biscuit notes (strongest in sparkling wine)"
       ],
       "topic": "Winemaking: maturation on lees",
       "level": "L3",
@@ -517,17 +516,18 @@
     },
     {
       "id": "old-oak-texture",
-      "title": "Old barrels add texture, not oak flavour",
+      "title": "Old barrels add little oak flavour",
       "chain": [
         "Used barrels have given up most of their oak compounds",
         "but still let a little oxygen through the wood",
-        "so the wine gains texture and gentle development with little oak flavour"
+        "so the wine develops gently, with softer tannin in reds and little oak flavour"
       ],
       "topic": "Winemaking: oak maturation",
       "level": "L3",
       "line": "aroma:oak",
       "sources": [
-        "extraction-and-oak.md#Vessel parameters"
+        "extraction-and-oak.md#Vessel parameters",
+        "extraction-and-oak.md#Oak evidence"
       ],
       "pour": {
         "region": "cote-dor",
@@ -680,6 +680,53 @@
         "variety": "Riesling",
         "style": "dry"
       }
+    },
+    {
+      "id": "steep-slope-labour",
+      "title": "Steep slopes mean hand labour",
+      "chain": [
+        "A slope too steep for tractors",
+        "leaves every task, from pruning to picking, to hand labour, whatever the trellis",
+        "so a hectare needs two to five times the hours of tractor-worked land"
+      ],
+      "topic": "Grape growing: site and training",
+      "level": "L3",
+      "line": "site",
+      "sources": [
+        "canopy-and-yield.md#2.7 Training systems",
+        "canopy-and-yield.md#6. Labour"
+      ],
+      "pour": {
+        "region": null,
+        "variety": null,
+        "style": null,
+        "vintageClass": null
+      },
+      "reviewBy": "chain"
+    },
+    {
+      "id": "lime-chlorosis",
+      "title": "Lime starves sensitive rootstocks of iron",
+      "chain": [
+        "Active lime in a marl or limestone soil",
+        "starves a lime-sensitive rootstock of iron (lime-induced chlorosis)",
+        "leaves yellow and photosynthesis falls",
+        "so the vine grows less, crops less and ripens less sugar"
+      ],
+      "topic": "Grape growing: soils and rootstocks",
+      "level": "L3",
+      "line": "site",
+      "sources": [
+        "soil-and-water.md#8. Lime-induced chlorosis",
+        "soil-and-water.md#7. Rootstocks"
+      ],
+      "pour": {
+        "region": null,
+        "variety": null,
+        "style": null,
+        "vintageClass": null
+      },
+      "reviewBy": "chain"
     }
   ]
 }

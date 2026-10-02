@@ -1,0 +1,44 @@
+{
+  "id": "leaf-removal",
+  "title": "Leaf removal",
+  "what": "Pulling leaves from the fruit zone to bare the bunches: which side, and when (early, from fruit set to bunch closure, or late, around véraison).",
+  "chains": [
+    {
+      "cause": "sun-exposure-tdn"
+    },
+    {
+      "cause": "sunburn-cooked"
+    },
+    {
+      "cause": "pyrazines-shade-cool"
+    }
+  ],
+  "choose": "An open fruit zone dries faster: less botrytis, better spray cover. The morning side is the safe one; the afternoon side takes the hottest sun. Go early: berries exposed from fruit set acclimatise, while baring shade-grown fruit before a heatwave is the classic sunburn case.",
+  "exam": "Expect 'explain how canopy management affects grape quality' for a named grape. Chain exposure → grape compounds → aroma, and weigh the sunburn risk.",
+  "check": {
+    "question": "A dense Napa Cabernet canopy at the start of véraison, with a heatwave forecast. The crew proposes stripping both sides now to cut green-pepper notes. Your answer?",
+    "options": [
+      "No: pyrazine levels are largely set before véraison, and baring shade-grown fruit now invites sunburn",
+      "Yes: sun from now on breaks down most of the pyrazines",
+      "Yes, but only the morning side: gentle sun now still lowers the pyrazines",
+      "Yes: late removal acclimatises the berries best"
+    ],
+    "answer": "No: pyrazine levels are largely set before véraison, and baring shade-grown fruit now invites sunburn",
+    "why": "Light before véraison decides most of the IBMP that accumulates; exposure afterwards does little. Berries grown in shade burn at a lower surface temperature than acclimatised ones."
+  },
+  "sources": [
+    "canopy-and-yield.md#2.3 Fruit exposure and fruit-zone microclimate",
+    "canopy-and-yield.md#2.4 Canopy Programme tiers",
+    "canopy-and-yield.md#2.5 Sunburn",
+    "ripening.md#6. Methoxypyrazines",
+    "ripening.md#7. TDN precursors",
+    "disease.md#5.4 Modifiers"
+  ],
+  "visual": "berry-temperature",
+  "causes": [
+    "sun-exposure-tdn",
+    "sunburn-cooked",
+    "pyrazines-shade-cool"
+  ],
+  "simplification": ""
+}

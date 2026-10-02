@@ -1,0 +1,45 @@
+{
+  "id": "training-system",
+  "title": "Training system",
+  "what": "How the vine's permanent wood is laid out, chosen once at planting: Einzelpfahl ties arched canes to one stake per vine; Guyot lays a new cane along a wire each winter; Cordon keeps a permanent arm of short spurs.",
+  "chains": [
+    {
+      "cause": "steep-slope-labour"
+    },
+    {
+      "steps": [
+        "All three are single canopies",
+        "each needs about 1 m² of leaf per kg of fruit to ripen it fully",
+        "so ripeness follows bud load and canopy work, not the system's name"
+      ],
+      "sources": [
+        "canopy-and-yield.md#2.2 Leaf area to fruit ratio",
+        "canopy-and-yield.md#2.7 Training systems"
+      ]
+    }
+  ],
+  "choose": "On the steepest Mosel terraces, Einzelpfahl is the tradition. On workable land, Cordon spur pruning is easy to mechanise; Guyot cane pruning is not, but keeps buds 4–10, more fruitful than basal buds in many vinifera varieties. Côte d'Or rules allow both, at most 8 buds per vine.",
+  "exam": "Expect 'explain why steep sites use single stakes' or 'compare cane and spur pruning'. Link site → system → labour, cost and ripening; name the region.",
+  "check": {
+    "question": "Block B: 58 % slate; the Plot allows Einzelpfahl or Guyot. At the same bud load and leaf area, how do the two differ?",
+    "options": [
+      "Both are hand-picked and ripen alike: leaf area per kg of fruit decides ripening",
+      "Guyot can be machine-harvested because its fruit hangs on a wire",
+      "Einzelpfahl ripens better: each vine has its own stake and more sun",
+      "Guyot needs far fewer hours because the wire does the tying"
+    ],
+    "answer": "Both are hand-picked and ripen alike: leaf area per kg of fruit decides ripening",
+    "why": "58 % is beyond machines whatever the trellis, so the hand work comes from the slope, not the stake. Both are single canopies needing about 1 m² of leaf per kg."
+  },
+  "sources": [
+    "canopy-and-yield.md#2.7 Training systems",
+    "canopy-and-yield.md#2.2 Leaf area to fruit ratio",
+    "canopy-and-yield.md#6. Labour",
+    "law.md#Rules that bite in the simulation"
+  ],
+  "visual": "turntable-training",
+  "causes": [
+    "steep-slope-labour"
+  ],
+  "simplification": "Game simplification: labour follows the Plot's slope; the training system sets the maximum buds per vine, machine picking on flatter land and the planting cost. Bud fruitfulness by position is not modelled."
+}
