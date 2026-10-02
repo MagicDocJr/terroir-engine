@@ -50,15 +50,15 @@ public class SheetTwoTests
     }
 
     [Fact]
-    public void Simple_OnlyWhenTheNoseHasFewPrimaryFamilies()
+    public void Simple_OnlyWhenTheNoseHasFewClearFamilies()
     {
         int simple = 0;
         for (int seed = 1; seed <= 24; seed++)
         {
             var s = TastingLab.Pour(Fixture.Data, PracticePours.Random(Fixture.Data, seed), seed).Sheet;
-            bool allPrimary = s.Aromas.All(a => a.Category == "Primary");
-            int nonFruit = s.Aromas.Select(a => a.Family).Where(f => !WhiteFruit.Contains(f) && !RedFruit.Contains(f)).Distinct().Count();
-            Assert.Equal(allPrimary && nonFruit <= 1 && s.Faults.Count == 0, s.Simple);
+            bool young = s.Aromas.All(a => a.Category == "Primary" || a.Family == "fermentation");
+            int clear = s.Aromas.Where(a => a.Intensity != "light" && !WhiteFruit.Contains(a.Family) && !RedFruit.Contains(a.Family)).Select(a => a.Family).Distinct().Count();
+            Assert.Equal(young && clear <= 1 && s.Faults.Count == 0, s.Simple);
             if (s.Simple) simple++;
         }
     }

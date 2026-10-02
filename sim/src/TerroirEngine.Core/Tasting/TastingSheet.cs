@@ -28,7 +28,8 @@ public sealed class TastingSheet
     /// <summary>Other observations (deposit, legs, spritz): noted, not marked.</summary>
     public List<(string Term, string Because)> Observations { get; } = new();
     public string FruitRipeness = "", FruitRipenessBecause = "";
-    /// <summary>A nose of few, purely primary families (at most one besides the fruit) and no fault.</summary>
+    /// <summary>A nose of very few aromas: nothing from oak, lees, malolactic or age (fermentation esters allowed), at most one clear
+    /// family besides the fruit, and no fault.</summary>
     public bool Simple;
     /// <summary>Flavour characteristics: the nose families felt on the palate (medium or above, without smell-only notes).</summary>
     public List<string> Flavours { get; } = new();
@@ -211,7 +212,10 @@ public static class TastingSheetGenerator
         double intensity = ps.Count == 0 ? 0 : 0.55 * ps[0] + 0.17 * ps.Skip(1).Take(3).Sum();
         s.NoseIntensity = intensity < 0.9 ? "light" : intensity < 1.25 ? "medium(−)" : intensity < 1.6 ? "medium" : intensity < 1.95 ? "medium(+)" : "pronounced";
         s.NoseCondition = s.Faults.Count > 0 ? "unclean" : "clean";
-        s.Simple = s.Faults.Count == 0 && s.Aromas.All(a => a.Category == "Primary") && s.Aromas.Select(a => a.Family).Where(f => !TastingSheet.IsFruit(f)).Distinct().Count() <= 1;
+        // simple: a very limited number of aromas (UW-2016 p. 6): nothing from oak, lees, malolactic or age (fermentation esters
+        // allowed), and at most one clear family besides the fruit
+        s.Simple = s.Faults.Count == 0 && s.Aromas.All(a => a.Category == "Primary" || a.Family == "fermentation")
+            && s.Aromas.Where(a => a.Intensity != "light" && !TastingSheet.IsFruit(a.Family)).Select(a => a.Family).Distinct().Count() <= 1;
         foreach (var a in s.Aromas)
             if (a.Intensity != "light" && a.Family is not ("volatile" or "reductive") && !s.Flavours.Contains(a.Family)) s.Flavours.Add(a.Family);
         if (s.Flavours.Count == 0 && s.Aromas.FirstOrDefault(a => a.Family is not ("volatile" or "reductive")) is { } top) s.Flavours.Add(top.Family);

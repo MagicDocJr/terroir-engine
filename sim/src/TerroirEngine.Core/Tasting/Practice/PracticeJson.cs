@@ -31,6 +31,7 @@ public static class PracticeJson
         {
             "lemon-green" => (0xE4, 0xE8, 0xA2), "lemon" => (0xEC, 0xDF, 0x8E), "gold" => (0xE0, 0xB8, 0x4E), "amber" => (0xC3, 0x82, 0x2C),
             "purple" => (0x4E, 0x1A, 0x3F), "ruby" => (0x85, 0x1A, 0x2A), "garnet" => (0x86, 0x35, 0x2A), "tawny" => (0x9A, 0x5A, 0x2A),
+            "brown" => sh.Palate.Any(l => l.Attribute == "Tannin") ? (0x6E, 0x40, 0x22) : (0x9C, 0x6A, 0x2E),
             _ => (0xD8, 0xC8, 0x89),
         };
         double k = sh.ColourIntensity switch { "pale" => 0.5, "medium" => 0.2, _ => 0.0 };
@@ -53,6 +54,8 @@ public static class PracticeJson
             ["aromas"] = new JsonArray(sh.Aromas.Select(a => (JsonNode)new JsonObject { ["category"] = a.Category, ["family"] = a.Family, ["terms"] = a.Terms, ["intensity"] = a.Intensity }).ToArray()),
             ["palate"] = new JsonArray(sh.Palate.Select(l => (JsonNode)new JsonObject { ["attribute"] = l.Attribute, ["level"] = l.Level }).ToArray()),
             ["faults"] = A(sh.Faults),
+            ["fruitRipeness"] = sh.FruitRipeness, ["simple"] = sh.Simple, ["flavours"] = A(sh.Flavours),
+            ["observations"] = A(sh.Observations.Select(o => o.Term)),
         };
         JsonObject Label() => new()
         {
