@@ -22,6 +22,7 @@ public sealed record WinemakerStyle(string Id, string Label, double OeOffset, IR
         new("old-oak", "fermented in old barriques, malolactic, fine lees", 0, C(("Vessel", 2), ("MLF", 1), ("Lees", 0), ("Ageing", 2))),
         // reds
         new("classic", "the Region's classic way", 0, C()),
+        new("chaptalised", "the Region's classic way, chaptalised by +1 % vol (a cool-year Côte d'Or practice)", -6, C(("Chaptalisation", 1))),
         new("light", "picked earlier, gentle pump-overs, cooler fermentation, old wood", -8, C(("Cap management", 0), ("Red temperature", 1), ("Vessel", 2))),
         new("extracted", "picked late, warm fermentation, long maceration, new oak", 10, C(("Red temperature", 2), ("Maceration", 1), ("Vessel", 4), ("Ageing", 3))),
         // any: a rustic, fault-prone cellar (ambient yeast, low SO₂, long in old wood, natural cork)

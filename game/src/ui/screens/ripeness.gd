@@ -20,6 +20,7 @@ static func build(D: Dictionary, shell) -> Control:
 		[UI.segmented(ids, B["id"], func(x): shell.state["rip_sel"] = x; shell.show_screen("ripeness"), 52)]))
 	# planner
 	var pp: Array = UI.panel("Harvest planner", "")
+	(pp[1].get_child(0) as HBoxContainer).add_child(load("res://src/ui/learn_drawer.gd").link(shell, "harvest-date", {"block": String(shell.state.get("rip_sel", ""))}))
 	var cols := ["Block", "Variety", "Stage", "Sugar", "Pot. alc.", "TA g/L", "pH", "Malic", "Seeds ripe", "Rot (grey · noble)", "Ripe enough for", ""]
 	var widths := [70, 190, 130, 100, 100, 80, 70, 80, 110, 160, 190, 190]
 	var hdr := UI.hbox(2)

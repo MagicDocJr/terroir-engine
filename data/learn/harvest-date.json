@@ -1,0 +1,52 @@
+{
+  "id": "harvest-date",
+  "title": "Harvest date",
+  "what": "The day each Block is picked. Each day of hang time trades acidity for sugar, riper fruit and riper tannin, while rot and rain risk grow.",
+  "chains": [
+    {
+      "cause": "sugar-to-alcohol"
+    },
+    {
+      "cause": "seed-ripeness-tannin"
+    },
+    {
+      "steps": [
+        "Each extra day after véraison",
+        "the berry respires malic acid and its skin softens as sugar rises",
+        "so acidity falls while botrytis risk climbs"
+      ],
+      "sources": [
+        "ripening.md#4.1 Malic acid",
+        "disease.md#5.2 Susceptibility windows"
+      ]
+    }
+  ],
+  "choose": "Pick for style, not the calendar. Kabinett needs 73 °Oe; Auslese needs 88 °Oe, so a longer hang. In warm sites sugar outruns the seeds: waiting means more alcohol, less acid. In cool sites waiting risks rot and rain, and early-picked Cabernet keeps green-pepper pyrazines.",
+  "exam": "Questions ask how harvest timing shapes style, often cool against warm regions. Link date → sugar, acid, tannin or pyrazines → alcohol, acidity, aroma.",
+  "check": {
+    "question": "A cool Mosel autumn: your Riesling Block is at 76 °Oe with TA 9.5 g/L, and rain is forecast all week. You want a Kabinett. What is the better call?",
+    "options": [
+      "Pick now: Kabinett weight is reached and rot risk only grows",
+      "Wait a week for Spätlese weight; the rain will concentrate the sugar",
+      "Wait: botrytis on ripe Riesling turns noble and adds sugar",
+      "Wait: cool weather keeps the acid, so a week costs nothing"
+    ],
+    "answer": "Pick now: Kabinett weight is reached and rot risk only grows",
+    "why": "76 °Oe already passes the 73 °Oe Kabinett minimum. Ripe, softening berries in wet weather are at their most susceptible to grey rot, not noble rot, and acidity only falls with hang time."
+  },
+  "sources": [
+    "ripening.md#10. The harvest decision",
+    "ripening.md#4.1 Malic acid",
+    "ripening.md#5.1 Seeds",
+    "ripening.md#6. Methoxypyrazines",
+    "disease.md#5.2 Susceptibility windows",
+    "law.md#Categories (lowest to highest)",
+    "fermentation.md#Conventions and conversions"
+  ],
+  "visual": "ripening-curves",
+  "causes": [
+    "sugar-to-alcohol",
+    "seed-ripeness-tannin"
+  ],
+  "simplification": ""
+}

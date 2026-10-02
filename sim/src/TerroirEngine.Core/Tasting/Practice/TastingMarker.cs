@@ -4,7 +4,8 @@ using TerroirEngine.Data;
 namespace TerroirEngine.Tasting.Practice;
 
 /// <summary>One marked item: the player's answer beside the Tasting sheet's, with its "because".</summary>
-public sealed record MarkItem(string Key, string Label, string Skill, string Yours, string Actual, double Score, string Because);
+public sealed record MarkItem(string Key, string Label, string Skill, string Yours, string Actual, double Score, string Because,
+    int Confidence = 0, string Case = "no-confidence", IReadOnlyList<string>? Causes = null, IReadOnlyDictionary<string, double>? CauseScores = null);
 
 public sealed record MarkResult(string Exercise, IReadOnlyList<MarkItem> Items, double Total, double Max, int Hints)
 {
@@ -78,6 +79,46 @@ public static class TastingMarker
 
     public static string[]? Scale(string key) => Scales.GetValueOrDefault(key);
 
+    /// <summary>The four cases of commit-then-reveal (learning-core design §5): right means full marks; "sure" is Confidence 3,
+    /// anything lower counts as unsure; no Confidence given is its own case.</summary>
+    public static string CaseFor(double score, int confidence) => confidence <= 0 ? "no-confidence"
+        : score >= 1 ? (confidence >= 3 ? "sure-right" : "guess-right") : (confidence >= 3 ? "sure-wrong" : "guess-wrong");
+
+    /// <summary>The sheet line an item asks about, for its Cause tags.</summary>
+    public static string? LineFor(string key) => key switch
+    {
+        "acidity" => "palate:Acidity", "tannin" => "palate:Tannin", "alcohol" => "palate:Alcohol", "sweetness" => "palate:Sweetness",
+        "flavourIntensity" => "palate:Flavour intensity", "colour" or "colourIntensity" => "appearance", "aromas" => "aroma:", "noseCondition" => "fault",
+        _ => null,
+    };
+
+    /// <summary>A marked item as a study-record event item (skill, score, Confidence, Causes) for PracticeProgress.Apply. An
+    /// unanswered item carries no Causes (a skipped question is not a miss); per-Cause scores, where an item has them, mark
+    /// each Cause on its own.</summary>
+    public static JsonObject EventItem(MarkItem x)
+    {
+        bool answered = x.Yours.Length > 0;
+        var o = new JsonObject
+        {
+            ["skill"] = x.Skill, ["score"] = x.Score, ["confidence"] = x.Confidence > 0 ? x.Confidence : null,
+            ["causes"] = answered && x.Causes is { Count: > 0 } cs ? new JsonArray(cs.Select(id => (JsonNode)JsonValue.Create(id)!).ToArray()) : null,
+        };
+        if (answered && x.CauseScores is { Count: > 0 } sc)
+        {
+            var so = new JsonObject();
+            foreach (var (id, v) in sc) so[id] = v;
+            o["causeScores"] = so;
+        }
+        return o;
+    }
+
+    public static IReadOnlyList<string> CausesFor(TastingSheet sheet, string key) => LineFor(key) is string line
+        ? sheet.CauseLinks.Where(l => line.EndsWith(':') ? l.Line.StartsWith(line) : l.Line == line).Select(l => l.Cause).Distinct().ToList()
+        : Array.Empty<string>();
+
+    private static int Conf(JsonObject answers, string key) =>
+        answers["confidence"] is JsonObject co && co[key] is JsonValue v && v.TryGetValue<int>(out var i) ? Math.Clamp(i, 1, 3) : 0;
+
     /// <summary>The picker options for every item, from the model's own vocabulary.</summary>
     public static JsonObject Options(GameData data, bool red)
     {
@@ -127,7 +168,11 @@ public static class TastingMarker
                 yours = string.Join(", ", mine);
                 actual = act.Count == 0 ? "no clear aromas" : string.Join(", ", act);
                 because = string.Join("; ", sh.Aromas.Select(a => $"{a.Family} ({a.Terms}): {a.Because}"));
-                items.Add(new(key, label, skill, yours, actual, score, because));
+                // each aroma family's Cause is right only when that family was picked
+                var perCause = new Dictionary<string, double>();
+                foreach (var l in sh.CauseLinks.Where(l => l.Line.StartsWith("aroma:")))
+                    perCause[l.Cause] = Math.Min(perCause.GetValueOrDefault(l.Cause, 1), mine.Contains(l.Line[6..]) ? 1 : 0);
+                items.Add(new(key, label, skill, yours, actual, score, because, Conf(answers, key), CaseFor(score, Conf(answers, key)), CausesFor(sh, key), perCause));
                 continue;
             }
             if (key.StartsWith("blic."))
@@ -139,7 +184,7 @@ public static class TastingMarker
                 bool? mine = answers["blic"] is JsonObject bo && bo.TryGetPropertyValue(crit, out var bv) && bv is JsonValue bj && bj.TryGetValue<bool>(out var bb) ? bb : null;
                 yours = mine == null ? "" : mine.Value ? "met" : "not met";
                 score = mine != null && yours == actual ? 1 : 0;
-                items.Add(new(key, label, skill, yours, actual, score, because));
+                items.Add(new(key, label, skill, yours, actual, score, because, Conf(answers, key), CaseFor(score, Conf(answers, key))));
                 continue;
             }
             yours = Str(answers, key);
@@ -172,7 +217,7 @@ public static class TastingMarker
                 score = i < 0 || j < 0 ? 0 : i == j ? 1 : Math.Abs(i - j) == 1 ? 0.5 : 0;
             }
             else score = string.Equals(yours, actual, StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-            items.Add(new(key, label, skill, yours, actual, score, because));
+            items.Add(new(key, label, skill, yours, actual, score, because, Conf(answers, key), CaseFor(score, Conf(answers, key)), CausesFor(sh, key)));
         }
         int hints = answers["hints"] is JsonValue hv && hv.TryGetValue<int>(out var h) ? Math.Max(0, h) : 0;
         double total = Math.Max(0, items.Sum(x => x.Score) - hints * HintCost);
@@ -184,6 +229,8 @@ public static class TastingMarker
         quiz.Select((q, i) =>
         {
             string yours = Str(answers, q.Topic);
-            return new MarkItem("quiz." + q.Topic, q.Text, "vintage", yours, q.Answer, yours == q.Answer ? 1 : 0, q.Evidence);
+            int conf = answers["confidence"] is JsonObject co && co[q.Topic] is JsonValue v && v.TryGetValue<int>(out var ci) ? Math.Clamp(ci, 1, 3) : 0;
+            double sc = yours == q.Answer ? 1 : 0;
+            return new MarkItem("quiz." + q.Topic, q.Text, "vintage", yours, q.Answer, sc, q.Evidence, conf, CaseFor(sc, conf));
         }).ToList();
 }

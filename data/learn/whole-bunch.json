@@ -1,0 +1,41 @@
+{
+  "id": "whole-bunch",
+  "title": "Destemming and whole bunch",
+  "what": "For red Lots: whether the grapes go into the vat fully destemmed, or with 30 % or 100 % of the bunches left whole, stems and all.",
+  "chains": [
+    {
+      "cause": "whole-bunch-stems"
+    },
+    {
+      "steps": [
+        "A larger share of whole bunches",
+        "brings more stems into the vat",
+        "so tannin and stalky notes rise with the share; in a Pinot Noir trial the clear rises came at 60 % and above"
+      ],
+      "sources": [
+        "extraction-and-oak.md#1. Red maceration"
+      ]
+    }
+  ],
+  "choose": "Choose 100 % whole bunch for a firmer, spicier Pinot Noir with more structure, accepting paler colour, and green, herbal notes if the stems are unripe. 30 % gives a subtler version. Fully destemmed keeps the most colour and no stem character.",
+  "exam": "Questions ask how and why whole-bunch fermentation changes a red, usually Pinot Noir. Name each effect (tannin, colour, aroma) and tie it to the style.",
+  "check": {
+    "question": "Cool year: Pinot Noir seeds 50 % ripe, stems green. What does 100 % whole bunch add, compared with destemmed?",
+    "options": [
+      "Firmer, coarser tannin and stalky, green notes",
+      "Softer tannin and deeper colour",
+      "Riper, darker fruit",
+      "Nothing measurable: only seeds give tannin"
+    ],
+    "answer": "Firmer, coarser tannin and stalky, green notes",
+    "why": "Stems give up tannin and green-smelling compounds, most of all when unripe; in trials they also lowered the colour."
+  },
+  "sources": [
+    "extraction-and-oak.md#1. Red maceration"
+  ],
+  "visual": "none",
+  "causes": [
+    "whole-bunch-stems"
+  ],
+  "simplification": "Game simplification: the game does not lower colour for whole bunches; stem tannin rises with the whole-bunch share, and stalky notes come from unripe stems, judged by the seeds' ripeness."
+}

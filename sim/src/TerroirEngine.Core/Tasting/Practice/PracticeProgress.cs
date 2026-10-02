@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using TerroirEngine.Learning;
 
 namespace TerroirEngine.Tasting.Practice;
 
@@ -11,7 +12,7 @@ namespace TerroirEngine.Tasting.Practice;
 /// Fair earns roughly 250 XP at half marks.</summary>
 public static class PracticeProgress
 {
-    public const int Version = 1, HistoryLength = 20, XpPerMark = 10, HintXp = 5, DailyBonus = 25;
+    public const int Version = StudyRecord.Version, HistoryLength = 20, XpPerMark = 10, HintXp = 5, DailyBonus = 25;
 
     public static readonly (string Name, int Xp, string Line)[] Ranks =
     {
@@ -22,6 +23,10 @@ public static class PracticeProgress
         ("Fair judge", 12000, "Your verdicts would hold up on any panel."),
     };
     public const int BlindRank = 2;
+    /// <summary>Ranks by the share of the Cause catalogue the player Knows (learning-core design §4.3): rewards report
+    /// durable mastery, never volume. XP stays as a quiet tally (and ranks a record when no catalogue is given).</summary>
+    public static readonly double[] RankShare = { 0, 0.15, 0.40, 0.70, 0.95 };
+    public const int RhythmTarget = 5, RepairReviews = 5;
     private static readonly string[] MedalOrder = { "bronze", "silver", "gold" };
     private static readonly Dictionary<string, int> MedalBonus = new() { ["bronze"] = 20, ["silver"] = 40, ["gold"] = 80 };
     /// <summary>Stand tiers open with medals: tier 1 after the first medal, tier 2 after three.</summary>
@@ -84,7 +89,7 @@ public static class PracticeProgress
     /// A malformed event returns the record unchanged.</summary>
     public static JsonObject Apply(JsonObject record, JsonObject ev)
     {
-        var rec = (JsonObject)record.DeepClone();
+        var rec = StudyRecord.Migrate(record);
         string? kind = Str(ev["kind"]);
         var date = Date(ev["date"]);
         rec["lastGain"] = 0;
@@ -96,11 +101,23 @@ public static class PracticeProgress
         int xp = Math.Max(0, Int(rec["xp"]));
         var skills = Obj(rec, "skills");
         double marks = 0;
+        var outcomes = new Dictionary<string, (bool Right, int Conf)>();   // per Cause: the worst outcome in this event
         foreach (var it in items)
         {
             if (it is not JsonObject o || Str(o["skill"]) is not { Length: > 0 } skill || double.IsNaN(Num(o["score"]))) continue;
             double sc = Math.Clamp(Num(o["score"]), 0, 1);
             marks += sc;
+            int conf = double.IsNaN(Num(o["confidence"])) ? 2 : Math.Clamp(Int(o["confidence"]), 1, 3);
+            // per-Cause scores (an aroma list) mark each Cause on its own; otherwise every Cause takes the item's score
+            var perCause = o["causeScores"] is JsonObject cso
+                ? cso.Select(kv => (Id: kv.Key, Sc: Math.Clamp(Num(kv.Value), 0, 1))).Where(x => !double.IsNaN(x.Sc)).ToList()
+                : o["causes"] is JsonArray cs ? cs.Select(Str).Where(x => !string.IsNullOrEmpty(x)).Select(x => (Id: x!, Sc: sc)).ToList() : new();
+            foreach (var (id, csc) in perCause)
+            {
+                // half credit counts as right but hard (scheduled like a guess)
+                var now = (Right: csc >= 0.5, Conf: csc >= 0.5 && csc < 1 ? 1 : conf);
+                outcomes[id] = outcomes.TryGetValue(id, out var was) ? (was.Right && now.Right, Math.Min(was.Conf, now.Conf)) : now;
+            }
             var hist = Arr(skills, skill);
             hist.Add(Math.Round(sc, 2));
             while (hist.Count > HistoryLength) hist.RemoveAt(0);
@@ -142,9 +159,50 @@ public static class PracticeProgress
         }
         var stats = Obj(rec, "stats");
         stats[kind == "stand" ? "flights" : "glasses"] = Int(stats[kind == "stand" ? "flights" : "glasses"]) + 1;
+        var states = StudyRecord.States(rec);
+        var exam = Date(rec["examDate"]);
+        foreach (var (id, o) in outcomes) StudyRecord.Put(rec, ReviewScheduler.Review(states.GetValueOrDefault(id), id, o.Right, o.Conf, date.Value, exam));
+        var rhythm = Arr(rec, "rhythm");
+        var today = rhythm.OfType<JsonObject>().FirstOrDefault(e => Date(e["date"]) == date);
+        if (today == null) { today = new JsonObject { ["date"] = date.Value.ToString("yyyy-MM-dd"), ["n"] = 0 }; rhythm.Add(today); }
+        today["n"] = Int(today["n"]) + outcomes.Count;   // Causes reviewed, not marked items: the rhythm rewards review, not volume
+        while (rhythm.Count > 60) rhythm.RemoveAt(0);
         rec["xp"] = xp + gained;
         rec["lastGain"] = gained;
         return rec;
+    }
+
+    /// <summary>Sets (or clears, with null) the exam date the review schedule works towards.</summary>
+    public static JsonObject SetExamDate(JsonObject record, DateOnly? exam)
+    {
+        var rec = StudyRecord.Migrate(record);
+        if (exam is DateOnly d) rec["examDate"] = d.ToString("yyyy-MM-dd"); else rec.Remove("examDate");
+        return rec;
+    }
+
+    /// <summary>The player's exam date as "yyyy-MM-dd" ("" clears it). A date that does not exist, is not after today, or lies more
+    /// than five years ahead is refused with a message for the screen, and the record is returned unchanged.</summary>
+    public static (JsonObject Record, string? Error) TrySetExamDate(JsonObject record, string date, DateOnly today)
+    {
+        if (date == "") return (SetExamDate(record, null), null);
+        if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var d))
+            return (StudyRecord.Migrate(record), "That date does not exist.");
+        if (d <= today) return (StudyRecord.Migrate(record), "Pick a date after today.");
+        if (d > today.AddYears(5)) return (StudyRecord.Migrate(record), "Pick a date within the next five years.");
+        return (SetExamDate(record, d), null);
+    }
+
+    /// <summary>The weekly rhythm (Monday to Sunday): days studied, plus missed days repaired by an extra set of reviews
+    /// (every 5 beyond the first 5 on a day) later in the week. A new week starts fresh and quietly.</summary>
+    public static (int Days, int Elapsed) Rhythm(JsonObject rec, DateOnly today)
+    {
+        var monday = today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
+        int elapsed = today.DayNumber - monday.DayNumber + 1;
+        var week = (rec["rhythm"] as JsonArray ?? new JsonArray()).OfType<JsonObject>()
+            .Select(e => (D: Date(e["date"]), N: Int(e["n"]))).Where(e => e.D >= monday && e.D <= today).ToList();
+        int days = week.Select(e => e.D).Distinct().Count();
+        int repairs = week.Sum(e => Math.Max(0, e.N - RepairReviews) / RepairReviews);
+        return (Math.Min(elapsed, days + Math.Min(elapsed - days, repairs)), elapsed);
     }
 
     // ------------------------------------------------------------------------------------------------ summary
@@ -169,10 +227,13 @@ public static class PracticeProgress
 
     public static int UnlockedTier(JsonObject rec) => Array.FindLastIndex(MedalsForTier, n => MedalCount(rec) >= n);
 
-    public static JsonObject Summary(JsonObject rec, DateOnly? today = null)
+    public static JsonObject Summary(JsonObject rec, DateOnly? today = null, IReadOnlyList<Cause>? catalog = null)
     {
         int xp = Math.Max(0, Int(rec["xp"]));
-        int ri = RankIndex(xp);
+        var states = StudyRecord.States(rec);
+        int known = catalog == null ? states.Values.Count(x => x.Known) : catalog.Count(c => states.TryGetValue(c.Id, out var st) && st.Known);
+        double share = catalog == null || catalog.Count == 0 ? 0 : (double)known / catalog.Count;
+        int ri = catalog == null ? RankIndex(xp) : Array.FindLastIndex(RankShare, x => share >= x);
         var medals = new JsonObject();
         if (rec["medals"] is JsonObject m) foreach (var (k, v) in m) if (MedalOrder.Contains(Str(v))) medals[k] = Str(v);
         var daily = rec["daily"] as JsonObject;
@@ -181,6 +242,7 @@ public static class PracticeProgress
         int streak = last != null && (last == t || last.Value.AddDays(1) == t) ? Math.Max(0, Int(daily!["streak"])) : 0;
         var skills = Skills(rec);
         string? weak = Weakest(rec);
+        var rhythm = Rhythm(rec, t);
         return new JsonObject
         {
             ["xp"] = xp, ["rank"] = Ranks[ri].Name, ["rankLine"] = Ranks[ri].Line, ["rankIndex"] = ri,
@@ -190,15 +252,36 @@ public static class PracticeProgress
             ["lastGain"] = Math.Max(0, Int(rec["lastGain"])),
             ["medals"] = medals, ["medalCount"] = medals.Count, ["unlockedTier"] = UnlockedTier(rec),
             ["tierNeeds"] = new JsonArray(MedalsForTier.Select(n => (JsonNode)JsonValue.Create(n)!).ToArray()),
-            ["blindUnlocked"] = ri >= BlindRank,
+            ["blindUnlocked"] = ri >= BlindRank || rec["blindKept"] is JsonValue bk && bk.TryGetValue<bool>(out var kept) && kept,
             ["cards"] = new JsonArray((rec["cards"] as JsonArray ?? new JsonArray()).Select(Str).Where(s => s != null).Select(s => (JsonNode)JsonValue.Create(s!)!).ToArray()),
             ["dailyDone"] = last == t, ["daysInARow"] = streak, ["bestDaysInARow"] = Math.Max(0, Int(daily?["best"])),
             ["skills"] = new JsonArray(CoreSkills.Select(s => (JsonNode)new JsonObject
             {
                 ["skill"] = s, ["avg"] = skills.TryGetValue(s, out var v) ? Math.Round(v.Avg, 2) : null, ["n"] = skills.TryGetValue(s, out var w) ? w.N : 0,
+                ["history"] = (rec["skills"] as JsonObject)?[s] is JsonArray ha ? ha.DeepClone() : new JsonArray(),
             }).ToArray()),
             ["weakest"] = weak,
             ["stats"] = (rec["stats"] as JsonObject)?.DeepClone() ?? new JsonObject(),
+            ["known"] = known, ["knownShare"] = Math.Round(share, 3), ["catalogSize"] = catalog?.Count ?? 0, ["byKnown"] = catalog != null,
+            ["rankShare"] = RankShare[ri], ["nextShare"] = ri + 1 < RankShare.Length ? RankShare[ri + 1] : null,
+            ["due"] = ReviewScheduler.Due(rec, t).Count,
+            ["rhythm"] = new JsonObject { ["daysThisWeek"] = rhythm.Days, ["elapsed"] = rhythm.Elapsed, ["target"] = RhythmTarget, ["met"] = rhythm.Days >= RhythmTarget },
+            ["examDate"] = Str(rec["examDate"]),
+            // calibration: how often answers at each Confidence were right (learning-core design §5)
+            ["calibration"] = new JsonArray(new[] { 1, 2, 3 }.Select(cf =>
+            {
+                var hs = states.Values.SelectMany(x => x.History).Where(h => h.Confidence == cf).ToList();
+                return (JsonNode)new JsonObject { ["confidence"] = cf, ["n"] = hs.Count, ["accuracy"] = hs.Count == 0 ? null : Math.Round(hs.Count(h => h.Right) / (double)hs.Count, 2) };
+            }).ToArray()),
+            ["daysToExam"] = Date(rec["examDate"]) is DateOnly ed ? ed.DayNumber - t.DayNumber : null,
+            // coverage by area (the topic up to its first ':' or ';'): six rows, not one per fine topic
+            ["coverage"] = catalog == null ? null : new JsonArray(catalog.GroupBy(c => c.Topic.Split(':', ';')[0].Trim()).Select(g => (JsonNode)new JsonObject
+            {
+                ["topic"] = g.Key,
+                ["known"] = g.Count(c => states.TryGetValue(c.Id, out var st) && st.Known),
+                ["learning"] = g.Count(c => states.TryGetValue(c.Id, out var st) && !st.Known),
+                ["notSeen"] = g.Count(c => !states.ContainsKey(c.Id)),
+            }).ToArray()),
         };
     }
 }

@@ -92,13 +92,13 @@ a non-game context [DETERDING-2011]; spaced practice and retrieval practice impr
 
 - **XP:** 10 per full mark (5 for half), −5 per hint; a replayed stand pays item XP only for improving on its best score; medal bonuses (bronze 20, silver 40, gold 80, paid once per
   improvement); Glass of the day +25.
-- **Taster ranks:** Novice taster 0, Cellar hand 300, Taster 1,500 (opens blind Flights), Senior taster 5,000, Fair judge
-  12,000 XP. Paced for months of study: a Flight at half marks earns roughly 250 XP.
+- **Taster ranks:** since the learning core, set by the share of Causes Known, not by XP (`learning-core.md` §3). XP
+  stays as a record of play. Taster (the third rank) opens blind Flights.
 - **Medals:** bronze, silver, gold at 50, 70 and 85 % of a stand's marks; the best is kept. One medal opens the second tier
   of stands, three open the third; inside an early game a tier also opens while every stand below it is still in the future.
 - **Glass of the day:** the same Wine for everyone on a date, Identify format; days in a row count consecutive daily
   glasses, and a missed day resets the run without costing rank.
-- **Adaptive practice:** the weakest skill (lowest average of the last 20 answers, at least three answers) picks the next
+- **Adaptive practice** (single exercises; the daily session is in `learning-core.md` §4): the weakest skill (lowest average of the last 20 answers, at least three answers) picks the next
   Wine: a red for tannin or appearance, Riesling across the sweetness range for sweetness, and so on.
 - The study record is `user://tasting_record.json`, separate from any Estate save, and tolerant of missing or unknown fields;
   an unreadable file is copied aside (`.unreadable-<time>`) before a fresh record replaces it.

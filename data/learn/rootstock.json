@@ -1,0 +1,45 @@
+{
+  "id": "rootstock",
+  "title": "Rootstock",
+  "what": "The roots your Variety is grafted onto, bred mostly from American vine species. They resist phylloxera and decide how the vine copes with lime, drought and vigour; own-rooted vines skip grafting but have no protection against the louse.",
+  "chains": [
+    {
+      "cause": "lime-chlorosis"
+    },
+    {
+      "steps": [
+        "A thin, stony soil holding little water",
+        "dries out sooner for shallow-rooted 3309C than for deep-rooted 1103 Paulsen",
+        "severe water stress closes the stomata",
+        "so sugar loading stalls in a dry summer"
+      ],
+      "sources": [
+        "soil-and-water.md#7. Rootstocks",
+        "canopy-and-yield.md#4. Water stress"
+      ]
+    }
+  ],
+  "choose": "Read the soil first. Lime: Fercal tolerates a chlorosis index up to 120, SO4 and 1103 Paulsen about 30, 3309C only 10. Drought: 1103 Paulsen roots deep and tolerates it; 3309C does not. Cool, moist sites: low-vigour, early-ripening 3309C helps ripening.",
+  "exam": "Expect 'why graft?' or 'pick a rootstock for chalky or dry soil'. Answer soil or pest → root trait → vine → grape, with a real example.",
+  "check": {
+    "question": "A Côte d'Or Block has marl with a chlorosis index of about 40 and a deep, moist soil. Which rootstock fits?",
+    "options": [
+      "Fercal",
+      "3309C, for its early ripening",
+      "1103 Paulsen, because drought tolerance comes first",
+      "Own-rooted, since grafting is unnecessary on limestone"
+    ],
+    "answer": "Fercal",
+    "why": "An index of 40 is beyond what 3309C (10), SO4 and 1103 Paulsen (30) tolerate, so they would turn yellow; Fercal copes up to 120. Water is no constraint on a deep, moist soil, and own-rooted vines lack phylloxera resistance."
+  },
+  "sources": [
+    "soil-and-water.md#7. Rootstocks",
+    "soil-and-water.md#8. Lime-induced chlorosis",
+    "canopy-and-yield.md#4. Water stress"
+  ],
+  "visual": "rootstock-roots",
+  "causes": [
+    "lime-chlorosis"
+  ],
+  "simplification": "Game simplification: the game turns active lime into a chlorosis index assuming the same soil iron everywhere (index ≈ 4 × lime %), so rootstocks yellow at lower lime than published tables give (3309C about 11 %, SO4 and 1103 Paulsen about 17 % active lime). Phylloxera on own-rooted vines is only a warning in the game."
+}

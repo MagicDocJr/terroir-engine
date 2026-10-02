@@ -297,10 +297,10 @@ public static class VineyardModel
             if (leaf == 1 && b.PsiStem < -1.4 && !ctx.IrrigationLegal) b.VineSurvival = Math.Max(0.6, b.VineSurvival - 0.004);
         }
 
-        // --- lime-induced chlorosis (soil-and-water.md §8), assuming easily extractable Fe ≈ 5 mg/kg on calcareous soils
+        // --- lime-induced chlorosis (soil-and-water.md §8)
         {
             double lime = b.Data.Soil.ActiveLimePct;
-            double ipc = lime <= 0 ? 0 : 10000 * lime / 100.0 / 25.0 * 1.0;      // IPC = 10⁴·(CaCO₃ %)/Fe²; Fe² = 25 (UNVERIFIED default)
+            double ipc = lime <= 0 ? 0 : 10000 * lime / 100.0 / 25.0 * 1.0;      // effectively IPC ≈ 4 × active lime %: a fixed soil-iron assumption (UNVERIFIED default; game simplification)
             double r = ipc / b.Rootstock.MaxChlorosisIndex;
             b.Chlorosis = M.Clamp((r - 0.8) / 0.8, 0, 1);
         }

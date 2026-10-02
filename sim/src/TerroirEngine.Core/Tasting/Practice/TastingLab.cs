@@ -8,7 +8,7 @@ namespace TerroirEngine.Tasting.Practice;
 /// <summary>What to pour: a Plot, a vintage, optionally a Block or Variety, a winemaker style id, a ripeness target and the producer
 /// (a Wine Fair host pours its own Wines).</summary>
 public sealed record PourSpec(string PlotId, int Vintage, string? BlockId = null, string? Variety = null, string? Style = null, double? TargetOe = null,
-    string? Producer = null);
+    string? Producer = null, IReadOnlyDictionary<string, int>? Choices = null);
 
 /// <summary>Everything the reveal and the quiz need about how a poured Wine came to be.</summary>
 public sealed class PourContext
@@ -93,7 +93,7 @@ public static class TastingLab
             if (lot == null) continue;
             if (!styled && lot.Phase is LotPhase.Received or LotPhase.ColdSoak)
             {
-                foreach (var kv in style.Choices)
+                foreach (var kv in style.Choices.Concat(spec.Choices ?? new Dictionary<string, int>()))   // explicit choices override the style's
                     if ((kv.Key == "Sweetness" || kv.Key == "Temperature") && lot.Red || kv.Key == "Red temperature" && !lot.Red) continue;
                     else g.Apply(new Command { Type = "lot", A = lot.Id, B = kv.Key, C = kv.Value.ToString() });
                 styled = true;

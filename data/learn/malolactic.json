@@ -1,0 +1,55 @@
+{
+  "id": "malolactic",
+  "title": "Malolactic conversion",
+  "what": "A second, bacterial fermentation after the alcoholic one. You can block it with SO₂, inoculate a selected strain, or let it start on its own.",
+  "chains": [
+    {
+      "cause": "mlf-softens-acid"
+    },
+    {
+      "steps": [
+        "The bacteria also break down citric acid",
+        "making diacetyl, which peaks as the malic acid runs out",
+        "so the wine can smell of butter and cream"
+      ],
+      "sources": [
+        "acid-ph-so2.md#4. Malolactic fermentation (MLF)"
+      ]
+    },
+    {
+      "steps": [
+        "A wine bottled with malic acid and live bacteria",
+        "can convert in the bottle",
+        "so a blocked wine needs SO₂ and sterile filtration; a converted one is more stable"
+      ],
+      "sources": [
+        "acid-ph-so2.md#4. Malolactic fermentation (MLF)",
+        "extraction-and-oak.md#4. Fining and filtration"
+      ]
+    }
+  ],
+  "choose": "Convert Côte d'Or reds: village and Premier Cru rules allow at most 0.4 g/L malic acid at bottling. Block it for crisp Mosel Riesling, whose acidity is the point. Inoculation is faster and surer.",
+  "exam": "A classic question: why does a producer choose, or avoid, malolactic conversion? Give acidity, buttery notes and stability, and name a wine for each choice.",
+  "check": {
+    "question": "An off-dry Mosel Riesling with 6 g/L malic acid is heading for bottle. Why does the cellar master block MLF and sterile-filter?",
+    "options": [
+      "To keep its sharp acidity and stop the conversion starting in bottle",
+      "To add buttery diacetyl",
+      "Because the bacteria would eat the residual sugar and make it dry",
+      "Because Prädikat rules forbid MLF"
+    ],
+    "answer": "To keep its sharp acidity and stop the conversion starting in bottle",
+    "why": "Much of Riesling's bright acidity is malic, and it balances the sugar. Without SO₂ and sterile filtration, bacteria could convert it in the bottle; its residual sugar needs sterile filtration anyway."
+  },
+  "sources": [
+    "acid-ph-so2.md#4. Malolactic fermentation (MLF)",
+    "law.md#Rules that bite in the simulation",
+    "extraction-and-oak.md#4. Fining and filtration"
+  ],
+  "visual": "malic-to-lactic",
+  "causes": [
+    "mlf-softens-acid",
+    "mlf-diacetyl"
+  ],
+  "simplification": "Game simplification: a spontaneous conversion gives more diacetyl than an inoculated one (in reality strain, oxygen, citric acid and SO₂ decide), and conversion in bottle is not modelled."
+}

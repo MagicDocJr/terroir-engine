@@ -57,7 +57,7 @@ static func _title(shell) -> Control:
 	col.add_child(tp)
 	var TS = JSON.parse_string(Sim.PracticeSummary())
 	if TS is Dictionary and int(TS.get("xp", 0)) > 0:
-		var rl := UI.label("%s · %d XP · %d medal%s" % [TS["rank"], int(TS["xp"]), int(TS["medalCount"]), "" if int(TS["medalCount"]) == 1 else "s"], 14, UI.GOLD)
+		var rl := UI.label("%s · %d of %d Causes known · %d medal%s" % [TS["rank"], int(TS.get("known", 0)), int(TS.get("catalogSize", 0)), int(TS["medalCount"]), "" if int(TS["medalCount"]) == 1 else "s"], 14, UI.GOLD)
 		rl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; col.add_child(rl)
 	for sv in saves.slice(0, 5):
 		var b := UI.button("Load %s   ·   %s" % [sv["name"], sv["modified"]], false, 16); b.custom_minimum_size = Vector2(360, 46)
@@ -323,9 +323,11 @@ static func _planting(shell) -> Control:
 		ov.tooltip_text = var_notes.get(pc["variety"], ""); row.add_child(ov)
 		var orr := UI.option(rs_items, pc["rootstock"], func(x): pc["rootstock"] = x; shell.show_screen("planting"), 170)
 		orr.tooltip_text = rs_notes.get(pc["rootstock"], ""); row.add_child(orr)
+		row.add_child(load("res://src/ui/learn_drawer.gd").link(shell, "rootstock", {"plot": P["id"], "block": bid}))
 		var tr_items := []
 		for t in P["training"]: tr_items.append(t)
 		row.add_child(UI.option(tr_items, pc["training"], func(x): pc["training"] = x, 150))
+		row.add_child(load("res://src/ui/learn_drawer.gd").link(shell, "training-system", {"plot": P["id"], "block": bid}))
 		var steep_plot: bool = float(P["slope"]) >= 30
 		var rows_items := [["DownSlope", "Rows downhill"]] if steep_plot else [["NorthSouth", "Rows N–S"], ["EastWest", "Rows E–W"]]
 		if steep_plot: pc["rows"] = "DownSlope"

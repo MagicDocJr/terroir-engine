@@ -41,7 +41,7 @@ public static class CellarOptions
         new("Vessel", new[] { "Stainless steel", "Old Fuder (1 000 L)", "Neutral barriques", "Barriques 1st fill", "New French barriques", "New American barriques" },
             "Steel keeps fruit pure. Old wood adds texture through slow oxygen exchange without oak flavour. New barriques add vanilla, toast and spice; American oak adds more coconut (oak lactone).", LockedAfterFermentStart: false),
         new("Toast", new[] { "Medium", "Light", "Medium+", "Heavy" },
-            "Toast level shapes oak flavour: light is woody/coconut, medium gives vanilla and caramel, heavy gives smoke, coffee and clove.", LockedAfterFermentStart: false),
+            "Toast level shapes oak flavour: heavier toast gives more smoky, toasty notes (volatile phenols and furanic compounds); its effect on the coconut-like oak lactones depends on the wood.", LockedAfterFermentStart: false),
         new("Ageing", new[] { "6 months", "3 months", "10 months", "18 months" },
             "Time in vessel before bottling. Longer oak ageing integrates tannin and builds oak character; Côte d'Or AOC wines may not be released before 15 June after harvest.", LockedAfterFermentStart: false),
         new("Lees", new[] { "Fine lees", "Racked off lees", "Fine lees + bâtonnage" },

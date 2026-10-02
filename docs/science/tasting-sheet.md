@@ -52,7 +52,7 @@ From the other models:
 
 | Attribute | Scale (our wording) | Computed from | Band source |
 |---|---|---|---|
-| Sweetness | dry / off-dry / medium / sweet | RS, with perceived sweetness adjusted for acidity. The legal label term (e.g. trocken, feinherb, Kabinett style) is shown separately via the law model | EU label terms for still wine are cited from memory (Reg. (EU) 2019/33 Annex III Part B): dry ≤ 4 g/L, or ≤ 9 g/L if TA ≥ RS − 2; medium dry ≤ 12 g/L, or ≤ 18 g/L if TA ≥ RS − 10; medium ≤ 45 g/L; sweet ≥ 45 g/L. **UNVERIFIED** |
+| Sweetness | dry / off-dry / medium / sweet | RS, with perceived sweetness adjusted for acidity. The legal label term (e.g. trocken, feinherb, Kabinett style) is shown separately via the law model | EU label terms for still wine (Commission Delegated Regulation (EU) 2019/33, Annex III Part B; checked against the retained text at https://www.legislation.gov.uk/eur/2019/33/annex/III on 2026-10-02): dry ≤ 4 g/L, or ≤ 9 g/L if TA ≥ RS − 2; medium dry ≤ 12 g/L, or ≤ 18 g/L if TA ≥ RS − 10; medium ≤ 45 g/L; sweet ≥ 45 g/L |
 | Acidity | low / medium(−) / medium / medium(+) / high | TA and pH (pH weighted for reds). White cut-offs are TA < 5, 5–6, 6–7, 7–8.5, > 8.5 g/L; reds shift down ~0.5 g/L | game calibration, UNVERIFIED |
 | Tannin, level (reds) | low → high | total tannin mg/L CE | game calibration, UNVERIFIED |
 | Tannin, nature (reds) | ripe/soft · fine-grained · green/coarse | seed:skin ratio, seed maturity, stem share, polymerisation, oak tannin share | direction per Sacchi et al. 2005; cut-offs UNVERIFIED |

@@ -10,6 +10,7 @@ public static class PracticeJson
     {
         var c = p.Context;
         var w = Snapshot.WineObj(p.Wine);
+        w["glassColour"] = GlassColour(p.Sheet);
         w["context"] = new JsonObject
         {
             ["region"] = c.RegionId, ["regionName"] = c.RegionName, ["plot"] = c.PlotId, ["plotName"] = c.PlotName, ["block"] = c.BlockId,
@@ -21,5 +22,59 @@ public static class PracticeJson
             ["tastedOn"] = c.TastedOn.ToString("yyyy-MM-dd"), ["ageYears"] = c.AgeYears,
         };
         return w;
+    }
+
+    /// <summary>The glass's colour for drawing (a presentation of the sheet's appearance terms), as #rrggbb.</summary>
+    public static string GlassColour(TastingSheet sh)
+    {
+        (double r, double g, double b) c = sh.Colour switch
+        {
+            "lemon-green" => (0xE4, 0xE8, 0xA2), "lemon" => (0xEC, 0xDF, 0x8E), "gold" => (0xE0, 0xB8, 0x4E), "amber" => (0xC3, 0x82, 0x2C),
+            "purple" => (0x4E, 0x1A, 0x3F), "ruby" => (0x85, 0x1A, 0x2A), "garnet" => (0x86, 0x35, 0x2A), "tawny" => (0x9A, 0x5A, 0x2A),
+            _ => (0xD8, 0xC8, 0x89),
+        };
+        double k = sh.ColourIntensity switch { "pale" => 0.5, "medium" => 0.2, _ => 0.0 };
+        int L(double v, double to) => (int)Math.Round(v + (to - v) * k);
+        return $"#{L(c.r, 0xF7):x2}{L(c.g, 0xF3):x2}{L(c.b, 0xE6):x2}";
+    }
+
+    private static JsonArray A(IEnumerable<string> xs) => new(xs.Select(x => (JsonNode)JsonValue.Create(x)!).ToArray());
+
+    /// <summary>Only what a screen may show before the player answers (learning-core design §5): no label, category, style,
+    /// "because" lines or conclusions, and per exercise only its own material. The reveal sends the full Wine.</summary>
+    public static JsonObject Shown(PouredWine p, string exercise, bool blind, bool stand)
+    {
+        var sh = p.Sheet; var c = p.Context;
+        var o = new JsonObject { ["glassColour"] = GlassColour(sh), ["red"] = c.Red };
+        JsonObject Described() => new()
+        {
+            ["appearance"] = new JsonObject { ["clarity"] = sh.Clarity, ["intensity"] = sh.ColourIntensity, ["colour"] = sh.Colour },
+            ["nose"] = new JsonObject { ["condition"] = sh.NoseCondition, ["intensity"] = sh.NoseIntensity, ["development"] = sh.Development },
+            ["aromas"] = new JsonArray(sh.Aromas.Select(a => (JsonNode)new JsonObject { ["category"] = a.Category, ["family"] = a.Family, ["terms"] = a.Terms, ["intensity"] = a.Intensity }).ToArray()),
+            ["palate"] = new JsonArray(sh.Palate.Select(l => (JsonNode)new JsonObject { ["attribute"] = l.Attribute, ["level"] = l.Level }).ToArray()),
+            ["faults"] = A(sh.Faults),
+        };
+        JsonObject Label() => new()
+        {
+            ["producer"] = stand ? null : c.Producer, ["plotName"] = c.PlotName, ["regionName"] = c.RegionName, ["variety"] = c.Variety,
+            ["vintage"] = blind ? null : c.Vintage,
+        };
+        switch (exercise)
+        {
+            case "conclusions": o["sheet"] = Described(); break;
+            case "identify": o["sheet"] = Described(); break;
+            case "cause":
+            case "session":
+                o["context"] = new JsonObject
+                {
+                    ["producer"] = c.Producer, ["plotName"] = c.PlotName, ["regionName"] = c.RegionName, ["variety"] = c.Variety, ["vintage"] = c.Vintage,
+                    ["gdd"] = Math.Round(c.Gdd), ["summerTmax"] = c.SummerTmax, ["harvestRain"] = c.HarvestRainMm, ["frostLoss"] = Math.Round(c.FrostLossPct),
+                    ["harvestDate"] = c.HarvestDate.ToString("yyyy-MM-dd"), ["harvestOe"] = Math.Round(c.HarvestOe), ["harvestTa"] = Math.Round(c.HarvestTa, 1),
+                    ["harvestPh"] = Math.Round(c.HarvestPh, 2), ["yield"] = Math.Round(c.YieldHlHa), ["styleLabel"] = c.StyleLabel, ["ageYears"] = c.AgeYears,
+                };
+                break;
+            default: o["context"] = Label(); break;
+        }
+        return o;
     }
 }

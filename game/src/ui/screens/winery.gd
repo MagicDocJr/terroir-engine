@@ -158,6 +158,9 @@ static func build(D: Dictionary, shell) -> Control:
 		ob.disabled = locked
 		ob.tooltip_text = String(opt["why"])
 		h.add_child(ob)
+		var card: String = {"Destemming": "whole-bunch", "Temperature": "fermentation-temperature", "Red temperature": "fermentation-temperature",
+			"Nutrients": "yeast-nitrogen", "MLF": "malolactic", "Vessel": "oak", "Toast": "oak", "Lees": "lees", "Sweetness": "stopping-for-sweetness"}.get(key, "")
+		if card != "": h.add_child(load("res://src/ui/learn_drawer.gd").link(shell, card, {"lot": lid3}))
 		cp[1].add_child(h)
 	cp[1].add_child(more_btn)
 	cp[1].add_child(UI.label("Hover a choice for what it does. Changes apply straight away; there's nothing to confirm.", 13, UI.MUTED, null, true))

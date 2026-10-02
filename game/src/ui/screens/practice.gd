@@ -1,6 +1,7 @@
-# Tasting practice: one simulated Wine at a time in one of four exercises (Conclusions, Cause to glass, Identify, your Tasting
-# sheet), the Glass of the day, adaptive practice aimed at the weakest skill, then an item-by-item reveal where every answer
-# says why. Reachable from the title screen and from a game (ADR 0002 locks vintages not yet harvested there).
+# Tasting practice: today's review session (Causes due, the weak spot and something new, each checked a different way), the
+# Glass of the day, four single-glass exercises, and the Progress view (Causes known, calibration, skills over time). Every
+# answer is committed with a Confidence before the reveal, and every verdict says why (learning-core design §4–§5).
+# Reachable from the title screen and from a game (ADR 0002 locks vintages not yet harvested there).
 extends RefCounted
 
 const UI := preload("res://src/ui/ui.gd")
@@ -14,10 +15,11 @@ static func build(_D: Dictionary, shell) -> Control:
 	if view != "" and String(shell.state.get("tp_owner", "practice")) != "practice":
 		v.add_child(_elsewhere(shell))
 		view = ""
+	var S: Dictionary = shell.state.get("tp_session", {})
 	match view:
 		"pouring": v.add_child(T.pouring_view(shell, "practice"))
-		"answer": v.add_child(_answer(shell))
-		"reveal": v.add_child(_reveal(shell))
+		"answer": v.add_child(_session(shell) if S.has("entries") and S["entries"].size() > 0 else _answer(shell))
+		"reveal": v.add_child(_session_reveal(shell) if shell.state.get("tp_result", {}).has("entries") else _reveal(shell))
 		_: v.add_child(_lobby(shell, L))
 	return UI.scroll(v)
 
@@ -37,78 +39,318 @@ static func _lobby(shell, L: Dictionary) -> Control:
 		return v
 	var S: Dictionary = L.get("summary", {})
 	var top := UI.hbox(16); v.add_child(top)
+	# today's session: the heart of the study loop
+	var due := int(S.get("due", 0))
+	var ss: Array = UI.panel("Today's session", "about 6 questions, 5–10 minutes")
+	ss[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL; ss[0].size_flags_stretch_ratio = 1.6
+	var line := ""
+	if due > 0: line = "%d Cause%s due for review, plus your weak spot and something new." % [due, "" if due == 1 else "s"]
+	elif int(S.get("known", 0)) > 0: line = "Nothing is due today: the session brings something new and your weak spot."
+	else: line = "Start here. Each session teaches a few Causes (why a Wine tastes as it does) and brings them back over the next days and weeks until you know them for good."
+	ss[1].add_child(UI.label(line, 16, UI.INK2, null, true))
+	var sb := UI.button("Start today's session", true, 17); sb.custom_minimum_size = Vector2(280, 46)
+	sb.pressed.connect(func(): T.start_pour(shell, {"kind": "session"}, "practice"))
+	ss[1].add_child(sb)
+	top.add_child(ss[0])
 	# Glass of the day
-	var gd: Array = UI.panel("Glass of the day", "Identify · +25 XP bonus")
+	var gd: Array = UI.panel("Glass of the day", "Identify")
 	gd[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var done: bool = S.get("dailyDone", false)
-	gd[1].add_child(UI.label("One blind glass a day, the same for everyone. Name the grape, the Region and how warm the vintage was." if not done
-		else "Done for today. Come back tomorrow to keep your run going.", 15, UI.INK2, null, true))
-	gd[1].add_child(UI.label("%d day%s in a row · best run %d" % [int(S.get("daysInARow", 0)), "" if int(S.get("daysInARow", 0)) == 1 else "s", int(S.get("bestDaysInARow", 0))], 14, UI.WARN))
+	gd[1].add_child(UI.label("One blind glass a day: name the grape, the Region and how warm the vintage was." if not done
+		else "Done for today. Come back tomorrow.", 15, UI.INK2, null, true))
 	if not done:
-		var b := UI.button("Pour today's glass", true, 16)
+		var b := UI.button("Pour today's glass", false, 16)
 		b.pressed.connect(func(): T.start_pour(shell, {"kind": "daily"}, "practice"))
 		gd[1].add_child(b)
 	top.add_child(gd[0])
-	# adaptive practice
-	var wk: Array = UI.panel("Practise your weak spot", "")
-	wk[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var fl = L.get("focusLine", null)
-	wk[1].add_child(UI.label(String(fl) if fl != null else "Answer a few glasses first: once each skill has three answers, this pours Wines aimed at the one you find hardest.", 15, UI.INK2, null, true))
-	var wb := UI.button("Pour a glass for me", fl != null, 16)
-	wb.pressed.connect(func(): T.start_pour(shell, {"kind": "suggest"}, "practice"))
-	wk[1].add_child(wb)
-	top.add_child(wk[0])
 	# the four exercises
-	var mv = L.get("maxVintage", null)
-	var ex: Array = UI.panel("Exercises", "a random Wine from 1995–%s in each" % (str(int(mv)) if mv != null else "2025"))
-	var grid := GridContainer.new(); grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 14); grid.add_theme_constant_override("v_separation", 14)
+	var ex: Array = UI.panel("Practise one exercise", "a single Wine from 1995–%s" % (str(int(L["maxVintage"])) if L.get("maxVintage") != null else "2025"))
+	var grid := GridContainer.new(); grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 12); grid.add_theme_constant_override("v_separation", 12)
 	ex[1].add_child(grid)
 	for e in L.get("exercises", []):
-		var c := UI.card(false, 16); c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var cv := UI.vbox(8); c.add_child(cv)
-		cv.add_child(UI.head(String(e["title"]), 22, UI.INK))
-		cv.add_child(UI.label(String(e["line"]), 15, UI.INK2, null, true))
+		var c := UI.card(false, 14); c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var cv := UI.vbox(6); c.add_child(cv)
+		cv.add_child(UI.head(String(e["title"]), 19, UI.INK))
+		cv.add_child(UI.label(String(e["line"]), 13, UI.INK2, null, true))
 		var id: String = e["id"]
-		var b := UI.button("Pour a glass", false, 15)
+		var b := UI.button("Pour a glass", false, 14)
 		b.pressed.connect(func(): T.start_pour(shell, {"kind": "practice", "exercise": id}, "practice"))
 		cv.add_child(b)
 		grid.add_child(c)
 	v.add_child(ex[0])
-	var low := UI.hbox(16); v.add_child(low)
-	low.add_child(_skills(S))
-	low.add_child(_ranks(L))
+	v.add_child(_progress(shell, S))
 	return v
 
-static func _skills(S: Dictionary) -> Control:
-	var p: Array = UI.panel("Your skills", "average of the last 20 answers")
-	p[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL
+# ------------------------------------------------------------------ Progress view
+static func _progress(shell, S: Dictionary) -> Control:
+	var p: Array = UI.panel("Progress", "measured by what you still know days later, not by how much you answer")
+	var row := UI.hbox(28); p[1].add_child(row)
+	# Causes known, by topic
+	var kv := UI.vbox(8); kv.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(kv)
+	kv.add_child(UI.label("Causes known", 15, UI.GOLD, UI.f_body_b))
+	kv.add_child(UI.num("%d of %d" % [int(S.get("known", 0)), int(S.get("catalogSize", 0))], 26, UI.INK))
+	kv.add_child(UI.label("Known means right on three separate days. Two misses in a row and it goes back to learning. Green known, amber learning, grey not seen yet.", 13, UI.MUTED, null, true))
+	var cov = S.get("coverage", null)
+	if cov != null:
+		for t in cov:
+			var h := UI.hbox(8)
+			var tl := UI.label(String(t["topic"]), 14, UI.INK2, null, true); tl.custom_minimum_size = Vector2(200, 0); h.add_child(tl)
+			var bar := StackBar.new(); bar.parts = [int(t["known"]), int(t["learning"]), int(t["notSeen"])]
+			bar.custom_minimum_size = Vector2(260, 10); bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER; h.add_child(bar)
+			h.add_child(UI.label("%d / %d" % [int(t["known"]), int(t["known"]) + int(t["learning"]) + int(t["notSeen"])], 13, UI.MUTED))
+			kv.add_child(h)
+	# calibration
+	var cv := UI.vbox(8); cv.custom_minimum_size = Vector2(360, 0); row.add_child(cv)
+	cv.add_child(UI.label("How sure, how right", 15, UI.GOLD, UI.f_body_b))
+	var cal: Array = S.get("calibration", [])
+	var acc := {}
+	for c in cal:
+		var h := UI.hbox(8)
+		var nl := UI.label("When you say \"%s\"" % T.CONF[int(c["confidence"]) - 1], 14, UI.INK2); nl.custom_minimum_size = Vector2(170, 0); h.add_child(nl)
+		if c["accuracy"] != null:
+			acc[int(c["confidence"])] = [float(c["accuracy"]), int(c["n"])]
+			var m := ProgressBar.new(); m.show_percentage = false; m.max_value = 1.0; m.value = float(c["accuracy"])
+			m.custom_minimum_size = Vector2(100, 10); m.size_flags_vertical = Control.SIZE_SHRINK_CENTER; h.add_child(m)
+			h.add_child(UI.label("right %d %% (%d)" % [int(round(float(c["accuracy"]) * 100)), int(c["n"])], 13, UI.MUTED))
+		else:
+			h.add_child(UI.label("no answers yet", 13, UI.MUTED))
+		cv.add_child(h)
+	cv.add_child(UI.label(_calibration_line(acc), 13, UI.INK2, null, true))
+	# skills over time
+	var sv := UI.vbox(6); sv.custom_minimum_size = Vector2(340, 0); row.add_child(sv)
+	sv.add_child(UI.label("Skills over time", 15, UI.GOLD, UI.f_body_b))
+	var any := false
 	for sk in S.get("skills", []):
-		var h := UI.hbox(10)
-		var nl := UI.label(String(sk["skill"]).capitalize(), 15, UI.INK2); nl.custom_minimum_size = Vector2(130, 0); h.add_child(nl)
-		var bar := ProgressBar.new(); bar.show_percentage = false; bar.custom_minimum_size = Vector2(260, 10)
-		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		bar.max_value = 1.0; bar.value = float(sk["avg"]) if sk["avg"] != null else 0.0
-		h.add_child(bar)
-		h.add_child(UI.label(("%d %%  (%d)" % [int(round(float(sk["avg"]) * 100)), int(sk["n"])]) if sk["avg"] != null else "not tried yet", 14, UI.MUTED))
-		if S.get("weakest", null) != null and String(S["weakest"]) == String(sk["skill"]): h.add_child(UI.chip("weak spot", UI.SERIOUS, 12))
-		p[1].add_child(h)
+		if sk["avg"] == null or int(sk["n"]) < 3: continue
+		any = true
+		var h := UI.hbox(8)
+		var nl := UI.label(String(sk["skill"]).capitalize(), 13, UI.INK2); nl.custom_minimum_size = Vector2(90, 0); h.add_child(nl)
+		var sp := Spark.new(); sp.values = sk.get("history", []); sp.custom_minimum_size = Vector2(120, 22); h.add_child(sp)
+		h.add_child(UI.label("%d %%" % int(round(float(sk["avg"]) * 100)), 13, UI.MUTED))
+		if S.get("weakest", null) != null and String(S["weakest"]) == String(sk["skill"]) and float(sk["avg"]) < 0.75: h.add_child(UI.chip("weak spot", UI.SERIOUS, 12))
+		sv.add_child(h)
+	if not any: sv.add_child(UI.label("Shows after a few answers per skill.", 13, UI.MUTED))
+	p[1].add_child(_exam_row(shell, S))
+	p[1].add_child(UI.label("The game trains reasoning and vocabulary: why a Wine tastes as it does. Your nose and palate need real glasses alongside it.", 13, UI.MUTED, null, true))
 	return p[0]
 
-static func _ranks(L: Dictionary) -> Control:
-	var p: Array = UI.panel("Taster ranks", "every marked answer earns XP")
-	p[0].custom_minimum_size = Vector2(520, 0)
-	var cur := String(L.get("summary", {}).get("rank", ""))
-	for r in L.get("ranks", []):
-		var on := String(r["name"]) == cur
-		var h := UI.hbox(10)
-		var n := UI.label(String(r["name"]), 16, UI.GOLD if on else UI.INK, UI.f_body_b if on else null); n.custom_minimum_size = Vector2(140, 0); h.add_child(n)
-		h.add_child(UI.label("%d XP" % int(r["xp"]), 14, UI.MUTED))
-		var ln := UI.label(String(r["line"]), 14, UI.INK2, null, true); ln.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(ln)
-		p[1].add_child(h)
+const MONTHS := ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
+## Exam date: optional. With a date set, review intervals shrink so every Cause comes back before the exam (the sim does this).
+static func _exam_row(shell, S: Dictionary) -> Control:
+	var h := UI.hbox(10)
+	var ex = S.get("examDate", null)
+	var exam := "" if ex == null else String(ex)
+	var editing: bool = exam == "" or shell.state.get("tp_exam_edit", false)
+	if not editing:
+		var parts := exam.split("-")
+		var days := int(S.get("daysToExam", 0))
+		var when := "%d %s %s" % [int(parts[2]), MONTHS[int(parts[1]) - 1], parts[0]]
+		var txt := ("Exam on %s: %d day%s to go. Reviews are spaced so every Cause comes back before then." % [when, days, "" if days == 1 else "s"]) if days > 0 \
+			else "Your exam date (%s) has passed. Set the next one, or clear it to return to the normal spacing." % when
+		var l := UI.label(txt, 14, UI.INK2 if days > 0 else UI.SERIOUS, null, true); l.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(l)
+		var ch := UI.button("Change", false, 13); ch.pressed.connect(func(): shell.state["tp_exam_edit"] = true; shell.refresh()); h.add_child(ch)
+		var cl := UI.button("Clear", false, 13); cl.pressed.connect(func(): _set_exam(shell, "")); h.add_child(cl)
+		return h
+	var l2 := UI.label("Exam date (optional): reviews will be spaced to land before it.", 14, UI.INK2, null, true); l2.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(l2)
+	var now := Time.get_date_dict_from_system()
+	var y := int(shell.state.get("tp_exam_y", now["year"] if int(now["month"]) < 10 else int(now["year"]) + 1))
+	var m := int(shell.state.get("tp_exam_m", 6))
+	var d := int(shell.state.get("tp_exam_d", 1))
+	var days_in: int = [31, 29 if (y % 4 == 0 and (y % 100 != 0 or y % 400 == 0)) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]
+	d = mini(d, days_in)
+	var dl := []
+	for i in range(1, days_in + 1): dl.append([str(i), str(i)])
+	var ml := []
+	for i in 12: ml.append([str(i + 1), MONTHS[i]])
+	var yl := []
+	for i in 6: yl.append([str(int(now["year"]) + i), str(int(now["year"]) + i)])
+	h.add_child(UI.option(dl, str(d), func(v): shell.state["tp_exam_d"] = int(v), 70))
+	h.add_child(UI.option(ml, str(m), func(v): shell.state["tp_exam_m"] = int(v); shell.refresh(), 140))
+	h.add_child(UI.option(yl, str(y), func(v): shell.state["tp_exam_y"] = int(v); shell.refresh(), 96))
+	var sb := UI.button("Set", true, 13)
+	sb.pressed.connect(func():
+		var dd := mini(int(shell.state.get("tp_exam_d", d)), days_in)
+		_set_exam(shell, "%04d-%02d-%02d" % [int(shell.state.get("tp_exam_y", y)), int(shell.state.get("tp_exam_m", m)), dd]))
+	h.add_child(sb)
+	if exam != "":
+		var cn := UI.button("Cancel", false, 13); cn.pressed.connect(func(): shell.state.erase("tp_exam_edit"); shell.refresh()); h.add_child(cn)
+	return h
+
+static func _set_exam(shell, date: String) -> void:
+	var err := String(Sim.PracticeSetExamDate(date))
+	if err != "": shell.notify(err); return
+	shell.state.erase("tp_exam_edit"); shell.state.erase("tp_lobby")
+	shell.notify("Exam date cleared." if date == "" else "Exam date set: your reviews now work towards it.", true)
+	shell.refresh()
+
+static func _calibration_line(acc: Dictionary) -> String:
+	if not acc.has(3) or acc[3][1] < 5: return "Rate every answer honestly: after a few sessions this shows whether your confidence can be trusted."
+	if acc[3][0] < 0.75: return "You are sometimes sure when you shouldn't be. Slow down on the answers you feel certain about."
+	if acc.has(1) and acc[1][1] >= 5 and acc[1][0] > 0.65: return "Your guesses are better than you think: trust your reasoning a little more."
+	return "Your confidence matches your results well."
+
+class StackBar extends Control:
+	var parts := [0, 0, 0]
+	func _draw() -> void:
+		var total := 0
+		for x in parts: total += int(x)
+		var cols := [Color("0ca30c"), Color("fab219"), Color("36434f")]
+		draw_rect(Rect2(Vector2.ZERO, size), Color("182026"))
+		if total == 0: return
+		var x0 := 0.0
+		for i in 3:
+			var w := size.x * float(parts[i]) / float(total)
+			draw_rect(Rect2(x0, 0, w, size.y), cols[i])
+			x0 += w
+
+class Spark extends Control:
+	var values := []
+	func _draw() -> void:
+		if values.size() < 2: return
+		var pts := PackedVector2Array()
+		var avg := []
+		for i in values.size():
+			var lo := maxi(0, i - 4); var s := 0.0
+			for j in range(lo, i + 1): s += float(values[j])
+			avg.append(s / float(i - lo + 1))
+		for i in avg.size():
+			pts.append(Vector2(size.x * float(i) / float(avg.size() - 1), size.y * (1.0 - float(avg[i]))))
+		draw_line(Vector2(0, size.y * 0.5), Vector2(size.x, size.y * 0.5), Color(1, 1, 1, 0.08))
+		draw_polyline(pts, Color("d9b24c"), 2.0, true)
+
+# ------------------------------------------------------------------ today's session
+static func _entry_answers(shell, i: int) -> Dictionary:
+	var A: Dictionary = shell.state["tp_answers"]
+	while A["entries"].size() <= i: A["entries"].append({"answers": [], "confidence": []})
+	var e: Dictionary = A["entries"][i]
+	var nq: int = shell.state["tp_session"]["entries"][i]["questions"].size()
+	while e["answers"].size() < nq: e["answers"].append("")
+	while e["confidence"].size() < nq: e["confidence"].append(0)
+	return e
+
+static func _session(shell) -> Control:
+	var S: Dictionary = shell.state["tp_session"]
+	var v := UI.vbox(14)
+	var head := UI.hbox(12); v.add_child(head)
+	var hv := UI.vbox(2); hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL; head.add_child(hv)
+	hv.add_child(UI.head("Today's session", 26, UI.INK))
+	hv.add_child(UI.label("Answer each one and say how sure you are. The reveal explains every answer, right or wrong.", 15, UI.INK2, null, true))
+	var quit := UI.button("Leave the session", false, 14); quit.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	quit.pressed.connect(func(): T.reset(shell); shell.show_screen("practice"))
+	head.add_child(quit)
+	var entries: Array = S["entries"]
+	for i in entries.size():
+		v.add_child(_entry_card(shell, i, entries[i]))
+	var mb := UI.button("Mark my answers", true, 17); mb.custom_minimum_size = Vector2(260, 46)
+	mb.pressed.connect(func(): T.mark(shell, "practice"))
+	v.add_child(mb)
+	return v
+
+const REASON := {"due": ["due for review", Color("3987e5")], "weak": ["your weak spot", Color("ec835a")], "new": ["new", Color("0ca30c")],
+	"learning": ["still learning", Color("fab219")], "review": ["review", Color("75818a")]}
+
+static func _entry_card(shell, i: int, E: Dictionary) -> Control:
+	var p: Array = UI.panel("", "", 10)
+	var top := UI.hbox(10); p[1].add_child(top)
+	top.add_child(UI.head("%d" % (i + 1), 22, UI.GOLD))
+	var r: Array = REASON.get(String(E["reason"]), ["review", UI.MUTED])
+	top.add_child(UI.chip(r[0], r[1], 12))
+	var kind := String(E["kind"])
+	var ans := _entry_answers(shell, i)
+	if kind == "chain":
+		var tl := UI.label(String(E["title"]), 17, UI.INK, UI.f_body_b, true); tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		top.add_child(tl)
+		p[1].add_child(UI.label("Complete the chain from cause to glass.", 13, UI.MUTED))
+		var steps: Array = E["steps"]
+		var blanks := []
+		for b in E["blanks"]: blanks.append(int(b))
+		var qi := 0
+		for s in steps.size():
+			if s > 0: p[1].add_child(UI.label("↓", 14, UI.MUTED))
+			if s in blanks:
+				p[1].add_child(_question(shell, i, qi, E["questions"][qi], ans, true))
+				qi += 1
+			else:
+				var box := PanelContainer.new(); box.add_theme_stylebox_override("panel", UI.sb(UI.RAISED, 4, UI.LINE, 1, 10))
+				box.add_child(UI.label(String(steps[s]), 15, UI.INK, null, true)); p[1].add_child(box)
+	elif kind == "wine":
+		top.add_child(UI.label("Predict from the site, the season and the cellar", 15, UI.INK2))
+		p[1].add_child(_mini_context(E["wine"]))
+		p[1].add_child(_question(shell, i, 0, E["questions"][0], ans, false))
+	else:
+		top.add_child(UI.label("Two Wines from the same Block", 15, UI.INK2))
+		var cols := UI.hbox(16); p[1].add_child(cols)
+		for w in [[E["wine"], "Glass 1"], [E["wine2"], "Glass 2"]]:
+			var cv := UI.vbox(4); cv.size_flags_horizontal = Control.SIZE_EXPAND_FILL; cols.add_child(cv)
+			cv.add_child(UI.label(w[1], 14, UI.GOLD, UI.f_body_b))
+			cv.add_child(_mini_context(w[0]))
+		for q in E["questions"].size(): p[1].add_child(_question(shell, i, q, E["questions"][q], ans, false))
 	return p[0]
 
-# ------------------------------------------------------------------ answering
+static func _mini_context(W: Dictionary) -> Control:
+	var C: Dictionary = W["context"]
+	var g := GridContainer.new(); g.columns = 4
+	g.add_theme_constant_override("h_separation", 14); g.add_theme_constant_override("v_separation", 2)
+	var cells := [["Site", "%s, %s" % [C["plotName"], C["regionName"]]], ["Grape", "%s %d" % [C["variety"], int(C["vintage"])]],
+		["Season", "%d growing-degree days · summer max %.1f °C" % [int(C["gdd"]), float(C["summerTmax"])]],
+		["Picked", "%s at %d °Oe, TA %.1f g/L" % [C["harvestDate"], int(C["harvestOe"]), float(C["harvestTa"])]],
+		["Cellar", String(C["styleLabel"])], ["Tasted", "%s years after harvest" % str(C["ageYears"])]]
+	if float(C.get("frostLoss", 0)) >= 1: cells.append(["Spring frost", "%d %% of young shoots killed" % int(C["frostLoss"])])
+	for c in cells:
+		g.add_child(UI.label(c[0], 13, UI.MUTED))
+		var l := UI.label(c[1], 14, UI.INK, null, true); l.custom_minimum_size = Vector2(300, 0); g.add_child(l)
+	return g
+
+static func _question(shell, i: int, j: int, Q: Dictionary, ans: Dictionary, in_chain: bool) -> Control:
+	var v := UI.vbox(6)
+	if not in_chain: v.add_child(UI.label(String(Q["prompt"]), 15, UI.INK, UI.f_body_b))
+	var opts: Array = Q["options"]
+	var chosen := str(ans["answers"][j])
+	var long := false
+	for o in opts: long = long or String(o).length() > 22
+	var pick := func(o): ans["answers"][j] = o; shell.show_screen("practice")
+	if long:
+		for o in opts:
+			var b := UI.button(String(o), false, 14); b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			if String(o) == chosen:
+				b.add_theme_stylebox_override("normal", UI.sb(UI.GOLD.darkened(0.62), 4, UI.GOLD, 1, 10))
+				b.add_theme_color_override("font_color", UI.GOLD.lightened(0.35))
+			b.pressed.connect(pick.bind(String(o)))
+			v.add_child(b)
+	else:
+		v.add_child(UI.segmented(opts, chosen, pick))
+	if chosen != "":
+		var set_conf := func(c: int): ans["confidence"][j] = c; shell.show_screen("practice")
+		var h := UI.hbox(8)
+		h.add_child(UI.label("How sure?", 13, UI.MUTED))
+		h.add_child(T.confidence_row(int(ans["confidence"][j]), set_conf))
+		v.add_child(h)
+	return v
+
+static func _session_reveal(shell) -> Control:
+	var R: Dictionary = shell.state["tp_result"]
+	var animate: bool = not shell.capture and not shell.state.get("tp_anim_done", false)
+	shell.state["tp_anim_done"] = true
+	var v := UI.vbox(14)
+	v.add_child(T.result_banner(R))
+	var delay := 0.0
+	for e in R["entries"]:
+		var p: Array = UI.panel(String(e["title"]), String(e["topic"]))
+		p[1].add_child(UI.label(" → ".join(e["chain"]), 14, UI.INK2, null, true))
+		p[1].add_child(T.item_rows(e["items"], animate, delay, 260.0))
+		delay += 0.07 * e["items"].size()
+		v.add_child(p[0])
+	var rp = T.recap_panel(R)
+	if rp != null: v.add_child(rp)
+	var bar := UI.hbox(12); v.add_child(bar)
+	var back := UI.button("Back to Tasting practice", true, 16)
+	back.pressed.connect(func(): T.reset(shell); shell.show_screen("practice"))
+	bar.add_child(back)
+	return v
+
+# ------------------------------------------------------------------ one-glass exercises
 static func _answer(shell) -> Control:
 	var S: Dictionary = shell.state["tp_session"]
 	var G: Dictionary = S["glasses"][0]
@@ -137,22 +379,22 @@ static func _answer(shell) -> Control:
 	row.add_child(ans[0])
 	return v
 
-# ------------------------------------------------------------------ reveal
 static func _reveal(shell) -> Control:
 	var R: Dictionary = shell.state["tp_result"]
-	var S: Dictionary = shell.state["tp_session"]
 	var animate: bool = not shell.capture and not shell.state.get("tp_anim_done", false)
 	shell.state["tp_anim_done"] = true
 	var v := UI.vbox(14)
 	v.add_child(T.result_banner(R))
 	var g: Dictionary = R["glasses"][0]
-	var W: Dictionary = S["glasses"][0]["wine"]
-	var p: Array = UI.panel("%s · %s" % [String(g.get("label", W.get("label", ""))), String(g["producer"])], String(g["style"]))
+	var W: Dictionary = g["wine"]
+	var p: Array = UI.panel("%s · %s" % [str(g.get("label", "")), str(g["producer"])], str(g["style"]))
 	p[1].add_child(T.item_rows(g["items"], animate))
 	p[1].add_child(UI.label(String(g["climate"]), 13, UI.MUTED, null, true))
 	var np = T.note_panel(g.get("note", null))
 	if np != null: p[1].add_child(np)
 	v.add_child(p[0])
+	var rp = T.recap_panel(R)
+	if rp != null: v.add_child(rp)
 	var sheet: Array = UI.panel("The full Tasting sheet", "every line says why")
 	sheet[1].add_child(T._sheet_view(W, ["appearance", "nose", "palate"]))
 	sheet[1].add_child(UI.label(String(W["sheet"]["qualityBecause"]), 14, UI.INK2, null, true))

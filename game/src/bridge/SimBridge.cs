@@ -8,6 +8,7 @@ using Godot;
 using TerroirEngine.Data;
 using TerroirEngine.Game;
 using TerroirEngine.Tasting.Practice;
+using TerroirEngine.Learning;
 using TerroirEngine.Vineyard;
 
 namespace TerroirGame;
@@ -27,6 +28,8 @@ public partial class SimBridge : Node
             // editor/dev: data/ above the project; exported build: data/ next to the .exe
             string start = OS.HasFeature("editor") ? ProjectSettings.GlobalizePath("res://") : System.IO.Path.GetDirectoryName(OS.GetExecutablePath())!;
             _data = new GameData(GameData.LocateDataRoot(start));
+            var d = _data;
+            Task.Run(() => { try { LearnCards.OakTable(d); } catch { } });   // warm the oak card's visual (about a second of pours)
         }
         catch (Exception e) { _lastError = e.Message; GD.PushError("Terroir: could not load game data: " + e.Message); }
     }
@@ -62,6 +65,7 @@ public partial class SimBridge : Node
                         DensityVinesHa = b.Value.GetProperty("density").GetInt32(),
                     };
             _game = new GameSession(_data!, setup);
+            Predictions.Init(_game);
             return true;
         }
         catch (Exception e) { _lastError = e.ToString(); GD.PushError("Terroir: new game failed: " + e); return false; }
@@ -105,6 +109,7 @@ public partial class SimBridge : Node
             var path = Path.Combine(SaveDir(), Safe(name) + ".json");
             if (!File.Exists(path)) return false;
             _game = GameSession.Load(_data!, File.ReadAllText(path));
+            Predictions.Init(_game);   // Wines bottled before predictions existed count as revealed
             return true;
         }
         catch (Exception e) { _lastError = e.ToString(); GD.PushError("Terroir: load failed: " + e); return false; }
@@ -153,12 +158,28 @@ public partial class SimBridge : Node
         File.Move(tmp, RecordPath, true);
     }
     private int? MaxVintage() => _game == null ? null : PracticeSession.MaxVintageFor(_game.Date);
-    private static DateOnly Today() => DateOnly.FromDateTime(DateTime.Now);
+    private static DateOnly? _todayOverride;
+    private static DateOnly Today() => _todayOverride ?? DateOnly.FromDateTime(DateTime.Now);
+    /// <summary>Harness only: play sessions on chosen dates ("" returns to the real date).</summary>
+    public void SetPracticeToday(string date) => _todayOverride = DateOnly.TryParse(date, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : null;
 
     public string PracticeSummary()
     {
-        try { return PracticeProgress.Summary(LoadRecord(), Today()).ToJsonString(); }
+        try { return PracticeProgress.Summary(LoadRecord(), Today(), _data == null ? null : CauseCatalog.All(_data)).ToJsonString(); }
         catch (Exception e) { _lastError = e.ToString(); return "{}"; }
+    }
+
+    /// <summary>Sets the exam date the review schedule works towards ("yyyy-MM-dd"; "" clears it). Returns "" when saved, else
+    /// the reason it was refused (the sim validates; the screen only shows the message).</summary>
+    public string PracticeSetExamDate(string date)
+    {
+        try
+        {
+            var (rec, err) = PracticeProgress.TrySetExamDate(LoadRecord(), date, Today());
+            if (err == null) SaveRecord(rec);
+            return err ?? "";
+        }
+        catch (Exception e) { _lastError = e.ToString(); return "The exam date could not be saved."; }
     }
 
     public string PracticeLobby()
@@ -200,6 +221,86 @@ public partial class SimBridge : Node
     }
 
     public void PourDrop() { _pourTaskId = 0; _session = null; }
+
+    /// <summary>Harness only (scripts/practice.sh, learning.sh): the poured Wines and the session's answers. The screens never
+    /// call it; they get only what they may show until the reveal.</summary>
+    public string PracticeDebugKey()
+    {
+        if (_session == null) return "{}";
+        return new JsonObject
+        {
+            ["wines"] = new JsonArray(_session.Flight.Select(p => (JsonNode)PracticeJson.Poured(p)).ToArray()),
+            ["entries"] = new JsonArray(_session.Entries.Select(e => (JsonNode)new JsonObject
+            {
+                ["answers"] = new JsonArray(e.Questions.Select(q => (JsonNode)JsonValue.Create(q.Answer)!).ToArray()),
+            }).ToArray()),
+        }.ToJsonString();
+    }
+
+    // ------------------------------------------------------------------ learn cards (learning-core §7)
+    /// <summary>contextJson: {plot?, block?, lot?}. Returns the card for the drawer and remembers it was opened.</summary>
+    public string LearnCard(string id, string contextJson)
+    {
+        if (_data == null) return "{}";
+        try
+        {
+            var ctx = JsonNode.Parse(string.IsNullOrEmpty(contextJson) ? "{}" : contextJson) as JsonObject ?? new JsonObject();
+            var rec = LoadRecord();
+            var card = LearnCards.Card(_data, id, ctx, rec, _game);
+            if (card == null) return "{}";
+            var seen = rec["seenCards"] as JsonArray ?? new JsonArray();
+            if (!seen.Any(x => x?.GetValue<string>() == id)) { seen.Add(id); rec["seenCards"] = seen.DeepClone(); SaveRecord(rec); }
+            return card.ToJsonString();
+        }
+        catch (Exception e) { _lastError = e.ToString(); GD.PushError("Terroir: learn card failed: " + e); return "{}"; }
+    }
+
+    public string LearnSeenList()
+    {
+        var rec = LoadRecord();
+        return (rec["seenCards"] as JsonArray ?? new JsonArray()).ToJsonString();
+    }
+
+    /// <summary>The card's check question: marks it and puts the card's Causes in the review queue (never a review itself).</summary>
+    public bool LearnCheck(string id, string answer, int confidence)
+    {
+        if (_data == null) return false;
+        try
+        {
+            var (rec, right) = LearnCards.Check(_data, LoadRecord(), id, answer, Today());
+            SaveRecord(rec);
+            return right;
+        }
+        catch (Exception e) { _lastError = e.ToString(); return false; }
+    }
+
+    // ------------------------------------------------------------------ predict before reveal on the Estate (learning-core §6)
+    public string PredictionFor(string wineId)
+    {
+        if (_game == null) return "{}";
+        try { return Predictions.ForOrNull(_game, wineId)?.ToJsonString() ?? "{}"; }
+        catch (Exception e) { _lastError = e.ToString(); return "{}"; }
+    }
+
+    /// <summary>Marks the predictions, adds them to the study record, and reveals the Wine (a game flag).</summary>
+    public string RevealWine(string wineId, string answersJson)
+    {
+        if (_game == null || _data == null) return "{}";
+        try
+        {
+            var answers = JsonNode.Parse(answersJson) as JsonObject ?? new JsonObject();
+            var (result, events) = Predictions.Mark(_game, wineId, answers);
+            var ev = new JsonObject { ["kind"] = "practice", ["date"] = Today().ToString("yyyy-MM-dd"), ["items"] = new JsonArray(events.Select(e => (JsonNode)e).ToArray()) };
+            var rec = PracticeProgress.Apply(LoadRecord(), ev);
+            SaveRecord(rec);
+            result["summary"] = PracticeProgress.Summary(rec, Today(), CauseCatalog.All(_data));
+            Predictions.Reveal(_game, wineId);
+            return result.ToJsonString();
+        }
+        catch (Exception e) { _lastError = e.ToString(); GD.PushError("Terroir: reveal failed: " + e); return "{}"; }
+    }
+
+    public void SkipPrediction(string wineId) { if (_game != null) Predictions.Reveal(_game, wineId); }
 
     /// <summary>Marks the poured Flight once, updates and saves the study record, and returns the reveal.</summary>
     public string PracticeMark(string answersJson)

@@ -57,6 +57,9 @@ dE/dt  = − Y_ES · dS/dt
 - Bely, Sablayrolles & Barre (1990) linked the early maximum CO₂ production rate to assimilable nitrogen. They proposed ~140 mg N/L as the threshold below which nitrogen deficiency slows fermentation (1.3 g CO₂/L·h at 24 °C).
 - **Requirement grows with sugar.** The game uses YAN_target = 140 mg/L at 20 °Brix + 25 mg/L per additional °Brix. **Game heuristic, UNVERIFIED**: to be checked against AWRI guidance before calibration.
 - **Additions (DAP):** the player may add diammonium phosphate at the start of fermentation or up to ~1/3 sugar depletion. N rises by the addition's nitrogen content (DAP ≈ 21 % N by mass, from the formula (NH₄)₂HPO₄: 28/132). EU and US legal maxima are UNVERIFIED and belong to the law model.
+- **Low YAN and H₂S.** Wine yeast starved of assimilable nitrogen liberate hydrogen sulphide. How much depends on the strain, the sulphur source and the sulphite-reductase activity just before nitrogen runs out; ammonium and most amino acids suppress it (Jiranek, Langridge & Henschke 1995).
+- **Too little and too much nitrogen both cost quality.** Low must YAN gives low yeast populations and poor fermentation vigour, more sluggish or stuck fermentations, more H₂S and higher alcohols, and fewer esters. High YAN gives more biomass and peak heat, more ethyl acetate, acetic acid and volatile acidity, more haze proteins, urea, ethyl carbamate and biogenic amines, and a higher risk of microbial instability. Intermediate YAN gives the best balance; the must should be measured just before fermentation and topped up with DAP where needed (Bell & Henschke 2005).
+- **Game model:** the "Add DAP if YAN < 150 mg/L" option tops a must up to its YAN target plus 20 mg/L only when it falls short, so the game never over-feeds and does not model the harms of high YAN (game simplification).
 
 ## Heat and tank temperature
 The fermentation enthalpy is taken as ≈ −100 kJ per mol hexose fermented. The value is commonly cited (Williams 1982, AJEV); the citation is from memory and UNVERIFIED.
@@ -74,6 +77,12 @@ u_ctrl ∈ [0,1]  (the controller opens the glycol valve when T > setpoint + dea
 - The basic Winery tanks (spec §5.3) are temperature-controlled. UA_jacket is sized so that a 5,000 L tank can hold 16 °C during peak white fermentation. **UNVERIFIED** magnitude, a design assumption rather than a sourced value.
 - A red cap is warmer than the juice beneath it (+2–5 °C typical). The game reports cap temperature separately for red Lots. UNVERIFIED range.
 - **Cellar master Staff level** sets the controller deadband: Junior ±1.5 °C, Experienced ±0.8 °C, Senior ±0.3 °C (spec §5.4). **Game simplification.**
+
+### Fermentation temperature and aroma
+- In a defined must fermented at 15 and 28 °C, yeast-derived compounds with fresh, fruity aromas were higher at 15 °C, and flowery ones higher at 28 °C (Molina et al. 2007).
+- Esters also escape with the CO₂. Losses in the off-gas were negligible for higher alcohols but very high for esters, up to 70 % of the ethyl hexanoate at 30 °C, and they peaked at the end of fermentation, so high final temperatures cost aroma (Mouret et al. 2012).
+- Reds are fermented warmer because fermentation temperature is among the variables that consistently raise phenolic extraction (Sacchi et al. 2005; `extraction-and-oak.md` §1).
+- **Game model:** the ester formation rate falls in steps above 15, 18 and 24 °C, with the loss to CO₂ folded into that rate (game simplification; `aroma-and-faults.md` hooks).
 
 ## Emergent failure states
 All of these come from the equations and are never rolled:
@@ -93,6 +102,15 @@ Steps and model effects:
 4. **Sterile-filter before bottling.** If this is skipped for a wine with residual sugar > 4 g/L, there is a refermentation risk in bottle. That is a fault state (CO₂ spritz, haze) whose probability rises with residual sugar, time and low molecular SO₂.
 
 Target calibration: a Mosel Kabinett feinherb in the range of 8–10 % vol with residual sugar ~20–45 g/L. That range is UNVERIFIED; the law model sets the legal residual-sugar terms, see `tasting-sheet.md`.
+
+**Evidence and law behind the steps:**
+- Yeast growth and sugar uptake fall as the must cools (the temperature-dependent rates of Coleman et al. 2007, the kinetic model above), and molecular SO₂ is the antimicrobial form of SO₂ (`acid-ph-so2.md` §6). Chilling plus SO₂ therefore halts the yeast; removing them and sterile-filtering keeps the sugar safe in bottle (`extraction-and-oak.md` §4).
+- Every 16.83 g/L of sugar left unfermented is about 1 % vol less alcohol (conventions above). Stopping an 80 °Oe must (≈ 183 g/L sugar) at 35 g/L gives ≈ 8.8 % vol instead of ≈ 10.9 % vol if fermented dry.
+- Prädikat wines such as Kabinett may not be enriched (`law.md` §2; Weingesetz §20), so their sweetness and alcohol both come from the grapes' own sugar.
+- EU label terms let acidity shift the sweetness limits for still wine: "dry" up to 4 g/L, or up to 9 g/L if the total acidity (as tartaric) is no more than 2 g/L below the residual sugar; "medium dry" up to 12 g/L, or up to 18 g/L if the total acidity is no more than 10 g/L below the sugar; "medium" up to 45 g/L; "sweet" from 45 g/L (Commission Delegated Regulation (EU) 2019/33, Annex III Part B; retained text on legislation.gov.uk, read 2026-10-02).
+- **Game simplification:** the model stops a Lot exactly at the chosen sugar level; the overshoot of step 1 is not simulated.
+
+- **The other route: sweet reserve.** EU rules let a wine be sweetened with grape must, concentrated grape must or rectified concentrated grape must (in German practice *Süssreserve*, unfermented juice kept back). For a PDO wine the must has to come from the same region, sweetening may raise the total alcohol by at most 4 % vol, and it is allowed only at the production and wholesale stages [EU-2019/934 Annex I Part D]. The game does not offer it (game simplification).
 
 ## Inputs and outputs
 - **Inputs from the harvest:** sugar S₀, YAN₀, malic and tartaric acid, K⁺, pH, precursor pools, Lot volume.
@@ -131,4 +149,12 @@ The scripted golden-vintage runs must land inside these ranges.
 - Bisson, L.F. (1999). Stuck and sluggish fermentations. *Am. J. Enol. Vitic.* 50(1):107–119. https://www.ajevonline.org/content/50/1/107
 - WineMaker Magazine, "Controlling Fermentation Temperature" (practitioner source for °C per °Brix). https://winemakermag.com/articles/controlling-fermentation-temperature
 - Williams, L.A. (1982). Heat release in alcoholic fermentation (AJEV). Cited from memory, **UNVERIFIED**.
+- Molina, A.M., Swiegers, J.H., Varela, C., Pretorius, I.S., Agosin, E. (2007). Influence of wine fermentation temperature on the synthesis of yeast-derived volatile aroma compounds. *Applied Microbiology and Biotechnology* 77(3):675–687. doi:10.1007/s00253-007-1194-3
+- Mouret, J.-R., Morakul, S., Nicolle, P., Athès, V., Sablayrolles, J.-M. (2012). Gas–liquid transfer of aroma compounds during winemaking fermentations. *LWT – Food Science and Technology* 49:238–244. doi:10.1016/j.lwt.2012.04.031
+- Jiranek, V., Langridge, P., Henschke, P.A. (1995). Regulation of hydrogen sulfide liberation in wine-producing *Saccharomyces cerevisiae* strains by assimilable nitrogen. *Applied and Environmental Microbiology* 61(2):461–467. doi:10.1128/aem.61.2.461-467.1995
+- Bell, S.-J., Henschke, P.A. (2005). Implications of nitrogen nutrition for grapes, fermentation and wine. *Australian Journal of Grape and Wine Research* 11(3):242–295. doi:10.1111/j.1755-0238.2005.tb00028.x
+- Sacchi, K.L., Bisson, L.F., Adams, D.O. (2005). A review of the effect of winemaking techniques on phenolic extraction in red wines. *Am. J. Enol. Vitic.* 56(3):197–206. doi:10.5344/ajev.2005.56.3.197
+- Commission Delegated Regulation (EU) 2019/33, Annex III Part B (sugar-content terms). https://www.legislation.gov.uk/eur/2019/33/annex/III
+- Weingesetz §20. https://www.gesetze-im-internet.de/weing_1994/__20.html
 - Jolly, N.P., Varela, C., Pretorius, I.S. (2014). Not your ordinary yeast: non-Saccharomyces yeasts in wine production uncovered. *FEMS Yeast Research* 14. Cited from memory, **UNVERIFIED**.
+- [EU-2019/934] Commission Delegated Regulation (EU) 2019/934, Annex I Part D (sweetening): https://www.legislation.gov.uk/eur/2019/934/annex/I/part/D (read 2026-10-02)
