@@ -8,6 +8,7 @@ using Godot;
 using TerroirEngine.Data;
 using TerroirEngine.Game;
 using TerroirEngine.Tasting.Practice;
+using TerroirEngine.Learning;
 using TerroirEngine.Vineyard;
 
 namespace TerroirGame;
@@ -62,6 +63,7 @@ public partial class SimBridge : Node
                         DensityVinesHa = b.Value.GetProperty("density").GetInt32(),
                     };
             _game = new GameSession(_data!, setup);
+            Predictions.Init(_game);
             return true;
         }
         catch (Exception e) { _lastError = e.ToString(); GD.PushError("Terroir: new game failed: " + e); return false; }
@@ -105,6 +107,7 @@ public partial class SimBridge : Node
             var path = Path.Combine(SaveDir(), Safe(name) + ".json");
             if (!File.Exists(path)) return false;
             _game = GameSession.Load(_data!, File.ReadAllText(path));
+            Predictions.Init(_game);   // Wines bottled before predictions existed count as revealed
             return true;
         }
         catch (Exception e) { _lastError = e.ToString(); GD.PushError("Terroir: load failed: " + e); return false; }
@@ -218,6 +221,34 @@ public partial class SimBridge : Node
             }).ToArray()),
         }.ToJsonString();
     }
+
+    // ------------------------------------------------------------------ predict before reveal on the Estate (learning-core §6)
+    public string PredictionFor(string wineId)
+    {
+        if (_game == null) return "{}";
+        try { return Predictions.ForOrNull(_game, wineId)?.ToJsonString() ?? "{}"; }
+        catch (Exception e) { _lastError = e.ToString(); return "{}"; }
+    }
+
+    /// <summary>Marks the predictions, adds them to the study record, and reveals the Wine (a game flag).</summary>
+    public string RevealWine(string wineId, string answersJson)
+    {
+        if (_game == null || _data == null) return "{}";
+        try
+        {
+            var answers = JsonNode.Parse(answersJson) as JsonObject ?? new JsonObject();
+            var (result, events) = Predictions.Mark(_game, wineId, answers);
+            var ev = new JsonObject { ["kind"] = "practice", ["date"] = Today().ToString("yyyy-MM-dd"), ["items"] = new JsonArray(events.Select(e => (JsonNode)e).ToArray()) };
+            var rec = PracticeProgress.Apply(LoadRecord(), ev);
+            SaveRecord(rec);
+            result["summary"] = PracticeProgress.Summary(rec, Today(), CauseCatalog.All(_data));
+            Predictions.Reveal(_game, wineId);
+            return result.ToJsonString();
+        }
+        catch (Exception e) { _lastError = e.ToString(); GD.PushError("Terroir: reveal failed: " + e); return "{}"; }
+    }
+
+    public void SkipPrediction(string wineId) { if (_game != null) Predictions.Reveal(_game, wineId); }
 
     /// <summary>Marks the poured Flight once, updates and saves the study record, and returns the reveal.</summary>
     public string PracticeMark(string answersJson)
