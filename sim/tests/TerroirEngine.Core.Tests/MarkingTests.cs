@@ -34,7 +34,7 @@ public class MarkingTests
     public void Categorical_OneOrZero_AndAromas_ByOverlap()
     {
         var p = Red.Value;
-        var m = TastingMarker.Mark(Fixture.Data, p, "sheet", Answers(("colour", p.Sheet.Colour), ("development", "tired")));
+        var m = TastingMarker.Mark(Fixture.Data, p, "sheet", Answers(("colour", p.Sheet.Colour), ("development", p.Sheet.Development == "youthful" ? "tired" : "youthful")));
         Assert.Equal(1, m.Items.First(x => x.Key == "colour").Score);
         Assert.Equal(0, m.Items.First(x => x.Key == "development").Score);
         var fams = p.Sheet.Aromas.Select(a => a.Family).Distinct().ToList();

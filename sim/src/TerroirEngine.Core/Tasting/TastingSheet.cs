@@ -17,6 +17,27 @@ public sealed class TastingSheet
     public List<string> Faults { get; } = new();
     public string Quality = "", QualityBecause = "", Readiness = "";
     public List<(string Criterion, bool Met, string Why)> Blic { get; } = new();
+    // Tasting sheet 2 (docs/superpowers/specs/2026-10-02-tasting-sheet-2-design.md §3)
+    public static readonly string[] ColoursWhite = { "lemon-green", "lemon", "gold", "amber", "brown" };
+    public static readonly string[] ColoursRed = { "purple", "ruby", "garnet", "tawny", "brown" };
+    public static readonly string[] FruitRipenessScale = { "unripe", "fresh", "ripe", "dried or cooked" };
+    public static readonly string[] ReadinessOptions = { "too young", "can drink now, has potential for ageing", "drink now, not for (further) ageing", "too old" };
+    public static readonly string[] FruitFamiliesWhite = { "green fruit", "citrus fruit", "stone fruit", "tropical fruit" };
+    public static readonly string[] FruitFamiliesRed = { "red fruit", "black fruit" };
+    public static bool IsFruit(string family) => FruitFamiliesWhite.Contains(family) || FruitFamiliesRed.Contains(family);
+    /// <summary>Other observations (deposit, legs, spritz): noted, not marked.</summary>
+    public List<(string Term, string Because)> Observations { get; } = new();
+    public string FruitRipeness = "", FruitRipenessBecause = "";
+    /// <summary>A nose of few, purely primary families (at most one besides the fruit) and no fault.</summary>
+    public bool Simple;
+    /// <summary>Flavour characteristics: the nose families felt on the palate (medium or above, without smell-only notes).</summary>
+    public List<string> Flavours { get; } = new();
+    /// <summary>The quality argument: the criteria met and missed with their evidence, and why the Wine is not a level higher.</summary>
+    public List<string> QualityFor { get; } = new();
+    public List<string> QualityAgainst { get; } = new();
+    public string QualityNotHigher = "";
+    /// <summary>The drinking window in years from the harvest (structure-based; UNVERIFIED design values).</summary>
+    public double WindowYears;
     public List<string> Chemistry { get; } = new();
     /// <summary>The Causes (data/causes.json) behind this sheet and the line each shows on: "appearance", "aroma:&lt;family&gt;",
     /// "palate:&lt;Attribute&gt;", "fault" or "vintage" (learning-core design §3.2). Written by the generator at the same
@@ -29,6 +50,17 @@ public sealed class TastingSheet
 /// aroma-and-faults.md odour-activity model OAV = C / threshold, perceived = log10(OAV) + 1 when OAV ≥ 1).</summary>
 public static class TastingSheetGenerator
 {
+    private static readonly Dictionary<string, string> FruitFamily = new()
+    {
+        ["green apple"] = "green fruit", ["apple"] = "green fruit", ["pear"] = "green fruit",
+        ["lime"] = "citrus fruit", ["lemon"] = "citrus fruit", ["grapefruit"] = "citrus fruit",
+        ["white peach"] = "stone fruit", ["peach"] = "stone fruit", ["apricot"] = "stone fruit",
+        ["pineapple"] = "tropical fruit", ["melon"] = "tropical fruit",
+        ["redcurrant"] = "red fruit", ["cranberry"] = "red fruit", ["sour cherry"] = "red fruit", ["red cherry"] = "red fruit", ["raspberry"] = "red fruit", ["strawberry"] = "red fruit",
+        ["blackcurrant"] = "black fruit", ["tart blackcurrant"] = "black fruit", ["black cherry"] = "black fruit", ["plum"] = "black fruit", ["blackberry"] = "black fruit",
+        ["black plum"] = "black fruit", ["jammy blackcurrant"] = "black fruit",
+    };
+
     private static double Perceived(double c, double threshold) { double oav = c / threshold; return oav < 1 ? 0 : Math.Log10(oav) + 1; }
     private static string IntensityWord(double p) => p <= 0 ? "" : p < 1.3 ? "light" : p < 1.7 ? "medium" : "pronounced";
     private static readonly string[] Five = { "low", "medium(−)", "medium", "medium(+)", "high" };
@@ -52,13 +84,14 @@ public static class TastingSheetGenerator
         if (!red)
         {
             double colourScore = 0.2 * ageYears + b.Acetaldehyde / 120 + (b.OakTannin > 40 ? 0.35 : 0) + b.NobleRotShare * 1.5 + (b.Choices["Pressing"] == 2 ? 0.25 : 0) + b.Laccase * 3 + (b.SunburnIndex * 1.5);
-            s.Colour = colourScore < 0.25 ? "lemon-green" : colourScore < 0.8 ? "lemon" : colourScore < 1.6 ? "gold" : "amber";
+            s.Colour = b.Acetaldehyde > 100 || colourScore >= 2.6 ? "brown" : colourScore < 0.25 ? "lemon-green" : colourScore < 0.8 ? "lemon" : colourScore < 1.6 ? "gold" : "amber";
             s.ColourIntensity = colourScore < 0.35 && alc < 11.5 ? "pale" : colourScore < 1.0 ? "medium" : "deep";
             s.AppearanceBecause = s.Colour switch
             {
                 "lemon-green" => "young, protected from oxygen, no oak",
                 "lemon" => "young; " + (b.OakTannin > 40 ? "oak contact deepens the colour" : "normal for the style"),
                 "gold" => b.NobleRotShare > 0.1 ? "noble rot concentrates and deepens colour" : b.OakTannin > 40 ? "barrel ageing and oxygen deepen the colour" : "oxygen exposure and age",
+                "brown" => "advanced oxidation: the wine has browned — " + (b.Laccase > 0.05 ? "laccase from grey-rotten grapes" : "too much oxygen"),
                 _ => "oxidation (browning) — " + (b.Laccase > 0.05 ? "laccase from grey-rotten grapes" : "too much oxygen"),
             };
         }
@@ -66,13 +99,19 @@ public static class TastingSheetGenerator
         {
             double colour = b.Anthocyanin + b.PolymericPigment * 1.4;
             s.ColourIntensity = colour < 150 ? "pale" : colour < 350 ? "medium" : "deep";
-            s.Colour = ph > 3.75 || ageYears > 4 ? "garnet" : ageYears < 1.5 && ph < 3.5 && colour > 250 ? "purple" : "ruby";
+            s.Colour = b.Acetaldehyde > 100 ? "brown" : ageYears > 10 || b.Acetaldehyde > 70 ? "tawny" : ph > 3.75 || ageYears > 4 ? "garnet" : ageYears < 1.5 && ph < 3.5 && colour > 250 ? "purple" : "ruby";
             s.AppearanceBecause = s.ColourIntensity switch
             {
                 "pale" => v == "Pinot Noir" ? "Pinot Noir has few, unstable anthocyanins (no acylated forms)" : "little colour extracted — short maceration, rot or unripe skins",
                 "deep" => "thick skins and good extraction" + (b.PolymericPigment > 60 ? "; stable polymeric pigments formed with tannin" : ""),
                 _ => "moderate colour extraction",
-            } + (s.Colour == "garnet" ? "; higher pH shifts colour towards garnet" : "");
+            } + (s.Colour switch
+            {
+                "garnet" => "; higher pH shifts colour towards garnet",
+                "tawny" => "; age and oxygen have turned the colour tawny",
+                "brown" => "; oxidation has browned the wine",
+                _ => "",
+            });
         }
         if (b.Choices["Pressing"] == 0 && !red && b.Opt("Settling").StartsWith("None")) s.Clarity = "clear (slight haze before fining)";
 
@@ -89,19 +128,25 @@ public static class TastingSheetGenerator
                 fruitBecause = $"Riesling picked at {harvestOe:0} °Oe: {(ripeness < 0.1 ? "early, so citrus and green fruit" : ripeness < 0.6 ? "balanced ripeness" : "very ripe, so stone and tropical fruit")}; yield {yieldT:0.0} t/ha {(yieldT > 11 ? "dilutes flavour" : yieldT < 6 ? "concentrates flavour" : "")}";
                 break;
             case "Chardonnay":
-                fruitTerms = ripeness < 0.1 ? "green apple, lemon" : ripeness < 0.6 ? "apple, pear, citrus" : "peach, melon, pineapple";
+                fruitTerms = ripeness < 0.1 ? "green apple, lemon" : ripeness < 0.6 ? "apple, pear, lemon" : "peach, melon, pineapple";
                 fruitBecause = $"Chardonnay is fairly neutral; ripeness ({harvestOe:0} °Oe) moves it from citrus to stone and tropical fruit";
                 break;
             case "Pinot Noir":
-                fruitTerms = ripeness < 0.1 ? "redcurrant, cranberry, sour cherry" : ripeness < 0.6 ? "red cherry, raspberry, strawberry" : "black cherry, plum";
+                fruitTerms = ripeness < 0.1 ? "redcurrant, cranberry, sour cherry" : ripeness < 0.6 ? "red cherry, raspberry, strawberry" : "red cherry, black cherry, plum";
                 fruitBecause = $"Pinot Noir at {harvestOe:0} °Oe gives {(ripeness < 0.1 ? "tart red fruit" : ripeness < 0.6 ? "fresh red fruit" : "riper, darker fruit")}";
                 break;
             default:
-                fruitTerms = ripeness < 0.1 ? "redcurrant, blackcurrant leaf" : ripeness < 0.6 ? "blackcurrant, black cherry" : "blackberry, black plum, jammy blackcurrant";
+                fruitTerms = ripeness < 0.1 ? "redcurrant, tart blackcurrant" : ripeness < 0.6 ? "blackcurrant, black cherry" : "blackberry, black plum, jammy blackcurrant";
                 fruitBecause = $"Cabernet Sauvignon picked at {harvestOe:0} °Oe";
                 break;
         }
-        fam.Add(("Primary", red ? "red and black fruit" : "fruit", fruitTerms, fruitP, fruitBecause));
+        // the fruit split into the exam's families (green, citrus, stone, tropical; red, black); the first family leads
+        var fruitGroups = fruitTerms.Split(", ").GroupBy(t => FruitFamily.GetValueOrDefault(t, red ? "red fruit" : "green fruit")).ToList();
+        for (int fi = 0; fi < fruitGroups.Count; fi++)
+            fam.Add(("Primary", fruitGroups[fi].Key, string.Join(", ", fruitGroups[fi]), fi == 0 ? fruitP : fruitP * 0.9, fruitBecause));
+        bool driedCooked = b.NobleRotShare > 0.05 || b.SunburnIndex > 0.08 || (red && ripeness >= 1.0);
+        s.FruitRipeness = driedCooked ? "dried or cooked" : ripeness < -0.2 ? "unripe" : ripeness < 0.6 ? "fresh" : "ripe";
+        s.FruitRipenessBecause = $"picked at {harvestOe:0} °Oe" + (b.NobleRotShare > 0.05 ? "; noble rot dries the berries (dried fruit)" : b.SunburnIndex > 0.08 ? "; sunburn cooks the fruit" : red && ripeness >= 1.0 ? "; very ripe, so the black fruit reads cooked or jammy" : ripeness < -0.2 ? ", well short of full ripeness" : ripeness < 0.6 ? ", so the fruit is fresh" : ", so the fruit is ripe");
         if (v == "Pinot Noir") fam.Add(("Primary", "earthy", "forest floor, mushroom", 0.9 + 0.4 * Math.Max(0, ripeness) + 0.3 * b.WholeBunchShare, "Pinot Noir's savoury side, more pronounced from ripe fruit and whole bunches"));
         if (v == "Cabernet Sauvignon" && b.Ibmp < 15) fam.Add(("Primary", "herbal", "mint, cedar, graphite", 0.9 + 0.3 * Math.Max(0, ripeness), "Cabernet Sauvignon's herbal-savoury character without green pyrazine"));
         if (b.NobleRotShare > 0.05) fam.Add(("Primary", "noble rot", "honey, marmalade, dried apricot", 1.2 + b.NobleRotShare * 3, $"{b.NobleRotShare * 100:0} % noble rot (botrytis on ripe, intact berries in misty-then-dry weather)"));
@@ -160,6 +205,10 @@ public static class TastingSheetGenerator
         double intensity = ps.Count == 0 ? 0 : 0.55 * ps[0] + 0.17 * ps.Skip(1).Take(3).Sum();
         s.NoseIntensity = intensity < 0.9 ? "light" : intensity < 1.25 ? "medium(−)" : intensity < 1.6 ? "medium" : intensity < 1.95 ? "medium(+)" : "pronounced";
         s.NoseCondition = s.Faults.Count > 0 ? "unclean" : "clean";
+        s.Simple = s.Faults.Count == 0 && s.Aromas.All(a => a.Category == "Primary") && s.Aromas.Select(a => a.Family).Where(f => !TastingSheet.IsFruit(f)).Distinct().Count() <= 1;
+        foreach (var a in s.Aromas)
+            if (a.Intensity != "light" && a.Family is not ("volatile" or "reductive") && !s.Flavours.Contains(a.Family)) s.Flavours.Add(a.Family);
+        if (s.Flavours.Count == 0 && s.Aromas.FirstOrDefault(a => a.Family is not ("volatile" or "reductive")) is { } top) s.Flavours.Add(top.Family);
         bool tertiary = s.Aromas.Any(a => a.Category == "Tertiary");
         s.Development = ageYears > 6 ? "fully developed" : (tertiary && ageYears > 1) || ageYears > 3 ? "developing" : "youthful";
 
@@ -200,9 +249,12 @@ public static class TastingSheetGenerator
         bool tart = perceivedAcid > 11 && rs < 10;
         bool green = red && s.Palate.Any(pl => pl.Attribute == "Tannin" && pl.Level.Contains("green"));
         bool thin = !red && body == "light" && s.FlavourIntensity is "light" or "medium(−)" && acidScore > 8.5;
-        bool balance = !(hot || flabby || tart || green || thin);
+        double oakP = fam.Where(f => f.family == "oak").Select(f => f.p * 0.8).DefaultIfEmpty(0).Max();
+        double fruitMax = fam.Where(f => TastingSheet.IsFruit(f.family)).Select(f => f.p).DefaultIfEmpty(0).Max();
+        bool oakDominant = oakP > 0 && oakP >= fruitMax + 0.3 && fruitMax < 1.3;   // integration (UW-2016 p. 8); thresholds are game calibration (UNVERIFIED)
+        bool balance = !(hot || flabby || tart || green || thin || oakDominant);
         string balWhy = balance ? "sugar, acidity, alcohol" + (red ? " and tannin" : "") + " in harmony" :
-            hot ? "alcohol is hot and not carried by the body" : flabby ? "too little acidity for the sweetness and ripeness (flabby)" : tart ? "acidity is sharp and unripe" : green ? "green, coarse tannins" : "thin and tart";
+            hot ? "alcohol is hot and not carried by the body" : oakDominant ? "the oak dominates the fruit (not integrated)" : flabby ? "too little acidity for the sweetness and ripeness (flabby)" : tart ? "acidity is sharp and unripe" : green ? "green, coarse tannins" : "thin and tart";
         bool length = s.Finish is "medium(+)" or "long";
         bool inten = s.FlavourIntensity is "medium(+)" or "pronounced";
         var clear = fam.Where(f => f.p >= 1.25).ToList();   // clearly perceived families only
@@ -215,21 +267,45 @@ public static class TastingSheetGenerator
         s.Blic.Add(("Complexity", complexity, $"{families} clearly defined aroma families across {cats} categor{(cats == 1 ? "y" : "ies")}"));
         int met = s.Blic.Count(x => x.Met);
         s.Quality = faulty ? "Faulty" : met switch { 0 => "Poor", 1 => "Acceptable", 2 => "Good", 3 => "Very good", _ => "Outstanding" };
-        s.QualityBecause = faulty ? "a fault dominates the wine" : $"{met} of 4 quality criteria met: " + string.Join("; ", s.Blic.Select(x => $"{x.Criterion} {(x.Met ? "✓" : "✗")} ({x.Why})"));
-        bool ageWorthy = (acidScore > 7 || (red && b.TotalTannin > 700) || rs > 30) && inten;
-        s.Readiness = faulty ? "not for sale as it is" : ageWorthy ? "can drink now, but has potential for ageing" : "drink now; not designed for long ageing";
+        if (!faulty)
+        {
+            foreach (var x in s.Blic) (x.Met ? s.QualityFor : s.QualityAgainst).Add($"{x.Criterion}: {x.Why}");
+            string[] levels = { "Poor", "Acceptable", "Good", "Very good", "Outstanding" };
+            var missed = s.Blic.FirstOrDefault(x => !x.Met);
+            s.QualityNotHigher = met >= 4 ? "" : $"Not {levels[met + 1]}, because {missed.Criterion.ToLowerInvariant()} falls short ({missed.Why})";
+        }
+        s.QualityBecause = faulty ? "a fault dominates the wine" :
+            $"For: {(s.QualityFor.Count == 0 ? "none" : string.Join("; ", s.QualityFor))}. Against: {(s.QualityAgainst.Count == 0 ? "none" : string.Join("; ", s.QualityAgainst))}." + (s.QualityNotHigher != "" ? " " + s.QualityNotHigher + "." : "");
+
+        // ---------------- readiness: a drinking window from structure (UW-2016 pp. 9–10; window values are UNVERIFIED design values)
+        int flavIdx = Array.IndexOf(new[] { "light", "medium(−)", "medium", "medium(+)", "pronounced" }, s.FlavourIntensity);
+        // structure (acid, tannin, sugar) carries a wine through ageing only with the concentration to go with it
+        double structure = M.Clamp((acidScore - 6) / 1.5, 0, 2.5) + (red ? M.Clamp(b.TotalTannin / 500, 0, 2.4) : 0) + M.Clamp(rs / 40, 0, 2);
+        double conc = 0.4 + 0.15 * Math.Max(0, flavIdx);
+        s.WindowYears = Math.Round(M.Clamp(1.5 + 5 * structure * conc, 2, 20), 1);
+        bool firm = red ? b.TotalTannin >= 1000 : rs >= 30 && acidScore >= 8;
+        s.Readiness = faulty ? "" :
+            ageYears > 1.3 * s.WindowYears ? "too old" :
+            ageYears > 0.7 * s.WindowYears || s.WindowYears < 6 ? "drink now, not for (further) ageing" :
+            ageYears < 0.25 * s.WindowYears && firm ? "too young" : "can drink now, has potential for ageing";
+        if (!faulty && ageYears > s.WindowYears) s.Development = "tired";
+
+        // ---------------- other observations (noted, not marked)
+        if (red && ageYears >= 4 && b.TotalTannin >= 700) s.Observations.Add(("deposit", "tannin and pigment bind and drop out after years in bottle"));
+        else if (wine.Filtration == Filtration.Unfiltered && ageYears >= 1) s.Observations.Add(("deposit", "the wine was bottled unfiltered"));
+        if (alc >= 14 || rs >= 45) s.Observations.Add(("pronounced legs", alc >= 14 ? $"{alc:0.0} % alcohol" : $"{rs:0} g/L of sugar"));
+        if (s.Faults.Any(f => f.StartsWith("Refermentation"))) s.Observations.Add(("possible spritz", "sugar and live yeast in bottle can referment"));
 
         // ---------------- Causes (learning-core design §3.2): the same conditions as the "because" lines above
         void Tag(string cause, string line) { if (!s.CauseLinks.Contains((cause, line))) s.CauseLinks.Add((cause, line)); }
-        if (red && s.ColourIntensity == "pale" && v == "Pinot Noir") Tag("pinot-pale-colour", "appearance");
         if (red && s.ColourIntensity == "deep") Tag("extraction-colour-tannin", "appearance");
-        if (red && s.Colour == "garnet") Tag("age-garnet-colour", "appearance");
+        if (red && s.Colour is "garnet" or "tawny") Tag("age-garnet-colour", "appearance");
         foreach (var a in s.Aromas)
         {
             string line = "aroma:" + a.Family;
+            if (TastingSheet.IsFruit(a.Family)) Tag("ripeness-fruit-character", line);
             switch (a.Family)
             {
-                case "fruit" or "red and black fruit": Tag("ripeness-fruit-character", line); break;
                 case "noble rot": Tag("noble-rot", line); break;
                 case "floral" when v == "Riesling": Tag("riesling-terpenes", line); break;
                 case "tropical (thiols)": Tag("thiols-skin-contact", line); break;
