@@ -213,7 +213,7 @@ public static class TastingSheetGenerator
         double intensity = ps.Count == 0 ? 0 : 0.55 * ps[0] + 0.17 * ps.Skip(1).Take(3).Sum();
         s.NoseIntensity = intensity < 0.9 ? "light" : intensity < 1.25 ? "medium(−)" : intensity < 1.6 ? "medium" : intensity < 1.95 ? "medium(+)" : "pronounced";
         s.NoseCondition = s.Faults.Count > 0 ? "unclean" : "clean";
-        // simple: a very limited number of aromas (UW-2016 p. 6): nothing from oak, lees, malolactic or age (fermentation esters
+        // simple: a very limited number of aromas (UW-2016 p. 4): nothing from oak, lees, malolactic or age (fermentation esters
         // allowed), and at most one clear family besides the fruit
         s.Simple = s.Faults.Count == 0 && s.Aromas.All(a => a.Category == "Primary" || a.Family == "fermentation")
             && s.Aromas.Where(a => a.Intensity != "light" && !TastingSheet.IsFruit(a.Family)).Select(a => a.Family).Distinct().Count() <= 1;
@@ -266,11 +266,11 @@ public static class TastingSheetGenerator
         bool thin = !red && body == "light" && s.FlavourIntensity is "light" or "medium(−)" && acidScore > 8.5;
         double oakP = fam.Where(f => f.family == "oak").Select(f => f.p * 0.8).DefaultIfEmpty(0).Max();
         double fruitMax = fam.Where(f => TastingSheet.IsFruit(f.family)).Select(f => f.p).DefaultIfEmpty(0).Max();
-        bool oakDominant = oakP > 0 && oakP >= fruitMax + 0.3 && fruitMax < 1.3;   // integration (UW-2016 p. 8); thresholds are game calibration (UNVERIFIED)
+        bool oakDominant = oakP > 0 && oakP >= fruitMax + 0.3 && fruitMax < 1.3;   // integration (UW-2016 p. 9); thresholds are game calibration (UNVERIFIED)
         bool balance = !(hot || flabby || tart || green || thin || oakDominant);
         string balWhy = balance ? "sugar, acidity, alcohol" + (red ? " and tannin" : "") + " in harmony" :
             hot ? "alcohol is hot and not carried by the body" : oakDominant ? "the oak dominates the fruit (not integrated)" : flabby ? "too little acidity for the sweetness and ripeness (flabby)" : tart ? "acidity is sharp and unripe" : green ? "green, coarse tannins" : "thin and tart";
-        // length: long, or medium(+) carried by pronounced flavour (intense wines generally have a long finish, UW-2016 p. 8)
+        // length: long, or medium(+) carried by pronounced flavour (intense wines generally have a long finish, UW-2016 p. 9)
         bool length = s.Finish == "long" || (s.Finish == "medium(+)" && s.FlavourIntensity == "pronounced");
         bool inten = s.FlavourIntensity is "medium(+)" or "pronounced";
         var clear = fam.Where(f => f.p >= 1.25).ToList();   // clearly perceived families only

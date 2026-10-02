@@ -22,11 +22,11 @@ or the exam materials.
 
 - **Quality.** The Level 3 coursebook itself teaches the four-criteria count (balance, intensity, length, complexity:
   outstanding is positive on all four, very good on three, down to poor on none), and says a Level 3 candidate gives no
-  reasons [UW-2016 pp. 8–9]. So the count stays, as the Level 3 method. Research track C's "not policy" note holds only for
+  reasons [UW-2016 p. 9]. So the count stays, as the Level 3 method. Research track C's "not policy" note holds only for
   the Diploma, where quality is argued from positive and negative evidence. The sheet therefore keeps the count and adds the
   argument as a learning aid.
 - **The book's balance includes integration.** Alcohol, oak and acidity must be integrated, not just present
-  [UW-2016 p. 8]. The balance check gains integration tests.
+  [UW-2016 p. 9]. The balance check gains integration tests.
 - **Simplicity is not always negative.** Purity of expression can make a wine great [UW-2016 p. 9]. A pure, intense,
   long, primary-led wine can meet complexity without oak or age.
 - **No pepper family.** The simulation has no rotundone, and none of its four grapes is a peppery variety. This goes to the
@@ -118,7 +118,7 @@ or the exam materials.
   - the four readiness options, brown colours, other observations, the fruit split, simple, flavours, the quality
     argument and integration;
   - the calibration target and the new climate class.
-- The alcohol bands are already the systematic approach's bands; this is confirmed by the coursebook [UW-2016 p. 7].
+- The alcohol bands are already the systematic approach's bands; this is confirmed by the coursebook [UW-2016 p. 8].
 
 ## 6. Out of scope
 - The pepper family and Syrah.
