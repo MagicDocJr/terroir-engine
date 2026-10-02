@@ -194,6 +194,8 @@ Volatile thiols (3MH, 3MHA: grapefruit, passion fruit) are released from odourle
 
 ## 10. The harvest decision
 
+**Textbook cross-check.** As black grapes ripen, the fruit moves from fresh towards riper and cooked fruit; Pinot Noir stays in red fruit when just ripe [LBTL p. 26], and warmer-climate Pinot shows plums and dark cherries [UW-2016 p. 168]. The Tasting sheet follows this: tart → fresh red fruit → riper, darker fruit (black cherry, plum).
+
 Every day in the harvest window, the dashboard shows for each Block:
 
 | Signal | What it measures | Direction with hang time |
@@ -255,3 +257,5 @@ A Senior staff member evaluates more ensemble members and a longer horizon than 
 - Kwasniewski MT, Vanden Heuvel JE, Pan BS, Sacks GL (2010). *Timing of cluster light environment manipulation during grape development affects C13 norisoprenoid and carotenoid concentrations in Riesling.* Journal of Agricultural and Food Chemistry 58(11):6841–6849. https://pubs.acs.org/doi/abs/10.1021/jf904555p
 - Waterhouse Lab, UC Davis. *TDN (1,1,6-trimethyl-1,2-dihydronaphthalene).* https://waterhouse.ucdavis.edu/whats-in-wine/tdn-116-trimethyl-12-dihydronapthalene (page returned 403 in this pass; used only as a pointer)
 - Standard references, cited from memory: Keller M., *The Science of Grapevines* (3rd ed., 2020); Jackson RS, *Wine Science* (5th ed.); Ribéreau-Gayon P. et al., *Handbook of Enology* Vol. 1–2.
+- [LBTL] Wine & Spirit Education Trust. *Looking Behind the Label* (introductory course companion). London: WSET. An introductory textbook, used to cross-check the learn cards and Causes; page numbers are the printed ones (PDF page − 5). Paraphrased, never quoted.
+- [UW-2016] Wine & Spirit Education Trust (2016). *Understanding Wines: Explaining Style and Quality*. London: WSET. ISBN 978-1-905819-39-3. A standard textbook, used to cross-check the learn cards and Causes; page numbers are the printed ones. Paraphrased, never quoted.
