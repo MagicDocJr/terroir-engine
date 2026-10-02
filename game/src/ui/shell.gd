@@ -1085,6 +1085,17 @@ func _learning_test() -> void:
 	if not (final_kinds.has("wine") or final_kinds.has("contrast")): ok = false; print("LEARNING FAIL no wine items by day 11")
 	state.erase("tp_lobby")
 	show_screen("practice"); await _shot_scrolled_to_end("learning_10_progress")
+	# exam date: the sim refuses a past date; a valid one shows as days to go
+	if String(Sim.PracticeSetExamDate("2020-01-01")) == "": ok = false; print("LEARNING FAIL past exam date accepted")
+	var exam := Time.get_date_string_from_unix_time(base + 90 * 86400)
+	var err := String(Sim.PracticeSetExamDate(exam))
+	if err != "": ok = false; print("LEARNING FAIL exam date ", err)
+	state.erase("tp_lobby")
+	var es = T.lobby(self).get("summary", {}).get("daysToExam", null)
+	print("LEARNING exam ", exam, " days to go ", es)
+	if es == null or int(es) != 79: ok = false; print("LEARNING FAIL days to exam")
+	show_screen("practice"); await _shot_scrolled_to_end("learning_11_exam")
+	Sim.PracticeSetExamDate(""); state.erase("tp_lobby")
 	Sim.SetPracticeToday("")
 	# every learn card in the drawer, with a Block's context (pre-game: no Lot), plus the turntable in winter
 	var ids := ["training-system", "rootstock", "harvest-date", "leaf-removal", "green-harvest", "whole-bunch", "fermentation-temperature",

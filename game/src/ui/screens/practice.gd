@@ -79,11 +79,11 @@ static func _lobby(shell, L: Dictionary) -> Control:
 		cv.add_child(b)
 		grid.add_child(c)
 	v.add_child(ex[0])
-	v.add_child(_progress(S))
+	v.add_child(_progress(shell, S))
 	return v
 
 # ------------------------------------------------------------------ Progress view
-static func _progress(S: Dictionary) -> Control:
+static func _progress(shell, S: Dictionary) -> Control:
 	var p: Array = UI.panel("Progress", "measured by what you still know days later, not by how much you answer")
 	var row := UI.hbox(28); p[1].add_child(row)
 	# Causes known, by topic
@@ -131,8 +131,59 @@ static func _progress(S: Dictionary) -> Control:
 		if S.get("weakest", null) != null and String(S["weakest"]) == String(sk["skill"]) and float(sk["avg"]) < 0.75: h.add_child(UI.chip("weak spot", UI.SERIOUS, 12))
 		sv.add_child(h)
 	if not any: sv.add_child(UI.label("Shows after a few answers per skill.", 13, UI.MUTED))
+	p[1].add_child(_exam_row(shell, S))
 	p[1].add_child(UI.label("The game trains reasoning and vocabulary: why a Wine tastes as it does. Your nose and palate need real glasses alongside it.", 13, UI.MUTED, null, true))
 	return p[0]
+
+const MONTHS := ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
+## Exam date: optional. With a date set, review intervals shrink so every Cause comes back before the exam (the sim does this).
+static func _exam_row(shell, S: Dictionary) -> Control:
+	var h := UI.hbox(10)
+	var ex = S.get("examDate", null)
+	var exam := "" if ex == null else String(ex)
+	var editing: bool = exam == "" or shell.state.get("tp_exam_edit", false)
+	if not editing:
+		var parts := exam.split("-")
+		var days := int(S.get("daysToExam", 0))
+		var when := "%d %s %s" % [int(parts[2]), MONTHS[int(parts[1]) - 1], parts[0]]
+		var txt := ("Exam on %s: %d day%s to go. Reviews are spaced so every Cause comes back before then." % [when, days, "" if days == 1 else "s"]) if days > 0 \
+			else "Your exam date (%s) has passed. Set the next one, or clear it to return to the normal spacing." % when
+		var l := UI.label(txt, 14, UI.INK2 if days > 0 else UI.SERIOUS, null, true); l.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(l)
+		var ch := UI.button("Change", false, 13); ch.pressed.connect(func(): shell.state["tp_exam_edit"] = true; shell.refresh()); h.add_child(ch)
+		var cl := UI.button("Clear", false, 13); cl.pressed.connect(func(): _set_exam(shell, "")); h.add_child(cl)
+		return h
+	var l2 := UI.label("Exam date (optional): reviews will be spaced to land before it.", 14, UI.INK2, null, true); l2.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(l2)
+	var now := Time.get_date_dict_from_system()
+	var y := int(shell.state.get("tp_exam_y", now["year"] if int(now["month"]) < 10 else int(now["year"]) + 1))
+	var m := int(shell.state.get("tp_exam_m", 6))
+	var d := int(shell.state.get("tp_exam_d", 1))
+	var days_in: int = [31, 29 if (y % 4 == 0 and (y % 100 != 0 or y % 400 == 0)) else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1]
+	d = mini(d, days_in)
+	var dl := []
+	for i in range(1, days_in + 1): dl.append([str(i), str(i)])
+	var ml := []
+	for i in 12: ml.append([str(i + 1), MONTHS[i]])
+	var yl := []
+	for i in 6: yl.append([str(int(now["year"]) + i), str(int(now["year"]) + i)])
+	h.add_child(UI.option(dl, str(d), func(v): shell.state["tp_exam_d"] = int(v), 70))
+	h.add_child(UI.option(ml, str(m), func(v): shell.state["tp_exam_m"] = int(v); shell.refresh(), 140))
+	h.add_child(UI.option(yl, str(y), func(v): shell.state["tp_exam_y"] = int(v); shell.refresh(), 96))
+	var sb := UI.button("Set", true, 13)
+	sb.pressed.connect(func():
+		var dd := mini(int(shell.state.get("tp_exam_d", d)), days_in)
+		_set_exam(shell, "%04d-%02d-%02d" % [int(shell.state.get("tp_exam_y", y)), int(shell.state.get("tp_exam_m", m)), dd]))
+	h.add_child(sb)
+	if exam != "":
+		var cn := UI.button("Cancel", false, 13); cn.pressed.connect(func(): shell.state.erase("tp_exam_edit"); shell.refresh()); h.add_child(cn)
+	return h
+
+static func _set_exam(shell, date: String) -> void:
+	var err := String(Sim.PracticeSetExamDate(date))
+	if err != "": shell.notify(err); return
+	shell.state.erase("tp_exam_edit"); shell.state.erase("tp_lobby")
+	shell.notify("Exam date cleared." if date == "" else "Exam date set: your reviews now work towards it.", true)
+	shell.refresh()
 
 static func _calibration_line(acc: Dictionary) -> String:
 	if not acc.has(3) or acc[3][1] < 5: return "Rate every answer honestly: after a few sessions this shows whether your confidence can be trusted."

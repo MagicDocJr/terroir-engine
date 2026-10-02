@@ -169,6 +169,19 @@ public partial class SimBridge : Node
         catch (Exception e) { _lastError = e.ToString(); return "{}"; }
     }
 
+    /// <summary>Sets the exam date the review schedule works towards ("yyyy-MM-dd"; "" clears it). Returns "" when saved, else
+    /// the reason it was refused (the sim validates; the screen only shows the message).</summary>
+    public string PracticeSetExamDate(string date)
+    {
+        try
+        {
+            var (rec, err) = PracticeProgress.TrySetExamDate(LoadRecord(), date, Today());
+            if (err == null) SaveRecord(rec);
+            return err ?? "";
+        }
+        catch (Exception e) { _lastError = e.ToString(); return "The exam date could not be saved."; }
+    }
+
     public string PracticeLobby()
     {
         try { return _data == null ? "{}" : PracticeSession.Lobby(_data, LoadRecord(), Today(), MaxVintage()).ToJsonString(); }

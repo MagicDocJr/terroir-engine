@@ -177,6 +177,18 @@ public static class PracticeProgress
         return rec;
     }
 
+    /// <summary>The player's exam date as "yyyy-MM-dd" ("" clears it). A date that does not exist, is not after today, or lies more
+    /// than five years ahead is refused with a message for the screen, and the record is returned unchanged.</summary>
+    public static (JsonObject Record, string? Error) TrySetExamDate(JsonObject record, string date, DateOnly today)
+    {
+        if (date == "") return (SetExamDate(record, null), null);
+        if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var d))
+            return (StudyRecord.Migrate(record), "That date does not exist.");
+        if (d <= today) return (StudyRecord.Migrate(record), "Pick a date after today.");
+        if (d > today.AddYears(5)) return (StudyRecord.Migrate(record), "Pick a date within the next five years.");
+        return (SetExamDate(record, d), null);
+    }
+
     /// <summary>The weekly rhythm (Monday to Sunday): days studied, plus missed days repaired by an extra set of reviews
     /// (every 5 beyond the first 5 on a day) later in the week. A new week starts fresh and quietly.</summary>
     public static (int Days, int Elapsed) Rhythm(JsonObject rec, DateOnly today)
