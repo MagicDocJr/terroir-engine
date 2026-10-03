@@ -1,0 +1,41 @@
+{
+  "about": "Famous vintages (docs/superpowers/specs/2026-10-03-famous-vintages-design.md, docs/science/famous-vintages.md). Briefings hold only what a grower knew in January (ADR 0002); the debrief's lines are cited in docs/science/vintage-notes.md by their source keys. Paraphrased, not copied.",
+  "scenarios": [
+    {
+      "id": "cotedor-2016", "region": "cote-dor", "plot": "cotedor-village", "variety": "Pinot Noir", "vintage": 2016,
+      "title": "2016, Côte d'Or", "teaser": "A spring growers still talk about",
+      "briefing": "January 2016. You take over a Village-classified Plot on the Côte d'Or, planted three years ago and now in its fourth leaf. The cellar is ready and the vines are yours. Make the best Village Wine you can. The weather is the real weather of that year on the Côte d'Or, and your forecasts reach only as far as in any game.",
+      "medals": [
+        { "name": "bronze", "criteria": [ { "type": "category", "value": ["Village AOC", "Premier Cru"] } ] },
+        { "name": "silver", "criteria": [ { "type": "noFault" }, { "type": "qualityAtLeast", "value": "Good" } ] },
+        { "name": "gold", "criteria": [ { "type": "noChaptalisation" }, { "type": "naturalSugarAtLeast", "value": 189 }, { "type": "qualityAtLeast", "value": "Very good" } ] }
+      ],
+      "growers": [], "compare": [],
+      "causes": ["spring-frost-yield", "cool-season-acid", "chaptalisation"]
+    },
+    {
+      "id": "mosel-2018", "region": "mosel", "plot": "mosel-blauschiefer", "variety": "Riesling", "vintage": 2018,
+      "title": "2018, Mosel", "teaser": "A summer to remember",
+      "briefing": "January 2018. You run a steep slate Plot on the Mosel, planted with Riesling three years ago. The goal is the Mosel's signature: a light, fresh Prädikat Riesling, ideally a Kabinett with lively acidity. The weather is the real weather of that year on the Mosel, and your forecasts reach only as far as in any game.",
+      "medals": [
+        { "name": "bronze", "criteria": [ { "type": "category", "value": ["Kabinett", "Spätlese", "Auslese", "Beerenauslese", "Trockenbeerenauslese", "Eiswein"] } ] },
+        { "name": "silver", "criteria": [ { "type": "category", "value": ["Kabinett"] }, { "type": "acidityAtLeast", "value": "medium(+)" } ] },
+        { "name": "gold", "criteria": [ { "type": "balanceMet" }, { "type": "qualityAtLeast", "value": "Very good" } ] }
+      ],
+      "growers": [], "compare": [],
+      "causes": ["warm-season-malic-loss", "sugar-to-alcohol", "ripeness-fruit-character"]
+    },
+    {
+      "id": "napa-2011", "region": "napa", "plot": "napa-floor", "variety": "Cabernet Sauvignon", "vintage": 2011,
+      "title": "2011, Napa Valley", "teaser": "An unusual year in the valley",
+      "briefing": "January 2011. You farm a Plot on the Napa Valley floor, planted with Cabernet Sauvignon three years ago. Napa Cabernet is prized for ripe fruit and ripe tannin: aim for a clean, ripe Wine under the Napa Valley name. The weather is the real weather of that year in Napa, and your forecasts reach only as far as in any game.",
+      "medals": [
+        { "name": "bronze", "criteria": [ { "type": "category", "value": ["Napa Valley AVA"] } ] },
+        { "name": "silver", "criteria": [ { "type": "noRotTaint" }, { "type": "seedsRipe" } ] },
+        { "name": "gold", "criteria": [ { "type": "qualityAtLeast", "value": "Very good" } ] }
+      ],
+      "growers": [], "compare": [],
+      "causes": ["seed-ripeness-tannin", "cool-season-acid", "grey-rot-taint"]
+    }
+  ]
+}

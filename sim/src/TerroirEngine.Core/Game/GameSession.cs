@@ -20,6 +20,8 @@ public sealed class GameSetup
     public StaffLevel VineyardManager { get; set; } = StaffLevel.Junior;
     public StaffLevel CellarMaster { get; set; } = StaffLevel.Junior;
     public Dictionary<string, PlantingChoice> Planting { get; set; } = new();
+    /// <summary>A famous-vintage scenario (data/scenarios.json), or null for a normal game. Saved with the setup.</summary>
+    public string? ScenarioId { get; set; }
 }
 
 public sealed class Command

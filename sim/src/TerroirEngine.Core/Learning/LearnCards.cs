@@ -61,11 +61,7 @@ public static class LearnCards
     public static (JsonObject Record, bool Right) Check(GameData data, JsonObject record, string id, string answer, DateOnly today)
     {
         if (Find(data, id) is not { } card) return (record, false);
-        var rec = StudyRecord.Migrate(record);
-        var states = StudyRecord.States(rec);
-        foreach (var c in card.Causes.Where(c => !states.ContainsKey(c) && CauseCatalog.Find(data, c) != null))
-            StudyRecord.Put(rec, new CauseState(c, 0, 0, ReviewScheduler.StartDifficulty, today.AddDays(1), null, new List<CauseAnswer>(), false));
-        return (rec, answer == card.Check.Answer);
+        return (StudyRecord.Enqueue(record, card.Causes, today, data), answer == card.Check.Answer);
     }
 
     /// <summary>The chain steps a card shows: a catalogue Cause's chain, or the card's own steps.</summary>
