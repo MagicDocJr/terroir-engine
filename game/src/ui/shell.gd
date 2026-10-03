@@ -1063,6 +1063,8 @@ func _scenario_test() -> void:
 	var List = JSON.parse_string(Sim.ScenarioList())
 	for it in List: if String(it["scenario"]["id"]) == "mosel-2018" and it.get("best") != "gold": ok = false; print("SCENARIOS FAIL medal not kept")
 	show_screen("inbox"); await _shot("scenarios_06_topbar")
+	state["report_vintage"] = 2018
+	refresh(); show_screen("report"); await _shot("scenarios_08_review")
 	show_screen("scenarios"); await _shot("scenarios_07_list_after")
 	print("SCENARIOS DONE ok=", ok)
 	get_tree().quit()

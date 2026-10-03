@@ -226,6 +226,10 @@ public static class VintageReview
         };
     }
 
+    /// <summary>The Causes on a review's cards, for the review queue.</summary>
+    public static IEnumerable<string> CauseIds(JsonObject review) =>
+        (review["cards"] as JsonArray ?? new()).SelectMany(c => (c!["causes"] as JsonArray ?? new()).Select(x => (string)x!["id"]!)).Distinct();
+
     /// <summary>The review object for the report, or null when the Vintage has no bottled Wine with a sheet.</summary>
     public static JsonObject? Review(GameSession g, int vintage)
     {
