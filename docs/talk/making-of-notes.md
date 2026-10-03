@@ -31,7 +31,7 @@ cross-check oracle (paraphrased, never copied).
 | Full capture (37 screens + save/load) | 28 s |
 | Fuzz | 77 s |
 
-Everything takes about 2.5 minutes in series.
+Everything takes about 2.5 minutes in series, or **85 s in parallel with `scripts/check.sh`** (added 2026-10-03).
 
 **One week-long agent session:** about 2,400 tool calls (1,670 shell commands, 250 file reads, 130 file writes) and 32
 sub-agents for reviews and research. The owner's own messages are a small fraction of the session.
@@ -83,6 +83,21 @@ sub-agents for reviews and research. The owner's own messages are a small fracti
   at screenshots. This became the automatic layout check (devex work, 2026-10-03).
 - **No future knowledge (ADR 0002).** The famous-vintage briefings are validated so they never reveal what the year will
   bring; the debrief reveals it afterwards.
+
+## Recorded videos (2026-10-03)
+
+Godot's Movie Maker, `scripts/record.sh`, writes to `game/shots/video/` (not in git; regenerate any time):
+
+| Video | Length | What it shows |
+|---|---|---|
+| `capture.mp4` | about 1 min | the full game, from setup through the season to bottling and the report |
+| `scenarios.mp4` | 11 s | a famous vintage, from briefing to gold medal and debrief |
+| `practice.mp4` | 18 s | Tasting practice exercises and the Wine Fair |
+| `learning.mp4` | 26 s | spaced review sessions and the learn cards |
+| `fuzz.mp4` | 1 min 33 s | random clicking through two seasons: the chaos test |
+
+**Lesson learnt:** Movie Maker films every frame, including frames where a harness waits for a background task. Cap
+recordings (`--quit-after`) and always rebuild before recording.
 
 ## Demo ideas
 
