@@ -33,6 +33,8 @@ static func build(D: Dictionary, shell) -> Control:
 	wb.pressed.connect(func(): shell.show_screen("wines"))
 	top.add_child(wb)
 	v.add_child(top)
+	# ---- Vintage in review: the season replayed and the causes behind the Wines
+	if R.get("review") != null: v.add_child(_review(R, shell))
 	# ---- weather tiles against the normal
 	var tiles := UI.hbox(12)
 	tiles.add_child(_tile("Season heat (Winkler)", "%d" % int(W["winkler"]), "normal %d · %+d %%" % [int(W["winklerNormal"]), int(W["heatAnomalyPct"])], _anom_col(float(W["heatAnomalyPct"]), 4, 12), Metrics.tip("winkler")))
@@ -151,3 +153,65 @@ static func _tile(caption: String, value: String, sub: String, col: Color, tip: 
 static func _anom_col(pct: float, mild: float, strong: float) -> Color:
 	var a := absf(pct)
 	return UI.SERIOUS if a >= strong else (UI.WARN if a >= mild else UI.INK)
+
+## Days from 1 March of the Vintage as 0..1 over March–November (layout only; the dates come from the sim).
+static func _t(iso, vintage: int) -> float:
+	if iso == null or String(iso) == "": return -1.0
+	var start := Time.get_unix_time_from_datetime_string("%d-03-01" % vintage)
+	var end := Time.get_unix_time_from_datetime_string("%d-11-30" % vintage)
+	return (Time.get_unix_time_from_datetime_string(String(iso)) - start) / float(end - start)
+
+static func _review(R: Dictionary, shell) -> Control:
+	var Rv: Dictionary = R["review"]
+	var vintage := int(R["vintage"])
+	var p: Array = UI.panel("The year in review", "what happened, and what it did in your Wines")
+	var Strip = load("res://src/ui/review_strip.gd")
+	var strip: Control = Strip.new()
+	strip.weekly = R.get("weekly", [])
+	var S: Dictionary = Rv["strip"] if Rv.get("strip") != null else {}
+	for k in [["budburst", "budburst"], ["flowering", "flowering"], ["veraison", "véraison"], ["harvest", "harvest"]]:
+		var t := _t(S.get(k[0]), vintage)
+		if t >= 0.0: strip.marks.append({"t": t, "label": k[1]})
+	var cards: Array = Rv["cards"]
+	var ts := []
+	for c in cards:
+		var t := _t(c["when"], vintage)
+		ts.append(t if t >= 0.0 and t <= 1.0 else 1.0)   # cellar and bottling moments come after November: shown when the replay ends
+		strip.pins.append({"t": t, "num": ts.size(), "priority": int(c["priority"])})
+	var first: bool = not Rv.get("seen", false) and not shell.capture
+	strip.animate = first
+	if not Rv.get("seen", false):
+		Sim.ReviewSeen(vintage)
+		Rv["seen"] = true   # the snapshot is not refreshed here: switching Vintages and back must not replay the season
+	strip.progress = 0.0 if first else 1.0
+	p[1].add_child(strip)
+	var bh := UI.hbox(10); p[1].add_child(bh)
+	var replay := UI.button("↺ Replay the season", false, 13); replay.pressed.connect(func(): strip.replay()); bh.add_child(replay)
+	var skip := UI.button("Skip", false, 13); skip.pressed.connect(func(): strip.skip()); bh.add_child(skip)
+	var hint := UI.label("Each card links a moment of the year to the Tasting-sheet lines it shaped; its lessons join your review queue.", 13, UI.MUTED, null, true)
+	hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL; hint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bh.add_child(hint)
+	var flow := HFlowContainer.new(); flow.add_theme_constant_override("h_separation", 12); flow.add_theme_constant_override("v_separation", 12)
+	p[1].add_child(flow)
+	var nodes := []
+	for i in cards.size():
+		var c: Dictionary = cards[i]
+		var cp := PanelContainer.new(); cp.custom_minimum_size = Vector2(440, 0)
+		var col := UI.CRIT if int(c["priority"]) == 0 else UI.SERIOUS if int(c["priority"]) == 1 else UI.GOLD
+		cp.add_theme_stylebox_override("panel", UI.sb(UI.RAISED, 6, col.darkened(0.3), 1, 12))
+		var cv := UI.vbox(4); cp.add_child(cv)
+		var hh := UI.hbox(8); cv.add_child(hh)
+		hh.add_child(UI.chip("%d · %s" % [i + 1, String(c["date"])], col, 12))
+		var tl := UI.label(String(c["title"]), 16, UI.INK, UI.f_body_b, true); tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL; hh.add_child(tl)
+		for h in c["happened"]: cv.add_child(UI.label(String(h), 14, UI.INK2, null, true))
+		cv.add_child(UI.label("In %s:" % String(c["wine"]), 13, UI.GOLD, UI.f_body_b))
+		for l in c["lines"]:
+			cv.add_child(UI.label("%s: %s" % [l["attribute"], l["level"]], 14, UI.INK, UI.f_body_b, true))
+			cv.add_child(UI.label("because " + String(l["because"]), 13, UI.MUTED, null, true))
+		flow.add_child(cp)
+		nodes.append(cp)
+	var show := func(prog: float):
+		for i in nodes.size(): nodes[i].modulate.a = 1.0 if ts[i] <= prog + 0.001 else 0.0
+	strip.progress_changed.connect(show)
+	show.call(strip.progress)
+	return p[0]

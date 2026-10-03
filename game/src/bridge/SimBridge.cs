@@ -71,6 +71,22 @@ public partial class SimBridge : Node
         catch (Exception e) { _lastError = e.ToString(); GD.PushError("Terroir: new game failed: " + e); return false; }
     }
 
+    // ------------------------------------------------------------------ Vintage in review
+    /// <summary>The first time a Vintage's review is shown: its cards' Causes join the review queue (no answer counted),
+    /// once per game (a flag in the save).</summary>
+    public void ReviewSeen(int vintage)
+    {
+        if (_game == null || _data == null) return;
+        try
+        {
+            string flag = $"review-seen-{vintage}";
+            if (_game.Flags.Contains(flag) || VintageReview.Review(_game, vintage) is not { } rev) return;
+            _game.Apply(new Command { Type = "flag", A = flag });
+            SaveRecord(StudyRecord.Enqueue(LoadRecord(), VintageReview.CauseIds(rev), Today(), _data));
+        }
+        catch (Exception e) { _lastError = e.ToString(); }
+    }
+
     // ------------------------------------------------------------------ famous vintages (docs/superpowers/specs/2026-10-03-famous-vintages-design.md)
     public string ScenarioList()
     {
