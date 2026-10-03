@@ -43,6 +43,45 @@ Format: **year: what happened** [source]. A note marked `UNVERIFIED` must not be
 
 ---
 
+## What growers did (famous-vintage debriefs)
+
+Shown in the famous-vintage debriefs (`data/scenarios.json`). Paraphrased; every line has its source.
+
+**Côte d'Or 2016**
+- Candles lit in some famous parcels did not stop the April frost. [DECANTER-2016]
+- With half the crop already lost, many organic and biodynamic growers sprayed against mildew rather than risk the rest. [DECANTER-2016]
+- Several top Montrachet owners pooled their tiny crops to fill about two barrels. [DECANTER-2016]
+- A fine late summer brought picking forward. Most Côte de Beaune producers picked reds first; some picked whites first as
+  their acidity fell. [INSIDEBURGUNDY-2016]
+- Several producers picked and chaptalised a little to keep the acid balance, rather than wait for sugar and have to
+  acidify. [INSIDEBURGUNDY-2016]
+- Reds came out concentrated with a fresh finish; whites fine-boned, with some dilution in Puligny. [INSIDEBURGUNDY-2016]
+- **Numbers.**
+  - Harvest from about 14–15 September (early pickers) to 27 September (Côte de Nuits). [INSIDEBURGUNDY-2016]
+  - Potential alcohol 12.5–13 % at one Gevrey estate. [DECANTER-2016]
+  - Crop losses of about a third to a half in many villages (Chambolle −39 %, Musigny −55 %), while Morey made more
+    than in 2015. [INSIDEBURGUNDY-2016]
+
+**Mosel 2018**
+- The grapes were so healthy that sorting took little effort; shrivelled berries were still picked out for the sweetest
+  wines. [MOSELWEIN-2018]
+- Some growers watered young vines to keep them alive; deep-rooted old vines coped. [MOSELWEIN-2018]
+- Most estates began picking Riesling by mid-September, their earliest ever. [MFW-2018]
+- Most wines were ripe and soft with mild acidity, many Kabinett and Spätlese of Auslese weight; a few top growers made
+  racy, elegant wines. [MFW-2018]
+- **Numbers.** Riesling averaged about 85 °Oe. Most varieties reached the legal maximum yield, the largest Mosel crop since
+  2002. [MOSELWEIN-2018]
+
+**Napa Valley 2011**
+- Growers opened their canopies for sun, warmth and air around the clusters. [NVV-2011]
+- Every pick was a choice between harvesting safely and waiting for more sugar at the risk of more botrytis. [NVV-2011]
+- Sorting in the field and at the wineries meant botrytis cut quantity rather than quality; one estate made a separate pass
+  to remove it before picking. [NVV-2011]
+- Flavours developed at lower sugar than usual, giving lower-alcohol wines; some estates picked early to catch fresh fruit.
+  [NVV-2011]
+- **Numbers.** Cabernet decisions around 23 °Brix; many estates finished in mid to late October, some in early November;
+  some sites lost more than 30 % of the crop to shatter. [NVV-2011]
+
 ## Sources
 - [RIESLING-2003] riesling.de, "Jahrgang 2003: völlig überschätzt …" (secondary): https://www.riesling.de/de/news/wein/jahrgang-2003-vollig-uberschatzt-/6_293.html
 - [WEINKENNER-2010] weinkenner.de, "Problematischer 2010er Jahrgang – Entsäuern auf breiter Front": https://www.weinkenner.de/problematischer-2010er-jahrgang-entsaeuern-auf-breiter-front/
@@ -61,3 +100,7 @@ Format: **year: what happened** [source]. A note marked `UNVERIFIED` must not be
 - [WIKI-GLASSFIRE] "Glass Fire", Wikipedia: https://en.wikipedia.org/wiki/Glass_Fire
 - [WINEINSTITUTE-2022] Wine Institute, "Californian Vintners Report High Quality for 2022 Harvest": https://wineinstitute.org/press-releases/californian-vintners-report-high-quality-for-2022-harvest/
 - [NVV-2022] Napa Valley Vintners, "Napa Valley's 2022 Harvest — the Tale of Two Harvests": https://napavintners.com/press/press_release_detail.asp?ID_News=3624475
+- [INSIDEBURGUNDY-2016] Jasper Morris, Inside Burgundy, "2016 Vintage Overview": https://insideburgundy.com/overview/2016-vintage-overview/
+- [MOSELWEIN-2018] Moselwein e.V. / Weinland Mosel, "Moselwinzer freuen sich über Bilderbuch-Trauben" (22 Oct 2018): https://www.weinland-mosel.de/de/aktuelles/show/moselwinzer-freuen-sich-ueber-bilderbuch-trauben
+- [MFW-2018] Jean Fisch, Mosel Fine Wines, "2018 Mosel Vintage | Kissed by the Sun": https://www.moselfinewines.com/2018-mosel-vintage-kissed-by-the-sun.php
+- Archive copies (the original pages now return 404): [DWI-2018] http://web.archive.org/web/20230927121822/https://www.deutscheweine.de/aktuelles/meldungen/details/news/detail/News/der-weinjahrgang-2018-in-den-anbaugebieten/ ; [NVV-2011] http://web.archive.org/web/20220709070815/https://napavintners.com/downloads/2011-Napa-Valley-Harvest-Report.pdf

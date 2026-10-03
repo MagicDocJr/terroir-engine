@@ -2,40 +2,287 @@
   "about": "Famous vintages (docs/superpowers/specs/2026-10-03-famous-vintages-design.md, docs/science/famous-vintages.md). Briefings hold only what a grower knew in January (ADR 0002); the debrief's lines are cited in docs/science/vintage-notes.md by their source keys. Paraphrased, not copied.",
   "scenarios": [
     {
-      "id": "cotedor-2016", "region": "cote-dor", "plot": "cotedor-village", "variety": "Pinot Noir", "vintage": 2016,
-      "title": "2016, Côte d'Or", "teaser": "A spring growers still talk about",
+      "id": "cotedor-2016",
+      "region": "cote-dor",
+      "plot": "cotedor-village",
+      "variety": "Pinot Noir",
+      "vintage": 2016,
+      "title": "2016, Côte d'Or",
+      "teaser": "A spring growers still talk about",
       "briefing": "January 2016. You take over a Village-classified Plot on the Côte d'Or, planted three years ago and now in its fourth leaf. The cellar is ready and the vines are yours. Make the best Village Wine you can. The weather is the real weather of that year on the Côte d'Or, and your forecasts reach only as far as in any game.",
       "medals": [
-        { "name": "bronze", "criteria": [ { "type": "category", "value": ["Village AOC", "Premier Cru"] } ] },
-        { "name": "silver", "criteria": [ { "type": "noFault" }, { "type": "qualityAtLeast", "value": "Good" } ] },
-        { "name": "gold", "criteria": [ { "type": "noChaptalisation" }, { "type": "naturalSugarAtLeast", "value": 189 }, { "type": "qualityAtLeast", "value": "Very good" } ] }
+        {
+          "name": "bronze",
+          "criteria": [
+            {
+              "type": "category",
+              "value": [
+                "Village AOC",
+                "Premier Cru"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "silver",
+          "criteria": [
+            {
+              "type": "noFault"
+            },
+            {
+              "type": "qualityAtLeast",
+              "value": "Good"
+            }
+          ]
+        },
+        {
+          "name": "gold",
+          "criteria": [
+            {
+              "type": "qualityAtLeast",
+              "value": "Very good"
+            }
+          ]
+        }
       ],
-      "growers": [], "compare": [],
-      "causes": ["spring-frost-yield", "cool-season-acid", "chaptalisation"]
+      "growers": [
+        {
+          "text": "Candles lit in some of the most famous parcels did not stop the April frost.",
+          "source": "DECANTER-2016"
+        },
+        {
+          "text": "With half the crop already lost to frost, many organic and biodynamic growers sprayed against mildew rather than risk the rest.",
+          "source": "DECANTER-2016"
+        },
+        {
+          "text": "Several top Montrachet owners pooled their tiny crops to fill about two barrels.",
+          "source": "DECANTER-2016"
+        },
+        {
+          "text": "A fine late summer brought picking forward; most Côte de Beaune producers picked their reds first, some picked whites first as their acidity fell.",
+          "source": "INSIDEBURGUNDY-2016"
+        },
+        {
+          "text": "Several producers picked and chaptalised a little to keep the acid balance, rather than wait for sugar and have to acidify.",
+          "source": "INSIDEBURGUNDY-2016"
+        },
+        {
+          "text": "The best reds came out concentrated with a fresh finish.",
+          "source": "INSIDEBURGUNDY-2016"
+        }
+      ],
+      "compare": [
+        {
+          "what": "harvestDate",
+          "label": "Harvest",
+          "real": "from about 14–15 September (early pickers) to 27 September (Côte de Nuits)",
+          "source": "INSIDEBURGUNDY-2016"
+        },
+        {
+          "what": "potentialAlcohol",
+          "label": "Potential alcohol at picking",
+          "real": "12.5–13 % at one Gevrey estate",
+          "source": "DECANTER-2016"
+        },
+        {
+          "what": "frostLoss",
+          "label": "Crop lost",
+          "real": "about a third to a half in many villages (Chambolle −39 %, Musigny −55 %)",
+          "source": "INSIDEBURGUNDY-2016"
+        }
+      ],
+      "causes": [
+        "spring-frost-yield",
+        "cool-season-acid",
+        "chaptalisation"
+      ]
     },
     {
-      "id": "mosel-2018", "region": "mosel", "plot": "mosel-blauschiefer", "variety": "Riesling", "vintage": 2018,
-      "title": "2018, Mosel", "teaser": "A summer to remember",
+      "id": "mosel-2018",
+      "region": "mosel",
+      "plot": "mosel-blauschiefer",
+      "variety": "Riesling",
+      "vintage": 2018,
+      "title": "2018, Mosel",
+      "teaser": "A summer to remember",
       "briefing": "January 2018. You run a steep slate Plot on the Mosel, planted with Riesling three years ago. The goal is the Mosel's signature: a light, fresh Prädikat Riesling, ideally a Kabinett with lively acidity. The weather is the real weather of that year on the Mosel, and your forecasts reach only as far as in any game.",
       "medals": [
-        { "name": "bronze", "criteria": [ { "type": "category", "value": ["Kabinett", "Spätlese", "Auslese", "Beerenauslese", "Trockenbeerenauslese", "Eiswein"] } ] },
-        { "name": "silver", "criteria": [ { "type": "category", "value": ["Kabinett"] }, { "type": "acidityAtLeast", "value": "medium(+)" } ] },
-        { "name": "gold", "criteria": [ { "type": "balanceMet" }, { "type": "qualityAtLeast", "value": "Very good" } ] }
+        {
+          "name": "bronze",
+          "criteria": [
+            {
+              "type": "category",
+              "value": [
+                "Kabinett",
+                "Spätlese",
+                "Auslese",
+                "Beerenauslese",
+                "Trockenbeerenauslese",
+                "Eiswein"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "silver",
+          "criteria": [
+            {
+              "type": "category",
+              "value": [
+                "Kabinett"
+              ]
+            },
+            {
+              "type": "acidityAtLeast",
+              "value": "medium(+)"
+            }
+          ]
+        },
+        {
+          "name": "gold",
+          "criteria": [
+            {
+              "type": "balanceMet"
+            },
+            {
+              "type": "qualityAtLeast",
+              "value": "Good"
+            }
+          ]
+        }
       ],
-      "growers": [], "compare": [],
-      "causes": ["warm-season-malic-loss", "sugar-to-alcohol", "ripeness-fruit-character"]
+      "growers": [
+        {
+          "text": "The grapes were so healthy that sorting took little effort; estates still picked out shrivelled berries for the sweetest wines.",
+          "source": "MOSELWEIN-2018"
+        },
+        {
+          "text": "Some growers watered young vines to keep them alive in the drought, while deep-rooted old vines coped.",
+          "source": "MOSELWEIN-2018"
+        },
+        {
+          "text": "Most estates began picking Riesling by mid-September, their earliest ever, and the dry autumn allowed selective picking.",
+          "source": "MFW-2018"
+        },
+        {
+          "text": "Most wines came out ripe and soft with mild acidity, many Kabinett and Spätlese really of Auslese weight; a few top growers made racy, elegant wines.",
+          "source": "MFW-2018"
+        }
+      ],
+      "compare": [
+        {
+          "what": "harvestDate",
+          "label": "Riesling harvest",
+          "real": "from mid-September",
+          "source": "MOSELWEIN-2018"
+        },
+        {
+          "what": "naturalOe",
+          "label": "Must weight",
+          "real": "Riesling averaged about 85 °Oe (Spätlese range)",
+          "source": "MOSELWEIN-2018"
+        },
+        {
+          "what": "yieldHlHa",
+          "label": "Yield",
+          "real": "most varieties reached the legal maximum yield; the largest Mosel crop since 2002",
+          "source": "MOSELWEIN-2018"
+        }
+      ],
+      "causes": [
+        "warm-season-malic-loss",
+        "sugar-to-alcohol",
+        "ripeness-fruit-character"
+      ]
     },
     {
-      "id": "napa-2011", "region": "napa", "plot": "napa-floor", "variety": "Cabernet Sauvignon", "vintage": 2011,
-      "title": "2011, Napa Valley", "teaser": "An unusual year in the valley",
+      "id": "napa-2011",
+      "region": "napa",
+      "plot": "napa-floor",
+      "variety": "Cabernet Sauvignon",
+      "vintage": 2011,
+      "title": "2011, Napa Valley",
+      "teaser": "An unusual year in the valley",
       "briefing": "January 2011. You farm a Plot on the Napa Valley floor, planted with Cabernet Sauvignon three years ago. Napa Cabernet is prized for ripe fruit and ripe tannin: aim for a clean, ripe Wine under the Napa Valley name. The weather is the real weather of that year in Napa, and your forecasts reach only as far as in any game.",
       "medals": [
-        { "name": "bronze", "criteria": [ { "type": "category", "value": ["Napa Valley AVA"] } ] },
-        { "name": "silver", "criteria": [ { "type": "noRotTaint" }, { "type": "seedsRipe" } ] },
-        { "name": "gold", "criteria": [ { "type": "qualityAtLeast", "value": "Very good" } ] }
+        {
+          "name": "bronze",
+          "criteria": [
+            {
+              "type": "category",
+              "value": [
+                "Napa Valley AVA"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "silver",
+          "criteria": [
+            {
+              "type": "noRotTaint"
+            },
+            {
+              "type": "seedsRipe"
+            },
+            {
+              "type": "balanceMet"
+            }
+          ]
+        },
+        {
+          "name": "gold",
+          "criteria": [
+            {
+              "type": "alcoholAtMost",
+              "value": 15.0
+            }
+          ]
+        }
       ],
-      "growers": [], "compare": [],
-      "causes": ["seed-ripeness-tannin", "cool-season-acid", "grey-rot-taint"]
+      "growers": [
+        {
+          "text": "Growers opened their canopies to bring sun, warmth and air to the clusters.",
+          "source": "NVV-2011"
+        },
+        {
+          "text": "Every pick was a choice between harvesting safely and waiting for more sugar at the risk of more botrytis.",
+          "source": "NVV-2011"
+        },
+        {
+          "text": "Sorting was set up in the field and at the wineries, so botrytis cut quantity rather than quality; one estate made a separate pass to remove it before picking.",
+          "source": "NVV-2011"
+        },
+        {
+          "text": "Flavours developed at lower sugar than usual, giving wines with lower alcohol; some estates picked early to catch fresh fruit.",
+          "source": "NVV-2011"
+        }
+      ],
+      "compare": [
+        {
+          "what": "brix",
+          "label": "Sugar at picking",
+          "real": "Cabernet decisions were made around 23 °Brix",
+          "source": "NVV-2011"
+        },
+        {
+          "what": "harvestDate",
+          "label": "Harvest",
+          "real": "many estates finished in mid to late October, some in early November",
+          "source": "NVV-2011"
+        },
+        {
+          "what": "yieldHlHa",
+          "label": "Yield",
+          "real": "some sites lost more than 30 % of the crop to shatter, others were near normal",
+          "source": "NVV-2011"
+        }
+      ],
+      "causes": [
+        "seed-ripeness-tannin",
+        "cool-season-acid",
+        "grey-rot-taint"
+      ]
     }
   ]
 }

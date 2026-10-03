@@ -31,7 +31,7 @@ public static class Scenarios
     private static readonly string[] QualityOrder = { "Faulty", "Poor", "Acceptable", "Good", "Very good", "Outstanding" };
     private static readonly string[] AcidityOrder = { "low", "medium(−)", "medium", "medium(+)", "high" };
     private static readonly ConcurrentDictionary<string, IReadOnlyList<Scenario>> Cache = new();
-    private static readonly HashSet<string> CriterionTypes = new() { "category", "qualityAtLeast", "noFault", "noChaptalisation", "naturalSugarAtLeast", "acidityAtLeast", "balanceMet", "seedsRipe", "noRotTaint" };
+    private static readonly HashSet<string> CriterionTypes = new() { "category", "qualityAtLeast", "noFault", "noChaptalisation", "naturalSugarAtLeast", "acidityAtLeast", "balanceMet", "seedsRipe", "noRotTaint", "alcoholAtMost" };
 
     public static IReadOnlyList<Scenario> Catalog(GameData data) => Cache.GetOrAdd(data.DataRoot, root =>
     {
@@ -102,6 +102,7 @@ public static class Scenarios
         "balanceMet" => "balanced",
         "seedsRipe" => "ripe tannin: seeds ripe at harvest",
         "noRotTaint" => "no rot taint",
+        "alcoholAtMost" => $"picked before the alcohol runs hot: at most {(double)c.Value!:0.0} % vol",
         _ => c.Type,
     };
 
@@ -131,6 +132,9 @@ public static class Scenarios
                 return (bal.Met, bal.Met ? "balanced" : $"not balanced: {bal.Why}");
             case "seedsRipe":
                 return (b.SeedMaturity >= 0.62, $"seed ripeness {b.SeedMaturity * 100:0} % at harvest{(b.SeedMaturity >= 0.62 ? "" : " (still green)")}");
+            case "alcoholAtMost":
+                double max = (double)c.Value!;
+                return (b.AlcoholPct <= max + 1e-9, $"{b.AlcoholPct:0.0} % vol{(b.AlcoholPct <= max + 1e-9 ? "" : $" (more than {max:0.0})")}");
             case "noRotTaint":
                 return (b.GreyRotShare <= 0.06, $"{b.GreyRotShare * 100:0.#} % grey-rotten fruit{(b.GreyRotShare <= 0.06 ? "" : " (taints the wine)")}");
         }
@@ -161,7 +165,8 @@ public static class Scenarios
     {
         var s = Find(g.Data, g.Setup.ScenarioId);
         if (s == null) return new JsonObject { ["judged"] = false };
-        var wines = g.Wines.Where(w => w.Vintage == s.Vintage && w.Sheet != null && w.Bottled != null).ToList();
+        // the scenario's grape only: a Plot's other Blocks may grow another grape, but the medal is about the year's challenge for this one
+        var wines = g.Wines.Where(w => w.Vintage == s.Vintage && w.Sheet != null && w.Bottled != null && w.Blend.VarietyName == s.Variety).ToList();
         if (wines.Count == 0) return new JsonObject { ["judged"] = false };
         var best = wines.Select(w => (w, j: JudgeWine(s, w)))
             .OrderByDescending(x => x.j.Earned).ThenByDescending(x => Array.IndexOf(QualityOrder, x.w.Sheet!.Quality)).ThenBy(x => x.w.Id, StringComparer.Ordinal).First();
@@ -216,6 +221,8 @@ public static class Scenarios
             "naturalSugar" => $"{wine.Blend.NaturalSugar:0} g/L",
             "yieldHlHa" => prov == null ? "" : $"{prov.YieldHlHa:0} hL/ha",
             "brix" => $"{Units.BrixFromOe(wine.Blend.NaturalOe):0.0} °Brix",
+            "potentialAlcohol" => $"{wine.Blend.NaturalSugar / 16.83:0.0} %",
+            "frostLoss" => prov == null ? "" : $"{prov.FrostLoss * 100:0} %",
             _ => "",
         };
         return new JsonObject

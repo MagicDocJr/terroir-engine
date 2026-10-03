@@ -17,8 +17,9 @@ public class ScenarioTests
         var styled = new HashSet<string>();
         while (!g.IsVintageBottled(last) && guard++ < 800)
         {
-            bool near = g.Blocks.Any(b => b.Veraison != null && !b.Harvested);
-            g.Advance(near ? 3 : 20, stopAtAlerts: false);
+            // daily near harvest and while a Lot waits for its choices (they lock once fermentation starts)
+            bool near = g.Blocks.Any(b => b.Veraison != null && !b.Harvested) || g.Lots.Any(l => l.Phase is LotPhase.Received or LotPhase.ColdSoak);
+            g.Advance(near ? 1 : 20, stopAtAlerts: false);
             if (g.Vintage <= last)
                 foreach (var b in g.Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null))
                     if (Chemistry.MustFromBlock(b).Oe >= targetOe || b.LeafFall != null) g.Apply(new Command { Type = "harvest", A = b.Data.Id, B = "hand", C = "Table" });
