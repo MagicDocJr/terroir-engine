@@ -66,6 +66,13 @@ public static class VintageReport
     private static List<SeasonRecord> Records(GameSession g, int vintage) =>
         g.Blocks.Select(b => g.Season(b, vintage)).Where(r => r != null).Select(r => r!).ToList();
 
+    /// <summary>The Vintage's growing-season mean temperature (April–October, Block A microclimate) and the 1991–2020 normal.</summary>
+    public static (double Gst, double GstNormal) SeasonTemps(GameSession g, int vintage)
+    {
+        var recs = Records(g, vintage);
+        return (Stats(g, vintage, recs.Select(r => r.Budburst).Where(d => d != null).Min()).Gst, Normal(g).gst);
+    }
+
     public static JsonObject Build(GameSession g, int vintage)
     {
         var recs = Records(g, vintage);
@@ -173,6 +180,7 @@ public static class VintageReport
             ["events"] = events, ["blocks"] = blocks, ["wines"] = wines,
             ["money"] = new JsonObject { ["revenue"] = Math.Round(revenue), ["costs"] = Math.Round(costs), ["result"] = Math.Round(revenue - costs), ["topCosts"] = topCosts },
             ["next"] = new JsonArray(next.Select(s => (JsonNode)s).ToArray()),
+            ["review"] = VintageReview.Review(g, vintage),
         };
     }
 
