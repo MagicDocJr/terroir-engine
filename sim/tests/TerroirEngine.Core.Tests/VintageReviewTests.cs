@@ -89,3 +89,36 @@ public class VintageReviewTests
         Assert.NotNull(VintageReport.Build(Frost.Value, 2016)["review"]!["strip"]);
     }
 }
+
+/// <summary>Fixes from the Vintage-in-review final review.</summary>
+public class VintageReviewFixTests
+{
+    private static readonly Lazy<GameSession> Hot = new(() => ScenarioTests.Play("mosel-2018", 84));
+
+    [Fact]
+    public void FaultLine_IsTheCausesOwnFault()
+    {
+        var sh = new TerroirEngine.Tasting.TastingSheet();
+        sh.Faults.Add("Volatile acidity 1.25 g/L exceeds the EU legal limit (1.20 g/L): vinegar, nail varnish.");
+        sh.Faults.Add("Brettanomyces taint (4-EP 500 µg/L): sticking plaster, barnyard, sweaty saddle.");
+        Assert.StartsWith("Brettanomyces", (string)VintageReview.FaultLine(sh, "brett")!["because"]!);
+        Assert.StartsWith("Volatile acidity", (string)VintageReview.FaultLine(sh, "volatile-acidity")!["because"]!);
+        Assert.Null(VintageReview.FaultLine(sh, "oxidation"));
+    }
+
+    [Fact]
+    public void SeasonCard_ShowsTheMeasureThatTaggedIt()
+    {
+        var g = Hot.Value;
+        var card = VintageReview.Cards(g, 2018).First(c => c!["causes"]!.AsArray().Any(x => (string)x!["id"]! == "warm-season-malic-loss"))!;
+        var w = g.Wines.First(x => x.Name == (string)card["wine"]!);
+        var prov = g.Provenance[w.Components.OrderByDescending(c => c.Litres).First().LotId];
+        Assert.Contains(card["happened"]!.AsArray(), h => ((string)h!).Contains($"{prov.SeasonTemp:0.0} °C"));
+    }
+
+    [Fact]
+    public void EveryCard_HasEvidence()
+    {
+        foreach (var c in VintageReview.Cards(Hot.Value, 2018)) Assert.NotEmpty(c!["happened"]!.AsArray());
+    }
+}

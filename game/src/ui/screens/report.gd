@@ -180,7 +180,9 @@ static func _review(R: Dictionary, shell) -> Control:
 		strip.pins.append({"t": t, "num": ts.size(), "priority": int(c["priority"])})
 	var first: bool = not Rv.get("seen", false) and not shell.capture
 	strip.animate = first
-	if not Rv.get("seen", false): Sim.ReviewSeen(vintage)
+	if not Rv.get("seen", false):
+		Sim.ReviewSeen(vintage)
+		Rv["seen"] = true   # the snapshot is not refreshed here: switching Vintages and back must not replay the season
 	strip.progress = 0.0 if first else 1.0
 	p[1].add_child(strip)
 	var bh := UI.hbox(10); p[1].add_child(bh)

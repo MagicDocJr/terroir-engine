@@ -73,6 +73,13 @@ public static class VintageReport
         return (Stats(g, vintage, recs.Select(r => r.Budburst).Where(d => d != null).Min()).Gst, Normal(g).gst);
     }
 
+    /// <summary>The review, or null if it cannot be built: the report must never fail because of it.</summary>
+    private static JsonObject? SafeReview(GameSession g, int vintage)
+    {
+        try { return VintageReview.Review(g, vintage); }
+        catch (Exception) { return null; }
+    }
+
     public static JsonObject Build(GameSession g, int vintage)
     {
         var recs = Records(g, vintage);
@@ -180,7 +187,7 @@ public static class VintageReport
             ["events"] = events, ["blocks"] = blocks, ["wines"] = wines,
             ["money"] = new JsonObject { ["revenue"] = Math.Round(revenue), ["costs"] = Math.Round(costs), ["result"] = Math.Round(revenue - costs), ["topCosts"] = topCosts },
             ["next"] = new JsonArray(next.Select(s => (JsonNode)s).ToArray()),
-            ["review"] = VintageReview.Review(g, vintage),
+            ["review"] = SafeReview(g, vintage),
         };
     }
 

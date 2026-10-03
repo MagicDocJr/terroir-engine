@@ -42,6 +42,25 @@ public static class VintageReview
         return new Ctx(w, lot, prov, block == null ? null : g.Season(block, vintage), block);
     }
 
+    private static readonly Dictionary<string, string> FaultPrefix = new()
+    {
+        ["volatile-acidity"] = "Volatile acidity", ["brett"] = "Brettanomyces", ["oxidation"] = "Oxidised", ["low-yan-h2s"] = "Reduction", ["grey-rot-taint"] = "Mouldy",
+    };
+
+    /// <summary>The sheet's fault entry that belongs to this Cause (never another Cause's fault), or null.</summary>
+    public static JsonObject? FaultLine(TastingSheet sh, string cause) =>
+        FaultPrefix.TryGetValue(cause, out var pre) && sh.Faults.FirstOrDefault(f => f.StartsWith(pre, StringComparison.Ordinal)) is { } f
+            ? new JsonObject { ["attribute"] = "Fault", ["level"] = "faulty", ["because"] = f } : null;
+
+    private static JsonObject? Line(TastingSheet sh, string line, string cause, Wine w)
+    {
+        if (line == "fault")
+            return cause == "molecular-so2-ph"
+                ? new JsonObject { ["attribute"] = "SO₂ protection", ["level"] = "low", ["because"] = $"molecular SO₂ {w.Blend.MolecularSo2:0.00} mg/L at pH {w.Blend.Ph:0.00}, below the 0.5 mg/L that protects a wine" }
+                : FaultLine(sh, cause);
+        return Line(sh, line);
+    }
+
     private static JsonObject? Line(TastingSheet sh, string line)
     {
         if (line.StartsWith("palate:"))
@@ -49,18 +68,17 @@ public static class VintageReview
         if (line.StartsWith("aroma:"))
             return sh.Aromas.FirstOrDefault(a => "aroma:" + a.Family == line) is { } a ? new JsonObject { ["attribute"] = "Aroma: " + a.Family, ["level"] = a.Terms, ["because"] = a.Because } : null;
         if (line == "appearance") return new JsonObject { ["attribute"] = "Colour", ["level"] = $"{sh.ColourIntensity} {sh.Colour}", ["because"] = sh.AppearanceBecause };
-        if (line == "fault") return sh.Faults.Count > 0 ? new JsonObject { ["attribute"] = "Fault", ["level"] = "faulty", ["because"] = sh.Faults[0] } : null;
         return null;
     }
 
     private static (DateOnly Date, double Tmin) ColdestNight(GameSession g, Ctx c, int vintage)
     {
         var from = c.Season?.Budburst ?? new DateOnly(vintage, 4, 1);
-        (DateOnly, double) best = (from, double.MaxValue);
+        (DateOnly, double) best = (from, double.NaN);
         for (var d = from; d <= new DateOnly(vintage, 5, 20); d = d.AddDays(1))
         {
             var w = c.Block!.Climate.Adjust(g.Weather.Get(d));
-            if (w.Tmin < best.Item2) best = (d, w.Tmin);
+            if (double.IsNaN(best.Item2) || w.Tmin < best.Item2) best = (d, w.Tmin);
         }
         return best;
     }
@@ -69,11 +87,11 @@ public static class VintageReview
     {
         var from = c.Season?.Veraison ?? new DateOnly(vintage, 7, 15);
         var to = c.Prov?.HarvestDate ?? new DateOnly(vintage, 10, 15);
-        (DateOnly, double) best = (from, double.MinValue);
+        (DateOnly, double) best = (from, double.NaN);
         for (var d = from; d <= to; d = d.AddDays(1))
         {
             var w = c.Block!.Climate.Adjust(g.Weather.Get(d));
-            if (w.Tmax > best.Item2) best = (d, w.Tmax);
+            if (double.IsNaN(best.Item2) || w.Tmax > best.Item2) best = (d, w.Tmax);
         }
         return best;
     }
@@ -93,18 +111,20 @@ public static class VintageReview
             case "spring-frost-yield" when c.Block != null:
                 var (night, tmin) = ColdestNight(g, c, vintage);
                 var hit = g.Blocks.Select(bl => (bl.Data.Id, Loss: g.Season(bl, vintage)?.FrostShootLoss ?? 0)).Where(x => x.Loss > 0.05).ToList();
-                lines.Add($"{D(night)}: {tmin:0.0} °C at Block {blockName} after budburst");
+                if (!double.IsNaN(tmin)) lines.Add($"{D(night)}: {tmin:0.0} °C at Block {blockName} after budburst");   // NaN: budburst came after 20 May
                 if (hit.Count > 0) lines.Add("Young shoots killed: " + string.Join(", ", hit.Select(x => $"Block {x.Id} {x.Loss * 100:0} %")));
                 if (p != null) lines.Add($"Block {blockName} yielded {p.YieldHlHa:0} hL/ha");
                 return (night, 1, lines);
             case "cool-season-acid" or "warm-season-malic-loss":
+                // the measure that tagged the Cause: the picked Block's April–September mean against the game's 15.5 / 18 °C marks
+                if (p != null) lines.Add($"Block {blockName}'s April–September mean was {p.SeasonTemp:0.0} °C (the game counts below 15.5 °C as cool, above 18 °C as warm)");
                 var (gst, normal) = VintageReport.SeasonTemps(g, vintage);
-                lines.Add($"The growing season averaged {gst:0.0} °C (April–October), against a normal of {normal:0.0} °C");
+                lines.Add($"For context, the Region's April–October mean was {gst:0.0} °C, against a 1991–2020 normal of {normal:0.0} °C");
                 if (p != null) lines.Add($"Block {blockName} was picked with TA {p.HarvestTa:0.0} g/L and pH {p.HarvestPh:0.00}");
                 return (s?.Veraison ?? new DateOnly(vintage, 8, 1), 1, lines);
             case "sunburn-cooked" when c.Block != null:
                 var (hot, tmax) = HottestDay(g, c, vintage);
-                lines.Add($"{D(hot)}: {tmax:0.0} °C at Block {blockName}");
+                if (!double.IsNaN(tmax)) lines.Add($"{D(hot)}: {tmax:0.0} °C at Block {blockName}");
                 if (p != null) lines.Add($"{p.SunburnPct:0.#} % of the berries were sunburned; leaves pulled: {(p.LeafSide == "" ? "none" : p.LeafSide.ToLowerInvariant() + " side")}");
                 return (hot, 1, lines);
             case "sun-exposure-tdn" or "pyrazines-shade-cool":
@@ -116,7 +136,7 @@ public static class VintageReview
                 return (s?.Flowering ?? new DateOnly(vintage, 6, 15), 1, lines);
             case "noble-rot" or "grey-rot-taint":
                 double rain = 0;
-                for (var d = harvest.AddDays(-21); d < harvest; d = d.AddDays(1)) rain += g.Weather.Get(d).Precip;
+                for (var d = harvest.AddDays(-21); d < harvest; d = d.AddDays(1)) rain += (c.Block?.Climate.Adjust(g.Weather.Get(d)) ?? g.Weather.Get(d)).Precip;   // the Block's rain, as the rot model sees it
                 lines.Add($"{rain:0} mm of rain fell in the three weeks before picking");
                 if (p != null) lines.Add(cause == "noble-rot" ? $"{p.NobleRotPct:0.#} % noble rot on Block {blockName}" : $"{p.GreyRotPct:0.#} % grey rot reached the press from Block {blockName}");
                 return (harvest, 1, lines);
@@ -131,7 +151,7 @@ public static class VintageReview
         }
         if (FaultCauses.Contains(cause))
         {
-            if (c.Wine.Sheet!.Faults.Count > 0) lines.Add(c.Wine.Sheet.Faults[0]);
+            if (FaultLine(c.Wine.Sheet!, cause) is { } fl) lines.Add((string)fl["because"]!);
             if (cause == "low-yan-h2s" && c.Lot != null) lines.Add($"Yeast-assimilable nitrogen in the must: {c.Lot.YanMgL:0} mg/L; nutrients: {Opt(c.Lot, "Nutrients").ToLowerInvariant()}");
             if (cause == "molecular-so2-ph") lines.Add($"Molecular SO₂ {b.MolecularSo2:0.00} mg/L at pH {b.Ph:0.00}");
             return (bottled, 0, lines);
@@ -168,9 +188,15 @@ public static class VintageReview
 
     /// <summary>The cause cards: from the Vintage's best Wine, plus season events and faults tagged on its other Wines; one card
     /// per moment; faults first, then season, harvest, cellar, the rest; chronological within each; at most eight.</summary>
+    /// <summary>The Vintage's bottled Wines: those whose largest component is a Lot of this Vintage (the Lot the sheet was
+    /// written from), labelled with the year or not — a topped-up, non-vintage Wine still tells its Vintage's story.</summary>
+    private static List<Wine> WinesOf(GameSession g, int vintage) =>
+        g.WinesOf(vintage).Where(w => w.Sheet != null && w.Bottled != null
+            && g.Lots.FirstOrDefault(l => l.Id == w.Components.OrderByDescending(c => c.Litres).First().LotId)?.Vintage == vintage).ToList();
+
     public static JsonArray Cards(GameSession g, int vintage)
     {
-        var wines = g.Wines.Where(w => w.Vintage == vintage && w.Sheet != null && w.Bottled != null).ToList();
+        var wines = WinesOf(g, vintage);
         if (wines.Count == 0) return new JsonArray();
         var best = wines.OrderByDescending(w => Array.IndexOf(QualityOrder, w.Sheet!.Quality)).ThenBy(w => w.Id, StringComparer.Ordinal).First();
         var picks = new List<(Wine W, string Cause, string Line)>();
@@ -182,7 +208,7 @@ public static class VintageReview
         foreach (var (w, cause, lineKey) in picks)
         {
             var c = Context(g, w, vintage);
-            var line = Line(w.Sheet!, lineKey) ?? (lineKey == "vintage" && c.Prov != null
+            var line = Line(w.Sheet!, lineKey, cause, w) ?? (lineKey == "vintage" && c.Prov != null
                 ? new JsonObject { ["attribute"] = "Vintage", ["level"] = vintage.ToString(Ci), ["because"] = $"{c.Prov.YieldHlHa:0} hL/ha from Block {c.Prov.BlockId}" }
                 : null);
             if (line == null) continue;
@@ -195,7 +221,7 @@ public static class VintageReview
             if (gr.Lines.All(x => (string?)x["attribute"] != (string?)line["attribute"])) gr.Lines.Add(line);
         }
         string Label(DateOnly d) => d.Year == vintage ? D(d) : d.ToString("d MMMM yyyy", Ci);
-        var cards = groups.Values.Select(gr =>
+        var cards = groups.Values.Where(gr => gr.Happened.Count > 0).Select(gr =>   // every card is backed by simulation state
         {
             var metas = gr.Causes.Select(id => CauseCatalog.Find(g.Data, id)).ToList();
             string title = gr.Causes.Count == 1 || gr.Title == null ? metas[0]?.Title ?? gr.Causes[0] : gr.Title;
@@ -213,7 +239,7 @@ public static class VintageReview
     /// <summary>The season strip: phenology of the best Wine's main Block and a pin per card, for the animated replay.</summary>
     public static JsonObject? Strip(GameSession g, int vintage, JsonArray cards)
     {
-        var wines = g.Wines.Where(w => w.Vintage == vintage && w.Sheet != null && w.Bottled != null).ToList();
+        var wines = WinesOf(g, vintage);
         if (wines.Count == 0) return null;
         var best = wines.OrderByDescending(w => Array.IndexOf(QualityOrder, w.Sheet!.Quality)).ThenBy(w => w.Id, StringComparer.Ordinal).First();
         var c = Context(g, best, vintage);
