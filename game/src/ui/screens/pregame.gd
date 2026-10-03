@@ -55,6 +55,10 @@ static func _title(shell) -> Control:
 	var tp := UI.button("Tasting practice & Wine Fair", false, 18); tp.custom_minimum_size = Vector2(360, 50)
 	tp.pressed.connect(func(): shell.show_screen("practice"))
 	col.add_child(tp)
+	var fv := UI.button("Famous vintages", false, 18); fv.custom_minimum_size = Vector2(360, 50)
+	fv.tooltip_text = "Replay a real year with three medals to earn and a debrief of what really happened"
+	fv.pressed.connect(func(): shell.show_screen("scenarios"))
+	col.add_child(fv)
 	var TS = JSON.parse_string(Sim.PracticeSummary())
 	if TS is Dictionary and int(TS.get("xp", 0)) > 0:
 		var rl := UI.label("%s · %d of %d Causes known · %d medal%s" % [TS["rank"], int(TS.get("known", 0)), int(TS.get("catalogSize", 0)), int(TS["medalCount"]), "" if int(TS["medalCount"]) == 1 else "s"], 14, UI.GOLD)

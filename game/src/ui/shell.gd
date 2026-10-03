@@ -25,11 +25,14 @@ const SCREENS := {
 	"practice": ["Tasting practice", "res://src/ui/screens/practice.gd", ""],
 	"fair": ["Wine Fair", "res://src/ui/screens/fair.gd", ""],
 	"cellarbook": ["Cellar book", "res://src/ui/screens/cellar_book.gd", ""],
+	"scenarios": ["Famous vintages", "res://src/ui/screens/scenarios.gd", "list"],
+	"scenario_brief": ["Famous vintages", "res://src/ui/screens/scenarios.gd", "brief"],
+	"scenario": ["Famous vintage", "res://src/ui/screens/scenarios.gd", "status"],
 }
 const NAV := ["inbox", "estate", "plot", "weather", "programmes", "ripeness", "winery", "blending", "wines", "glossary", "practice"]
 const NAV_GLYPH := {"inbox": "▤", "estate": "◆", "plot": "▦", "weather": "☁", "programmes": "≡", "ripeness": "◔",
 	"winery": "▥", "blending": "⋈", "wines": "✦", "glossary": "?", "practice": "◇"}
-const PREGAME := ["title", "region", "plots", "planting"]
+const PREGAME := ["title", "region", "plots", "planting", "scenarios", "scenario_brief"]
 const TASTING := ["practice", "fair", "cellarbook"]   # open with or without a game; their state lives in `state`, so never cached
 
 var D: Dictionary = {}          # latest snapshot
@@ -92,6 +95,8 @@ func _ready() -> void:
 	if "--perf" in args: capture = true; _perf.call_deferred(); return
 	if "--pregame" in args: capture = true; _pregame_shots.call_deferred(); return
 	if "--avatars" in args: capture = true; _avatar_sheet.call_deferred(); return
+	if "--scenarios" in args:
+		capture = true; Sim.SetRecordPath("user://tasting_record_test.json"); _scenario_test.call_deferred(); return
 	if "--learning" in args:
 		capture = true; Sim.SetRecordPath("user://tasting_record_test.json"); _learning_test.call_deferred(); return
 	if "--practice" in args:
@@ -120,6 +125,11 @@ func apply(type: String, a: String, b: String, c: String, message: String) -> vo
 	command(type, a, b, c)
 	notify(message, true)
 
+## The autosave slot: a famous-vintage scenario keeps its own, so it never overwrites the main Estate's autosave.
+func autosave_slot() -> String:
+	var sid := String(Sim.ScenarioId())
+	return "autosave" if sid == "" else "autosave-" + sid
+
 ## Advance time. stop=true runs until the next Alert (max `days`).
 func advance(days: int, stop := true, quiet := false) -> bool:
 	if busy or not Sim.HasGame(): return false
@@ -127,7 +137,7 @@ func advance(days: int, stop := true, quiet := false) -> bool:
 	var before := _alert_ids()
 	var n: int = Sim.Advance(days, stop)
 	D = JSON.parse_string(Sim.Snapshot())
-	Sim.SaveGame("autosave")
+	Sim.SaveGame(autosave_slot())
 	busy = false
 	# open each Vintage report once, the first time its Vintage is fully bottled (the flag lives in the save)
 	var fl: Array = D.get("flags", [])
@@ -206,7 +216,7 @@ func start_game(setup_json: Dictionary) -> void:
 	if not ok:
 		notify("Could not start: " + String(Sim.LastError()).left(200)); return
 	D = JSON.parse_string(Sim.Snapshot())
-	Sim.SaveGame("autosave")
+	Sim.SaveGame(autosave_slot())
 	state.clear()
 	_build_chrome()
 	show_screen("inbox")
@@ -403,7 +413,7 @@ func _hide_3d() -> void:
 	root_box.visible = true
 	if stale_2d:                       # days passed in the 3D time-lapse: rebuild the screens once
 		stale_2d = false
-		Sim.SaveGame("autosave")
+		Sim.SaveGame(autosave_slot())
 		_build_chrome()
 		show_screen("report" if tl_report else ("inbox" if tl_alert_id >= 0 else current))
 		tl_alert_id = -1
@@ -438,7 +448,7 @@ func _on_advance_requested(days: int) -> void:
 			tl_report = true
 			if subject == "": subject = "The %d Vintage report is ready" % int(bv)
 	if subject != "" or tl_days % 7 == 0:
-		Sim.SaveGame("autosave")
+		Sim.SaveGame(autosave_slot())
 	await get_tree().process_frame   # the sim step and the 3D update land in different frames (time-lapse smoothness)
 	busy = false
 	if view3d == null or not view3d.visible:
@@ -449,11 +459,11 @@ func _on_advance_requested(days: int) -> void:
 		view3d.timelapse_alert(subject)
 
 func _on_timelapse_toggled(on: bool) -> void:
-	if not on and stale_2d: Sim.SaveGame("autosave")
+	if not on and stale_2d: Sim.SaveGame(autosave_slot())
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST and Sim.HasGame() and stale_2d:
-		Sim.SaveGame("autosave")      # days passed in the 3D time-lapse since the last save
+		Sim.SaveGame(autosave_slot())      # days passed in the 3D time-lapse since the last save
 
 # ------------------------------------------------------------------ chrome
 func _build_chrome() -> void:
@@ -516,6 +526,18 @@ func _topbar() -> void:
 	bell.mouse_filter = Control.MOUSE_FILTER_STOP
 	bell.gui_input.connect(func(e): if e is InputEventMouseButton and e.pressed: show_screen("inbox"))
 	h.add_child(bell)
+	# a famous-vintage scenario: its chip opens the goals (and the debrief once a Wine of the vintage is judged)
+	var SC = JSON.parse_string(Sim.ScenarioStatus())
+	if SC is Dictionary and SC.get("scenario") != null:
+		var judged: bool = SC.get("judged", false)
+		var medal = SC["evaluation"].get("medal") if judged and SC.get("evaluation") != null else null
+		var sc := UI.button(("● %s" % String(medal).capitalize()) if medal != null else "◎ %s" % String(SC["scenario"]["title"]), false, 14)
+		sc.custom_minimum_size = Vector2(0, 40); sc.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		sc.tooltip_text = "Famous vintage %s: %s" % [SC["scenario"]["title"], "your medal and the debrief" if judged else "your goals, judged at bottling"]
+		sc.pressed.connect(func(): show_screen("scenario")); h.add_child(sc)
+		if judged and not SC.get("seen", false) and current != "scenario":
+			if playing: playing = false; play_timer.stop(); call_deferred("_build_chrome")   # the Play button must show the stopped clock
+			call_deferred("show_screen", "scenario")
 	var b3 := UI.button("3D", false, 15); b3.custom_minimum_size = Vector2(52, 40); b3.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	b3.tooltip_text = "Walk the vineyard and winery in 3D (Tab)"; b3.pressed.connect(toggle_3d.bind("")); h.add_child(b3)
 	var sv := UI.button("Save", false, 15); sv.size_flags_vertical = Control.SIZE_SHRINK_CENTER; sv.custom_minimum_size = Vector2(0, 40)
@@ -1015,6 +1037,34 @@ func _practice_test() -> void:
 	show_screen("cellarbook"); await _shot("practice_16_cellar_book")
 	show_screen("title"); await _shot("practice_17_title")
 	print("PRACTICE DONE ok=", ok)
+	get_tree().quit()
+
+# ------------------------------------------------------------------ famous-vintages harness (--scenarios)
+## The list and briefing from the title screen, a scenario game's goals, the scripted player to bottling, then the debrief
+## and the list again with the medal earned.
+func _scenario_test() -> void:
+	var ok := true
+	show_screen("title"); await _shot("scenarios_00_title")
+	show_screen("scenarios"); await _shot("scenarios_01_list")
+	state["scn_id"] = "mosel-2018"
+	show_screen("scenario_brief"); await _shot("scenarios_02_brief")
+	if not Sim.NewScenarioGame("mosel-2018"): ok = false; print("SCENARIOS FAIL start")
+	state.clear(); current = ""; refresh()
+	show_screen("scenario"); await _shot("scenarios_03_goals")
+	Sim.ScenarioAutoplay(75, JSON.stringify({"Sweetness": 2}))
+	refresh()
+	await get_tree().process_frame
+	if current != "scenario": ok = false; print("SCENARIOS FAIL debrief did not open")
+	var St = JSON.parse_string(Sim.ScenarioStatus())
+	print("SCENARIOS mosel-2018 judged ", St.get("judged"), " medal ", St["evaluation"].get("medal") if St.get("evaluation") != null else null)
+	if not St.get("judged", false) or St["evaluation"].get("medal") != "gold": ok = false; print("SCENARIOS FAIL expected gold")
+	show_screen("scenario"); await _shot("scenarios_04_debrief")
+	await _shot_scrolled_to_end("scenarios_05_debrief_end")
+	var List = JSON.parse_string(Sim.ScenarioList())
+	for it in List: if String(it["scenario"]["id"]) == "mosel-2018" and it.get("best") != "gold": ok = false; print("SCENARIOS FAIL medal not kept")
+	show_screen("inbox"); await _shot("scenarios_06_topbar")
+	show_screen("scenarios"); await _shot("scenarios_07_list_after")
+	print("SCENARIOS DONE ok=", ok)
 	get_tree().quit()
 
 # ------------------------------------------------------------------ learning-core harness (--learning)

@@ -84,6 +84,17 @@ public static class ReviewScheduler
 /// (study days). Migration keeps every v1 field and is idempotent.</summary>
 public static class StudyRecord
 {
+    /// <summary>Puts Causes in the review queue, due tomorrow, without counting any answer (learn-card checks, scenario debriefs).
+    /// Causes already in the queue and unknown ids are left alone.</summary>
+    public static JsonObject Enqueue(JsonObject record, IEnumerable<string> causeIds, DateOnly today, TerroirEngine.Data.GameData data)
+    {
+        var rec = Migrate(record);
+        var states = States(rec);
+        foreach (var c in causeIds.Distinct().Where(c => !states.ContainsKey(c) && CauseCatalog.Find(data, c) != null))
+            Put(rec, new CauseState(c, 0, 0, ReviewScheduler.StartDifficulty, today.AddDays(1), null, new List<CauseAnswer>(), false));
+        return rec;
+    }
+
     public const int Version = 2;
     private static readonly CultureInfo Ci = CultureInfo.InvariantCulture;
 
