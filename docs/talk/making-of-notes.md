@@ -90,7 +90,7 @@ Godot's Movie Maker, `scripts/record.sh`, writes to `game/shots/video/` (not in 
 
 | Video | Length | What it shows |
 |---|---|---|
-| `capture.mp4` | about 1 min | the full game, from setup through the season to bottling and the report |
+| `capture.mp4` | 47 s | the full game, from setup through the season to bottling and the report |
 | `scenarios.mp4` | 11 s | a famous vintage, from briefing to gold medal and debrief |
 | `practice.mp4` | 18 s | Tasting practice exercises and the Wine Fair |
 | `learning.mp4` | 26 s | spaced review sessions and the learn cards |
