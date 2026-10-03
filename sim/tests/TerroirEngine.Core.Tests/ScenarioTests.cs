@@ -111,3 +111,52 @@ public class ScenarioTests
         Assert.Equal(today.AddDays(1), st["spring-frost-yield"].Due);
     }
 }
+
+/// <summary>Fixes from the famous-vintages final review.</summary>
+public class ScenarioReviewFixTests
+{
+    private static readonly Lazy<GameSession> CoteDor = new(() => ScenarioTests.Play("cotedor-2016", 94));
+
+    [Fact]
+    public void ApplyToRecord_QueuesTheCauses_EvenWithoutAMedal()
+    {
+        var status = new System.Text.Json.Nodes.JsonObject
+        {
+            ["judged"] = true, ["scenario"] = new System.Text.Json.Nodes.JsonObject { ["id"] = "cotedor-2016" },
+            ["evaluation"] = new System.Text.Json.Nodes.JsonObject { ["medal"] = null },
+            ["debrief"] = new System.Text.Json.Nodes.JsonObject { ["causes"] = new System.Text.Json.Nodes.JsonArray(new System.Text.Json.Nodes.JsonObject { ["id"] = "spring-frost-yield" }) },
+        };
+        var rec = Scenarios.ApplyToRecord(new System.Text.Json.Nodes.JsonObject(), status, new DateOnly(2026, 10, 3), Fixture.Data);
+        Assert.True(StudyRecord.States(rec).ContainsKey("spring-frost-yield"));
+        Assert.Null(rec["scenarios"]?["cotedor-2016"]);
+    }
+
+    [Fact]
+    public void MissedCriterion_ShowsWhatTheWineHad()
+    {
+        var ev = Scenarios.Evaluate(CoteDor.Value);
+        var silver = ev["medals"]!.AsArray().First(m => (string)m!["name"]! == "silver")!;
+        foreach (var c in silver["criteria"]!.AsArray().Where(c => !(bool)c!["met"]!))
+            Assert.NotEqual("", (string)c!["evidence"]!);
+    }
+
+    [Fact]
+    public void Evidence_IsShownOnAMiss_EvenWhenTheCriterionTextContainsIt()
+    {
+        Assert.Equal("acidity medium", Scenarios.EvidenceShown("acidity medium(+) or higher", false, "acidity medium"));
+        Assert.Equal("", Scenarios.EvidenceShown("balanced", true, "balanced"));
+    }
+
+    [Fact]
+    public void Evaluate_JudgesOnlyTheScenarioGrape_AndPicksTheBestWine()
+    {
+        var g = CoteDor.Value;
+        Assert.Contains(g.Wines, w => w.Vintage == 2016 && w.Blend.VarietyName == "Chardonnay");   // the Plot grows both
+        var ev = Scenarios.Evaluate(g);
+        var judged = g.Wines.First(w => w.Id == (string)ev["wine"]!["id"]!);
+        Assert.Equal("Pinot Noir", judged.Blend.VarietyName);
+        string[] q = { "Faulty", "Poor", "Acceptable", "Good", "Very good", "Outstanding" };
+        int best = g.Wines.Where(w => w.Vintage == 2016 && w.Blend.VarietyName == "Pinot Noir").Max(w => Array.IndexOf(q, w.Sheet!.Quality));
+        Assert.Equal(best, Array.IndexOf(q, judged.Sheet!.Quality));
+    }
+}

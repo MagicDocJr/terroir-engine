@@ -66,7 +66,8 @@ Shown in the famous-vintage debriefs (`data/scenarios.json`). Paraphrased; every
 - The grapes were so healthy that sorting took little effort; shrivelled berries were still picked out for the sweetest
   wines. [MOSELWEIN-2018]
 - Some growers watered young vines to keep them alive; deep-rooted old vines coped. [MOSELWEIN-2018]
-- Most estates began picking Riesling by mid-September, their earliest ever. [MFW-2018]
+- Most estates began picking Riesling by mid-September, their earliest ever, and the warm, dry autumn left time for
+  selective picking. [MFW-2018]
 - Most wines were ripe and soft with mild acidity, many Kabinett and Spätlese of Auslese weight; a few top growers made
   racy, elegant wines. [MFW-2018]
 - **Numbers.** Riesling averaged about 85 °Oe. Most varieties reached the legal maximum yield, the largest Mosel crop since

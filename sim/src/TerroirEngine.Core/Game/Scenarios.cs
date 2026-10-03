@@ -153,9 +153,8 @@ public static class Scenarios
             foreach (var c in s.Medals[i].Criteria)
             {
                 var (met, ev) = Judge(c, w); all &= met;
-                // the evidence only where it says more than the criterion itself ("balanced — balanced" says nothing)
                 string text = CriterionText(c);
-                crit.Add(new JsonObject { ["text"] = text, ["met"] = met, ["evidence"] = text.Contains(ev, StringComparison.OrdinalIgnoreCase) ? "" : ev });
+                crit.Add(new JsonObject { ["text"] = text, ["met"] = met, ["evidence"] = EvidenceShown(text, met, ev) });
             }
             chain &= all;
             if (chain) earned = i;
@@ -237,6 +236,21 @@ public static class Scenarios
             ["causes"] = new JsonArray(s.Causes.Select(id => CauseCatalog.Find(g.Data, id)).Where(c => c != null)
                 .Select(c => (JsonNode)new JsonObject { ["id"] = c!.Id, ["title"] = c.Title }).ToArray()),
         };
+    }
+
+    /// <summary>The evidence beside a criterion: always on a miss (the player needs to see what the Wine had), and on a
+    /// pass only where it says more than the criterion itself ("balanced — balanced" says nothing).</summary>
+    public static string EvidenceShown(string text, bool met, string evidence) =>
+        met && text.Contains(evidence, StringComparison.OrdinalIgnoreCase) ? "" : evidence;
+
+    /// <summary>What a judged scenario writes to the study record: the medal, if one was earned (the best is kept), and the
+    /// year's Causes in the review queue whatever the medal — the player who missed the lesson needs it most.</summary>
+    public static JsonObject ApplyToRecord(JsonObject record, JsonObject status, DateOnly today, GameData data)
+    {
+        if (status["judged"] is not JsonValue jv || !jv.TryGetValue<bool>(out var judged) || !judged) return record;
+        var rec = status["evaluation"]?["medal"] is JsonValue mv && mv.TryGetValue<string>(out var medal)
+            ? RecordMedal(record, (string)status["scenario"]!["id"]!, medal) : StudyRecord.Migrate(record);
+        return StudyRecord.Enqueue(rec, (status["debrief"]?["causes"] as JsonArray ?? new()).Select(c => (string)c!["id"]!), today, data);
     }
 
     /// <summary>Keeps the best medal per scenario in the study record ("scenarios": {id: medal}).</summary>

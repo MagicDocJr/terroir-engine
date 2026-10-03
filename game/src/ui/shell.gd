@@ -125,6 +125,11 @@ func apply(type: String, a: String, b: String, c: String, message: String) -> vo
 	command(type, a, b, c)
 	notify(message, true)
 
+## The autosave slot: a famous-vintage scenario keeps its own, so it never overwrites the main Estate's autosave.
+func autosave_slot() -> String:
+	var sid := String(Sim.ScenarioId())
+	return "autosave" if sid == "" else "autosave-" + sid
+
 ## Advance time. stop=true runs until the next Alert (max `days`).
 func advance(days: int, stop := true, quiet := false) -> bool:
 	if busy or not Sim.HasGame(): return false
@@ -132,7 +137,7 @@ func advance(days: int, stop := true, quiet := false) -> bool:
 	var before := _alert_ids()
 	var n: int = Sim.Advance(days, stop)
 	D = JSON.parse_string(Sim.Snapshot())
-	Sim.SaveGame("autosave")
+	Sim.SaveGame(autosave_slot())
 	busy = false
 	# open each Vintage report once, the first time its Vintage is fully bottled (the flag lives in the save)
 	var fl: Array = D.get("flags", [])
@@ -211,7 +216,7 @@ func start_game(setup_json: Dictionary) -> void:
 	if not ok:
 		notify("Could not start: " + String(Sim.LastError()).left(200)); return
 	D = JSON.parse_string(Sim.Snapshot())
-	Sim.SaveGame("autosave")
+	Sim.SaveGame(autosave_slot())
 	state.clear()
 	_build_chrome()
 	show_screen("inbox")
@@ -408,7 +413,7 @@ func _hide_3d() -> void:
 	root_box.visible = true
 	if stale_2d:                       # days passed in the 3D time-lapse: rebuild the screens once
 		stale_2d = false
-		Sim.SaveGame("autosave")
+		Sim.SaveGame(autosave_slot())
 		_build_chrome()
 		show_screen("report" if tl_report else ("inbox" if tl_alert_id >= 0 else current))
 		tl_alert_id = -1
@@ -443,7 +448,7 @@ func _on_advance_requested(days: int) -> void:
 			tl_report = true
 			if subject == "": subject = "The %d Vintage report is ready" % int(bv)
 	if subject != "" or tl_days % 7 == 0:
-		Sim.SaveGame("autosave")
+		Sim.SaveGame(autosave_slot())
 	await get_tree().process_frame   # the sim step and the 3D update land in different frames (time-lapse smoothness)
 	busy = false
 	if view3d == null or not view3d.visible:
@@ -454,11 +459,11 @@ func _on_advance_requested(days: int) -> void:
 		view3d.timelapse_alert(subject)
 
 func _on_timelapse_toggled(on: bool) -> void:
-	if not on and stale_2d: Sim.SaveGame("autosave")
+	if not on and stale_2d: Sim.SaveGame(autosave_slot())
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST and Sim.HasGame() and stale_2d:
-		Sim.SaveGame("autosave")      # days passed in the 3D time-lapse since the last save
+		Sim.SaveGame(autosave_slot())      # days passed in the 3D time-lapse since the last save
 
 # ------------------------------------------------------------------ chrome
 func _build_chrome() -> void:
@@ -531,7 +536,7 @@ func _topbar() -> void:
 		sc.tooltip_text = "Famous vintage %s: %s" % [SC["scenario"]["title"], "your medal and the debrief" if judged else "your goals, judged at bottling"]
 		sc.pressed.connect(func(): show_screen("scenario")); h.add_child(sc)
 		if judged and not SC.get("seen", false) and current != "scenario":
-			playing = false
+			if playing: playing = false; play_timer.stop(); call_deferred("_build_chrome")   # the Play button must show the stopped clock
 			call_deferred("show_screen", "scenario")
 	var b3 := UI.button("3D", false, 15); b3.custom_minimum_size = Vector2(52, 40); b3.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	b3.tooltip_text = "Walk the vineyard and winery in 3D (Tab)"; b3.pressed.connect(toggle_3d.bind("")); h.add_child(b3)

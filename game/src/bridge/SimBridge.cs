@@ -78,6 +78,9 @@ public partial class SimBridge : Node
         catch (Exception e) { _lastError = e.ToString(); return "[]"; }
     }
 
+    /// <summary>The scenario id of the game in play ("" for a normal game): the shell's autosave slot follows it.</summary>
+    public string ScenarioId() => _game?.Setup.ScenarioId ?? "";
+
     public bool NewScenarioGame(string id)
     {
         try
@@ -97,15 +100,12 @@ public partial class SimBridge : Node
         try
         {
             var st = Scenarios.Status(_game);
-            if ((bool)st["judged"]! && st["scenario"] is JsonObject sc && st["evaluation"]?["medal"] is JsonValue mv && mv.TryGetValue<string>(out var medal))
+            if ((bool)st["judged"]!)
             {
+                // written only when something changed (a new or better medal, Causes not yet queued)
                 var rec = LoadRecord();
-                var next = Scenarios.RecordMedal(rec, (string)sc["id"]!, medal);
-                if (next["scenarios"]?.ToJsonString() != rec["scenarios"]?.ToJsonString())
-                {
-                    var causes = (st["debrief"]?["causes"] as JsonArray ?? new()).Select(c => (string)c!["id"]!);
-                    SaveRecord(StudyRecord.Enqueue(next, causes, Today(), _data));
-                }
+                var next = Scenarios.ApplyToRecord(rec, st, Today(), _data);
+                if (next.ToJsonString() != StudyRecord.Migrate(rec).ToJsonString()) SaveRecord(next);
             }
             return st.ToJsonString();
         }

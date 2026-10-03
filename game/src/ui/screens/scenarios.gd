@@ -24,7 +24,9 @@ static func _list(shell) -> Control:
 	var hv := UI.vbox(4); hv.size_flags_horizontal = Control.SIZE_EXPAND_FILL; top.add_child(hv)
 	hv.add_child(UI.head("Famous vintages", 40, UI.INK))
 	hv.add_child(UI.label("Replay a real year on an established Estate, on the weather that really happened. Three goals for each year, judged when your Wine is in bottle; then see what really happened and what growers did.", 16, UI.INK2, null, true))
-	var back := UI.button("‹ Title", false, 15); back.pressed.connect(func(): shell.show_screen("title")); top.add_child(back)
+	# with a game loaded, the way out is back to it (the title screen has no Continue)
+	var back := UI.button("‹ Back to the Estate" if Sim.HasGame() else "‹ Title", false, 15)
+	back.pressed.connect(func(): shell.show_screen("inbox" if Sim.HasGame() else "title")); top.add_child(back)
 	var row := HFlowContainer.new(); row.add_theme_constant_override("h_separation", 16); row.add_theme_constant_override("v_separation", 16)
 	v.add_child(row)
 	for item in _list_json():
@@ -75,7 +77,9 @@ static func _brief(shell) -> Control:
 	v.add_child(bp[0])
 	v.add_child(_goals_panel(item["goals"], "Your goals", "judged on your best %s Wine of %d, once it is in bottle" % [S["variety"], int(S["vintage"])]))
 	var start := UI.button("Start %s" % String(S["title"]), true, 18); start.custom_minimum_size = Vector2(360, 52)
+	if Sim.HasGame(): v.add_child(UI.label("Your current Estate is saved first (%s); load it again from the title screen." % shell.autosave_slot(), 13, UI.MUTED, null, true))
 	start.pressed.connect(func():
+		if Sim.HasGame(): Sim.SaveGame(shell.autosave_slot())
 		if Sim.NewScenarioGame(id):
 			shell.state.clear(); shell.current = ""; shell.refresh()
 			shell.notify("%s: the vines are yours. Open the scenario from the medal chip at the top." % String(S["title"]), true)
@@ -96,7 +100,7 @@ static func _status(shell) -> Control:
 	hv.add_child(UI.head(String(S["title"]), 36, UI.INK))
 	hv.add_child(UI.label("“%s”" % String(S["teaser"]), 16, UI.INK2))
 	if not St.get("judged", false):
-		v.add_child(_goals_panel(St["goals"], "Your goals", "judged when your first %s Wine of %d is in bottle" % [S["variety"], int(S["vintage"])]))
+		v.add_child(_goals_panel(St["goals"], "Your goals", "judged on your best %s Wine of %d, once it is in bottle" % [S["variety"], int(S["vintage"])]))
 		var bp: Array = UI.panel("The briefing", "")
 		bp[1].add_child(UI.label(String(S["briefing"]), 15, UI.INK2, null, true))
 		v.add_child(bp[0])
@@ -151,7 +155,9 @@ static func _status(shell) -> Control:
 		c2.add_child(qp[0])
 	var bh := UI.hbox(12); v.add_child(bh)
 	var keep := UI.button("Keep playing this Estate", true, 16); keep.pressed.connect(func(): shell.show_screen("inbox")); bh.add_child(keep)
-	var more := UI.button("Famous vintages", false, 16); more.pressed.connect(func(): shell.show_screen("scenarios")); bh.add_child(more)
+	var more := UI.button("Famous vintages", false, 16)
+	more.pressed.connect(func(): Sim.SaveGame(shell.autosave_slot()); shell.show_screen("scenarios"))   # the bottling just done is saved before leaving
+	bh.add_child(more)
 	return v
 
 static func _sources(arr: Array) -> Control:
