@@ -56,6 +56,14 @@ year.
 | `mosel-2018` | **2018, Mosel**: "a summer to remember" | Blauschiefer, Riesling | bottle a Prädikat Wine | a Kabinett with acidity medium(+) or higher (a fresh wine from a hot year) | silver, plus balance met and Very good or better |
 | `napa-2011` | **2011, Napa Valley**: "an unusual year in the valley" | Valley floor, Cabernet Sauvignon | bottle a Napa Valley AVA Wine | no rot taint and ripe tannin (seeds ripe at harvest) | silver, plus Very good or better |
 
+**Final goals after tuning (2026-10-03):**
+- Côte d'Or 2016: gold is Very good. "No chaptalisation" and natural ≥ 189 g/L were dropped: growers chaptalised a little
+  that year, and every simulated Pinot clears 189 g/L.
+- Mosel 2018: gold is balanced and Good.
+- Napa 2011: silver is ripe seeds, no rot and balanced; gold is at most 15.0 % vol. Default play reaches silver here.
+
+Full table and tuning evidence: `docs/science/famous-vintages.md`.
+
 **Côte d'Or 2021** is the next scenario to add: its frost is reproduced, but it needs its own debrief research.
 
 **Goal thresholds** are tuned during implementation so that:

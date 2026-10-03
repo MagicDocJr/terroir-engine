@@ -186,6 +186,10 @@ _Avoid_: Deadline, test day
 A short card that opens beside a choice and explains what that choice does in the wine, applied to the player's own Block or Lot.
 _Avoid_: Tooltip, help page, tutorial
 
+**Famous vintage**:
+A scenario that replays one real, well-known year on an established Estate, with bronze, silver and gold goals judged on the Wine and a cited debrief of what really happened.
+_Avoid_: Level, mission, challenge mode
+
 ### Play modes
 
 The engine always simulates at full depth. The mode only changes what the player is shown and how certain it is.
