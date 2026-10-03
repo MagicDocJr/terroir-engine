@@ -34,3 +34,4 @@ __pycache__/
 # Standalone builds (scripts/export-windows.sh)
 build/
 .superpowers/
+game/shots_baseline/

@@ -60,12 +60,15 @@ var _screen_cache := {}          # screen id → {node, ver, ret}: built screens
 var _chrome_ver := 0             # bumps whenever a new snapshot is shown
 var learn_layer: Control = null   # the open learn drawer (one at a time)
 var _learn_open := ["", {}]
+var harness := ""         # the harness this run plays (scripts/*.sh), or "" in normal play
+var shot_hold := 10       # frames a harness waits before each screenshot; scripts/record.sh raises it so a video lingers
 var _learn_seen_cache = null
 
 func _ready() -> void:
 	theme = UI.make_theme()
 	var args := OS.get_cmdline_user_args()
 	capture = "--capture" in args
+	for a in args: if a.begins_with("--hold="): shot_hold = maxi(1, int(a.substr(7)))   # frames per screenshot (videos linger)
 	if capture:
 		get_tree().root.content_scale_mode = Window.CONTENT_SCALE_MODE_VIEWPORT
 		get_tree().root.content_scale_size = Vector2i(1920, 1080)
@@ -82,9 +85,14 @@ func _ready() -> void:
 	statusbar = PanelContainer.new(); root_box.add_child(statusbar)
 	_make_toast()
 	sfx = load("res://src/ui/sfx.gd").new(); add_child(sfx)
+	# harness runs never touch the player's study record or saves, and each harness has its own, so they can run in parallel
+	for h in ["scenarios", "learning", "practice", "fuzz", "perf", "pregame", "layoutcheck", "capture"]:
+		if ("--" + h) in args:
+			harness = h
+			Sim.SetRecordPath("user://tasting_record_test_%s.json" % h); Sim.SetSaveDir("user://saves_test_%s" % h)
+			break
 	if capture:
 		sfx.enabled = false
-		Sim.SetRecordPath("user://tasting_record_test.json")   # harness and fuzz runs never touch the player's study record
 	get_tree().node_added.connect(_on_node_added)
 	play_timer = Timer.new(); play_timer.wait_time = 0.25; play_timer.timeout.connect(_play_tick); add_child(play_timer)
 	if "--sfxcheck" in args:
@@ -96,11 +104,12 @@ func _ready() -> void:
 	if "--pregame" in args: capture = true; _pregame_shots.call_deferred(); return
 	if "--avatars" in args: capture = true; _avatar_sheet.call_deferred(); return
 	if "--scenarios" in args:
-		capture = true; Sim.SetRecordPath("user://tasting_record_test.json"); _scenario_test.call_deferred(); return
+		capture = true; _scenario_test.call_deferred(); return
 	if "--learning" in args:
-		capture = true; Sim.SetRecordPath("user://tasting_record_test.json"); _learning_test.call_deferred(); return
+		capture = true; _learning_test.call_deferred(); return
 	if "--practice" in args:
-		capture = true; Sim.SetRecordPath("user://tasting_record_test.json"); _practice_test.call_deferred(); return
+		capture = true; _practice_test.call_deferred(); return
+	if "--layoutcheck" in args: capture = true; _layout_selftest.call_deferred(); return
 	if "--fuzz" in args: capture = true; _run_fuzz.call_deferred()
 	elif capture: _run_capture.call_deferred()
 	else: show_screen("title")
@@ -658,6 +667,47 @@ func notify(text: String, ok := false) -> void:
 
 # ------------------------------------------------------------------ capture (plays a real game; also the UI smoke test)
 ## The current screen scrolled to its end (panels below the fold, e.g. the Winery look).
+# ------------------------------------------------------------------ layout check (every harness screenshot)
+## Finds the layout bugs the eye used to catch: a wrapped label squeezed into a narrow column (the "vertical letters" bug,
+## when a wrapping label sits in a row without SIZE_EXPAND_FILL), or a label with text but no width. Prints one
+## "LAYOUT FAIL" line per issue; scripts/check.sh fails the run on any.
+func _layout_issues(root: Node) -> Array:
+	var out := []
+	var stack: Array = [root]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		for c in n.get_children(): stack.append(c)
+		if not (n is Label) or not n.is_visible_in_tree(): continue
+		var l: Label = n
+		var txt := l.text.strip_edges()
+		if txt.length() < 8: continue
+		var r := l.get_global_rect()
+		if l.autowrap_mode != TextServer.AUTOWRAP_OFF and r.size.x < 60.0 and r.size.y > 3.0 * maxf(r.size.x, 1.0):
+			out.append("collapsed label (%dx%d) '%s' at %s" % [int(r.size.x), int(r.size.y), txt.left(40), str(l.get_path()).right(60)])
+		elif r.size.x < 2.0 and r.size.y > 2.0:
+			out.append("label with no width '%s' at %s" % [txt.left(40), str(l.get_path()).right(60)])
+	return out
+
+func _layout_lint(shot_name: String) -> void:
+	for issue in _layout_issues(self): print("LAYOUT FAIL %s: %s" % [shot_name, issue])
+
+## Self-test (--layoutcheck): a row with a wrapping label that does not expand must be flagged; the fixed row must not.
+func _layout_selftest() -> void:
+	var ok := true
+	for fixed in [false, true]:
+		for c in host.get_children(): c.queue_free()
+		var row := UI.hbox(8); host.add_child(row)
+		row.add_child(UI.button("A button", false, 14))
+		var l := UI.label("A long hint text that wraps across the row when there is room for it.", 13, UI.MUTED, null, true)
+		if fixed: l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(l)
+		for f in 5: await get_tree().process_frame
+		var n := _layout_issues(row).size()
+		print("LAYOUTCHECK %s row: %d issue(s)" % ["fixed" if fixed else "broken", n])
+		if (n == 0) != fixed: ok = false
+	print("LAYOUTCHECK DONE ok=", ok)
+	get_tree().quit()
+
 func _shot_scrolled_to_end(name: String) -> void:
 	var sc := _find_scroll(host)
 	if sc:
@@ -666,7 +716,8 @@ func _shot_scrolled_to_end(name: String) -> void:
 	await _shot(name)
 
 func _shot(name: String) -> void:
-	for f in 10: await get_tree().process_frame
+	for f in shot_hold: await get_tree().process_frame
+	_layout_lint(name)
 	var dir := ProjectSettings.globalize_path("res://shots")
 	DirAccess.make_dir_recursive_absolute(dir)
 	var img := get_viewport().get_texture().get_image()

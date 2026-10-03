@@ -159,7 +159,10 @@ public partial class SimBridge : Node
         catch (Exception ex) { _lastError = ex.ToString(); GD.PushError("Terroir: command failed: " + ex); return false; }
     }
 
-    public string SaveDir() => ProjectSettings.GlobalizePath("user://saves");
+    private string _saveDir = "user://saves";
+    public string SaveDir() => ProjectSettings.GlobalizePath(_saveDir);
+    /// <summary>Harness only: each harness saves into its own folder, so harnesses can run in parallel (scripts/check.sh).</summary>
+    public void SetSaveDir(string dir) => _saveDir = dir;
 
     public bool SaveGame(string name)
     {
