@@ -8,10 +8,12 @@ using TerroirEngine.Learning;
 using TerroirEngine.Tasting;
 using TerroirEngine.Tasting.Practice;
 using TerroirEngine.Util;
+using TerroirEngine.Winery;
 
 namespace TerroirEngine.Game;
 
-public sealed record Criterion(string Type, JsonNode? Value);
+/// <summary>A medal criterion: its type, its value, and an optional short wording for the screens.</summary>
+public sealed record Criterion(string Type, JsonNode? Value, string? Text = null);
 public sealed record Medal(string Name, IReadOnlyList<Criterion> Criteria);
 /// <summary>A debrief line with its source key (data/vintage_notes.json "sources", docs/science/vintage-notes.md).</summary>
 public sealed record SourcedLine(string Text, string Source);
@@ -41,7 +43,7 @@ public static class Scenarios
         return doc["scenarios"]!.AsArray().Select(n => new Scenario(
             (string)n!["id"]!, (string)n["region"]!, (string)n["plot"]!, (string)n["variety"]!, (int)n["vintage"]!,
             (string)n["title"]!, (string)n["teaser"]!, (string)n["briefing"]!,
-            n["medals"]!.AsArray().Select(m => new Medal((string)m!["name"]!, m["criteria"]!.AsArray().Select(c => new Criterion((string)c!["type"]!, c["value"]?.DeepClone())).ToList())).ToList(),
+            n["medals"]!.AsArray().Select(m => new Medal((string)m!["name"]!, m["criteria"]!.AsArray().Select(c => new Criterion((string)c!["type"]!, c["value"]?.DeepClone(), (string?)c["text"])).ToList())).ToList(),
             (n["growers"] as JsonArray ?? new()).Select(g => new SourcedLine((string)g!["text"]!, (string)g["source"]!)).ToList(),
             (n["compare"] as JsonArray ?? new()).Select(c => new CompareLine((string)c!["what"]!, (string)c["label"]!, (string)c["real"]!, (string)c["source"]!)).ToList(),
             (n["causes"] as JsonArray ?? new()).Select(c => (string)c!).ToList())).ToList();
@@ -91,7 +93,7 @@ public static class Scenarios
 
     // ------------------------------------------------------------------------------------------------ judging
 
-    private static string CriterionText(Criterion c) => c.Type switch
+    private static string CriterionText(Criterion c) => c.Text ?? c.Type switch
     {
         "category" => $"labelled {string.Join(" or ", c.Value!.AsArray().Select(x => (string)x!))}",
         "qualityAtLeast" => $"quality {(string)c.Value!} or better",
@@ -151,7 +153,9 @@ public static class Scenarios
             foreach (var c in s.Medals[i].Criteria)
             {
                 var (met, ev) = Judge(c, w); all &= met;
-                crit.Add(new JsonObject { ["text"] = CriterionText(c), ["met"] = met, ["evidence"] = ev });
+                // the evidence only where it says more than the criterion itself ("balanced — balanced" says nothing)
+                string text = CriterionText(c);
+                crit.Add(new JsonObject { ["text"] = text, ["met"] = met, ["evidence"] = text.Contains(ev, StringComparison.OrdinalIgnoreCase) ? "" : ev });
             }
             chain &= all;
             if (chain) earned = i;
@@ -245,6 +249,29 @@ public static class Scenarios
         if (old == null || Array.IndexOf(MedalOrder, medal) > Array.IndexOf(MedalOrder, old)) o[id] = medal;
         rec["scenarios"] = o.DeepClone();
         return rec;
+    }
+
+    /// <summary>Harness and tests only: a scripted player. Harvests every Block at a target must weight, sets the cellar
+    /// choices on each new Lot (daily steps near harvest, as choices lock once fermentation starts), bottles each Lot on its
+    /// own, restarts stuck ferments, until the given vintage is in bottle.</summary>
+    public static void Autoplay(GameSession g, double targetOe, IReadOnlyDictionary<string, int>? choices = null, int? untilVintage = null)
+    {
+        int last = untilVintage ?? g.FirstVintage, guard = 0;
+        var styled = new HashSet<string>();
+        while (!g.IsVintageBottled(last) && guard++ < 800)
+        {
+            bool near = g.Blocks.Any(b => b.Veraison != null && !b.Harvested) || g.Lots.Any(l => l.Phase is LotPhase.Received or LotPhase.ColdSoak);
+            g.Advance(near ? 1 : 20, stopAtAlerts: false);
+            if (g.Vintage <= last)
+                foreach (var b in g.Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null))
+                    if (Chemistry.MustFromBlock(b).Oe >= targetOe || b.LeafFall != null) g.Apply(new Command { Type = "harvest", A = b.Data.Id, B = "hand", C = "Table" });
+            foreach (var lot in g.Lots.Where(l => l.Phase is LotPhase.Received or LotPhase.ColdSoak && styled.Add(l.Id)).ToList())
+                foreach (var kv in choices ?? new Dictionary<string, int>())
+                    if (!((kv.Key is "Sweetness" or "Temperature") && lot.Red || kv.Key == "Red temperature" && !lot.Red))
+                        g.Apply(new Command { Type = "lot", A = lot.Id, B = kv.Key, C = kv.Value.ToString(CultureInfo.InvariantCulture) });
+            foreach (var lot in g.Lots.Where(l => l.Phase == LotPhase.Ready).ToList()) g.Apply(new Command { Type = "wine", A = lot.Id, E = lot.Id });
+            foreach (var lot in g.Lots.Where(l => l.Phase == LotPhase.Stuck).ToList()) g.Apply(new Command { Type = "restart", A = lot.Id });
+        }
     }
 
     /// <summary>The scenario list for the title screen, with the best medal earned so far.</summary>

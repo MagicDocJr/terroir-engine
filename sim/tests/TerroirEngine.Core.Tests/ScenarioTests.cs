@@ -13,23 +13,7 @@ public class ScenarioTests
     public static GameSession Play(string id, double targetOe, Dictionary<string, int>? choices = null, int extraVintages = 0)
     {
         var g = new GameSession(Fixture.Data, Scenarios.Setup(Fixture.Data, id));
-        int last = g.FirstVintage + extraVintages, guard = 0;
-        var styled = new HashSet<string>();
-        while (!g.IsVintageBottled(last) && guard++ < 800)
-        {
-            // daily near harvest and while a Lot waits for its choices (they lock once fermentation starts)
-            bool near = g.Blocks.Any(b => b.Veraison != null && !b.Harvested) || g.Lots.Any(l => l.Phase is LotPhase.Received or LotPhase.ColdSoak);
-            g.Advance(near ? 1 : 20, stopAtAlerts: false);
-            if (g.Vintage <= last)
-                foreach (var b in g.Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null))
-                    if (Chemistry.MustFromBlock(b).Oe >= targetOe || b.LeafFall != null) g.Apply(new Command { Type = "harvest", A = b.Data.Id, B = "hand", C = "Table" });
-            foreach (var lot in g.Lots.Where(l => l.Phase is LotPhase.Received or LotPhase.ColdSoak && styled.Add(l.Id)).ToList())
-                foreach (var kv in choices ?? new())
-                    if (!((kv.Key is "Sweetness" or "Temperature") && lot.Red || kv.Key == "Red temperature" && !lot.Red))
-                        g.Apply(new Command { Type = "lot", A = lot.Id, B = kv.Key, C = kv.Value.ToString() });
-            foreach (var lot in g.Lots.Where(l => l.Phase == LotPhase.Ready).ToList()) g.Apply(new Command { Type = "wine", A = lot.Id, E = lot.Id });
-            foreach (var lot in g.Lots.Where(l => l.Phase == LotPhase.Stuck).ToList()) g.Apply(new Command { Type = "restart", A = lot.Id });
-        }
+        Scenarios.Autoplay(g, targetOe, choices, g.FirstVintage + extraVintages);
         return g;
     }
 

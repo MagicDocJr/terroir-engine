@@ -71,6 +71,57 @@ public partial class SimBridge : Node
         catch (Exception e) { _lastError = e.ToString(); GD.PushError("Terroir: new game failed: " + e); return false; }
     }
 
+    // ------------------------------------------------------------------ famous vintages (docs/superpowers/specs/2026-10-03-famous-vintages-design.md)
+    public string ScenarioList()
+    {
+        try { return _data == null ? "[]" : Scenarios.List(_data, LoadRecord()).ToJsonString(); }
+        catch (Exception e) { _lastError = e.ToString(); return "[]"; }
+    }
+
+    public bool NewScenarioGame(string id)
+    {
+        try
+        {
+            _game = new GameSession(_data!, Scenarios.Setup(_data!, id));
+            Predictions.Init(_game);
+            return true;
+        }
+        catch (Exception e) { _lastError = e.ToString(); GD.PushError("Terroir: scenario failed: " + e); return false; }
+    }
+
+    /// <summary>The scenario's goals, and once a Wine of the vintage is in bottle its medals and debrief. A newly earned or
+    /// better medal is kept in the study record, and the year's Causes join the review queue (no answer counted).</summary>
+    public string ScenarioStatus()
+    {
+        if (_game == null || _data == null) return "{\"scenario\":null}";
+        try
+        {
+            var st = Scenarios.Status(_game);
+            if ((bool)st["judged"]! && st["scenario"] is JsonObject sc && st["evaluation"]?["medal"] is JsonValue mv && mv.TryGetValue<string>(out var medal))
+            {
+                var rec = LoadRecord();
+                var next = Scenarios.RecordMedal(rec, (string)sc["id"]!, medal);
+                if (next["scenarios"]?.ToJsonString() != rec["scenarios"]?.ToJsonString())
+                {
+                    var causes = (st["debrief"]?["causes"] as JsonArray ?? new()).Select(c => (string)c!["id"]!);
+                    SaveRecord(StudyRecord.Enqueue(next, causes, Today(), _data));
+                }
+            }
+            return st.ToJsonString();
+        }
+        catch (Exception e) { _lastError = e.ToString(); return "{\"scenario\":null}"; }
+    }
+
+    public void ScenarioDebriefSeen() { if (_game != null && !_game.Flags.Contains("scenario-debrief-seen")) _game.Apply(new Command { Type = "flag", A = "scenario-debrief-seen" }); }
+
+    /// <summary>Harness only (scripts/scenarios.sh): plays the current scenario with the scripted player to bottling.</summary>
+    public void ScenarioAutoplay(double targetOe, string choicesJson)
+    {
+        if (_game == null) return;
+        var ch = (JsonNode.Parse(string.IsNullOrEmpty(choicesJson) ? "{}" : choicesJson) as JsonObject ?? new()).ToDictionary(kv => kv.Key, kv => (int)kv.Value!);
+        Scenarios.Autoplay(_game, targetOe, ch);
+    }
+
     public string Snapshot() => _game == null ? "{}" : TerroirEngine.Game.Snapshot.Json(_game);
 
     /// <summary>Advance up to maxDays, stopping at the first Alert. Returns days advanced.</summary>
