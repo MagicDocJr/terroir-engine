@@ -1,6 +1,7 @@
 # The Winery shop: make it cozy with the money your wine earns
 
-Status: draft for the owner's review (2026-10-07), revised after the owner's direction: "more like stuff to the winery.
+Status: approved by the owner 2026-10-07 ("agree, go ahead i also want the frost protection and such. just this in
+addition"): the Winery shop plus a "Vineyard & cellar" equipment section (§6). Revised after the owner's direction: "more like stuff to the winery.
 like colors on the wall and outside panels and such. wanna make it a bit cozy and fun to actually do an effort to make
 money". Earlier draft (equipment: frost protection, sorting table) moved to the backlog as a later "Vineyard & cellar"
 section of the same shop.
@@ -95,8 +96,41 @@ building is made of them.
 
 ## 5. Out of scope (backlog)
 
-- The "Vineyard & cellar" equipment section: frost protection (candles, wind machine, sprinklers) and a sorting table,
-  each with simulated effects. Earlier draft of this spec; still a good next step for the frost scenarios.
 - The label designer bound by label law.
 - A trophy wall for medals.
 - Resale, and seasonal decorations.
+
+## 6. Vineyard & cellar: equipment with real effects (part of this build)
+
+The same Shop has a second section of real equipment. These items, unlike the cosmetic ones, change the simulation; each
+card says how, with cited numbers.
+
+| Item | What it changes in the simulation | Where the need shows |
+|---|---|---|
+| **Frost candles** (stock per night) | Today's frost protection, kept as the baseline: a small lift of vine-level Tmin on radiation-frost nights, paid per hectare per night. Owned from the start | frost warnings, Programmes frost row |
+| **Wind machine** | Bought once (per about 4–5 ha), then a low cost per night. Lifts vine-level Tmin under an inversion (radiation frost) only, and does nothing on windy, advective nights | frost warnings, Programmes |
+| **Overhead sprinklers** | Bought once, plus water per night. Protects down to a lower temperature through the latent heat of freezing water, and works in advective frost too. Offered only where water is plausible (not on steep Mosel slate) | frost warnings, Programmes |
+| **Sorting table** | Makes rigorous sorting possible. Without it, sorting stays at table level | the harvest panel's sorting choice |
+
+**How it fits the existing game:**
+- The frost Programme decides whether you protect on a frost night (off, or on).
+- The method is the best one you own: sprinklers, then the wind machine, then candles.
+- It replaces today's abstract +1 / +2 °C tiers with per-method values.
+- Old saves: candles only, with their tier mapped to on or off.
+
+**Numbers** (protected temperature, conditions, coverage, capital and running costs, regional use, and the effect of a
+sorting table) come from a research task and are cited in `economy.md` and `phenology.md` §6. Values the research cannot
+back are `UNVERIFIED`.
+
+**Findability:**
+- a frost-warning message shows what you own and links to the section;
+- the Programmes frost row names the method in use;
+- the rigorous-sorting option says "needs a sorting table", with a link;
+- the first Inbox message of a new game mentions the Shop once.
+
+**Tests:**
+- the wind machine lifts Tmin on a radiation night and not on a windy one;
+- sprinklers protect below the candle limit;
+- rigorous sorting without a table is refused;
+- a Mosel steep Plot offers no sprinklers;
+- Côte d'Or 2016 with a wind machine loses less to frost than without.
