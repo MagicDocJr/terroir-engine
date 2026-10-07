@@ -282,6 +282,25 @@ func _on_light_changed(elev: float) -> void:
 
 
 # ------------------------------------------------------------------ contract
+## The look to show: the one in use from the sim's Shop (owned items only), with the Shop's preview on top. Older
+## snapshots without a "shop" fall back to the Region's look and the stored decor.
+var preview_look := {}
+func look_for(snap: Dictionary) -> Dictionary:
+	var shop: Dictionary = snap.get("shop", {})
+	var look: Dictionary = (shop.get("inUse", {}) as Dictionary).duplicate() if not shop.is_empty() \
+		else WineryStyle.resolve(String(snap.get("region", {}).get("id", "mosel")), snap.get("decor", {}))
+	for k in preview_look:
+		look[k] = preview_look[k]
+	return look
+
+
+## The Shop's "Preview in 3D": shows a look over the one in use. Never saved; set_preview({}) ends it.
+func set_preview(look: Dictionary) -> void:
+	preview_look = look.duplicate()
+	if not D.is_empty() and not missing:
+		winery.call("apply_style", look_for(D))
+
+
 func apply_snapshot(snap: Dictionary) -> void:
 	D = snap
 	tl_waiting = false
@@ -299,7 +318,7 @@ func apply_snapshot(snap: Dictionary) -> void:
 		winery.position = vineyard.call("building_origin")
 		moved = true
 	# the Winery look (winery_style.gd; cosmetic) before the GI bake, so one bake sees both the new place and the look
-	var baked_now: bool = winery.call("apply_style", WineryStyle.resolve(region, snap.get("decor", {})))
+	var baked_now: bool = winery.call("apply_style", look_for(snap))
 	if moved and not baked_now:
 		winery.call("bake_gi")
 	winery.call("apply_snapshot", snap)

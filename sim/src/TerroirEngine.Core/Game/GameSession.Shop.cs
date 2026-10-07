@@ -111,6 +111,13 @@ public sealed partial class GameSession
         if (v == "" || OwnsLook(c.A, v)) Decor[c.A] = v;
     }
 
+    /// <summary>Harness only (the 3D look harness and the thumbnail renderer): own every look and piece of equipment.</summary>
+    public void HarnessOwnAll()
+    {
+        foreach (var s in ShopData.Look) foreach (var o in s.Options) Setup.ShopGrants.Add($"{s.Key}:{o.Value}");
+        foreach (var e in ShopData.Equipment) Setup.ShopGrants.Add($"equipment:{e.Id}");
+    }
+
     /// <summary>Loading a game from before the shop: its start look and every look chosen become owned for free.</summary>
     private void MigrateShop()
     {

@@ -141,6 +141,8 @@ public partial class SimBridge : Node
 
     /// <summary>Why the last Shop purchase was refused ("" if it went through).</summary>
     public string ShopRefusal() => _game?.ShopRefusal ?? "";
+    /// <summary>Harness only: own every Shop item (3D look checks and the thumbnail renderer).</summary>
+    public void ShopOwnAll() => _game?.HarnessOwnAll();
 
     public string Snapshot() => _game == null ? "{}" : TerroirEngine.Game.Snapshot.Json(_game);
 

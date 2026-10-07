@@ -248,7 +248,7 @@
         {
           "value": "timber",
           "label": "Timber cladding",
-          "blurb": "Vertical larch boards over the walls.",
+          "blurb": "Larch boards over the walls, weathering to silver.",
           "price": 12000
         },
         {
@@ -343,14 +343,14 @@
       "options": [
         {
           "value": "off",
-          "label": "None",
-          "blurb": "No sign.",
+          "label": "Painted board",
+          "blurb": "The Estate's name painted on a plain board over the door.",
           "price": 0
         },
         {
           "value": "on",
-          "label": "Estate sign",
-          "blurb": "A painted sign with your Estate's name by the door.",
+          "label": "Gilded, lit sign",
+          "blurb": "Gold-leaf letters and two lamps over the door that light the name after dark.",
           "price": 2000
         }
       ]

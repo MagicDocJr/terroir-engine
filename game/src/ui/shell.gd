@@ -16,6 +16,7 @@ const SCREENS := {
 	"plot": ["Plot & Blocks", "res://src/ui/screens/plot.gd", ""],
 	"weather": ["Weather", "res://src/ui/screens/weather.gd", ""],
 	"programmes": ["Programmes", "res://src/ui/screens/programmes.gd", ""],
+	"shop": ["Shop", "res://src/ui/screens/shop.gd", ""],
 	"ripeness": ["Ripeness", "res://src/ui/screens/ripeness.gd", ""],
 	"winery": ["Winery", "res://src/ui/screens/winery.gd", ""],
 	"blending": ["Blending", "res://src/ui/screens/blending.gd", ""],
@@ -29,8 +30,8 @@ const SCREENS := {
 	"scenario_brief": ["Famous vintages", "res://src/ui/screens/scenarios.gd", "brief"],
 	"scenario": ["Famous vintage", "res://src/ui/screens/scenarios.gd", "status"],
 }
-const NAV := ["inbox", "estate", "plot", "weather", "programmes", "ripeness", "winery", "blending", "wines", "glossary", "practice"]
-const NAV_GLYPH := {"inbox": "▤", "estate": "◆", "plot": "▦", "weather": "☁", "programmes": "≡", "ripeness": "◔",
+const NAV := ["inbox", "estate", "plot", "weather", "programmes", "shop", "ripeness", "winery", "blending", "wines", "glossary", "practice"]
+const NAV_GLYPH := {"inbox": "▤", "estate": "◆", "plot": "▦", "weather": "☁", "programmes": "≡", "shop": "⌂", "ripeness": "◔",
 	"winery": "▥", "blending": "⋈", "wines": "✦", "glossary": "?", "practice": "◇"}
 const PREGAME := ["title", "region", "plots", "planting", "scenarios", "scenario_brief"]
 const TASTING := ["practice", "fair", "cellarbook"]   # open with or without a game; their state lives in `state`, so never cached
@@ -416,7 +417,21 @@ func _shot3d(name: String, kind: String) -> void:
 	await _shot(name)
 	_hide_3d()
 
+## The Shop's "Preview in 3D": the 3D winery with one look shown over the one in use, from a camera that sees it.
+## Leaving 3D ends the preview; nothing is saved and no cash moves.
+var previewing := false
+func preview_3d(look: Dictionary, view: String, cam: String) -> void:
+	if view3d != null and view3d.visible: _hide_3d()
+	toggle_3d(view)
+	if view3d == null or not view3d.visible: return
+	previewing = true
+	if view3d.has_method("set_preview"): view3d.set_preview(look)
+	if cam != "" and view3d.has_method("camera_preset"): view3d.camera_preset(cam)
+
 func _hide_3d() -> void:
+	if previewing and view3d and view3d.has_method("set_preview"):
+		previewing = false
+		view3d.set_preview({})
 	if view3d: view3d.visible = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	root_box.visible = true
@@ -607,7 +622,8 @@ func _refresh_nav() -> void:
 		row.custom_minimum_size = Vector2(0, 46)
 		row.mouse_filter = Control.MOUSE_FILTER_STOP
 		row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		row.tooltip_text = "%s  (key %s)" % [SCREENS[id][0], str((i + 1) % 10)]
+		var key_hint := str(i + 1) if i < 9 else ("0" if id == "glossary" else "")
+		row.tooltip_text = "%s  (key %s)" % [SCREENS[id][0], key_hint] if key_hint != "" else String(SCREENS[id][0])
 		row.gui_input.connect(func(e): if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT: state.erase("return_to"); show_screen(id))
 		var h := UI.hbox(14); row.add_child(h)
 		var ic := UI.label(NAV_GLYPH[id], 17, UI.GOLD if active else UI.MUTED); ic.custom_minimum_size = Vector2(20, 0); h.add_child(ic)
@@ -620,6 +636,9 @@ func _refresh_nav() -> void:
 		if id == "blending":
 			for l in D.get("lots", []):
 				if l.get("ready", false): badge_n += 1
+		if id == "shop" and not Onboarding.flags(D).has("visited_shop") and not D.get("shop", {}).is_empty():
+			h.add_child(UI.spacer())                       # a gold dot until the first visit (Shop spec §3)
+			var dot := UI.label("●", 13, UI.GOLD); dot.tooltip_text = "New: the Shop"; h.add_child(dot)
 		if badge_n > 0:
 			h.add_child(UI.spacer())
 			var badge := PanelContainer.new(); badge.add_theme_stylebox_override("panel", UI.sb(UI.CRIT if id != "blending" else UI.GOLD.darkened(0.3), 9, Color(0, 0, 0, 0), 0, 7))

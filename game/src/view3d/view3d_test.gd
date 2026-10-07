@@ -1241,6 +1241,7 @@ func _look_game(region: String) -> void:
 	g["seed"] = 5
 	g["estateName"] = "Look Test"
 	Sim.NewGame(JSON.stringify(g))
+	Sim.ShopOwnAll()
 
 
 func _decor(look: Dictionary) -> void:
@@ -1354,6 +1355,25 @@ func _winery_look(perf_mode: bool) -> void:
 	var col_ok: bool = shown_solid and not hidden_solid
 	print("WINERYLOOK furniture_collides_only_when_shown %s (shown %s, hidden %s)" % ["ok" if col_ok else "FAIL", shown_solid, hidden_solid])
 	ok = ok and col_ok
+	# the 3D catalogue (winery_style.gd) matches the Shop's (data/shop.json via the snapshot)
+	var cat_ok := true
+	for sec in snap["shop"]["look"]:
+		for o in sec["options"]:
+			if WineryStyleT.option(String(sec["key"]), String(o["value"])).is_empty():
+				cat_ok = false; print("  not in winery_style.gd: %s %s" % [sec["key"], o["value"]])
+	print("WINERYLOOK catalogue_matches_shop %s" % ("ok" if cat_ok else "FAIL"))
+	ok = ok and cat_ok
+	# "Preview in 3D" shows a look without changing the save or the cash
+	var before_use: String = JSON.stringify(snap["shop"]["inUse"])
+	var before_cash: float = float(snap["shop"]["cash"])
+	view.set_preview({"facade": "shingle", "walls": "redwood"})
+	var pv_shown: bool = String((wy.get("style") as Dictionary).get("facade", "")) == "shingle"
+	snap = _snap()
+	var pv_ok: bool = pv_shown and JSON.stringify(snap["shop"]["inUse"]) == before_use and float(snap["shop"]["cash"]) == before_cash
+	view.set_preview({})
+	pv_ok = pv_ok and String((wy.get("style") as Dictionary).get("facade", "")) == String(snap["shop"]["inUse"]["facade"])
+	print("WINERYLOOK preview_changes_nothing %s" % ("ok" if pv_ok else "FAIL"))
+	ok = ok and pv_ok
 	if "--checks" in OS.get_cmdline_user_args():      # checks only, no screenshots
 		print("WINERYLOOK %s" % ("ok" if ok else "FAIL"))
 		get_tree().quit()
@@ -1363,11 +1383,34 @@ func _winery_look(perf_mode: bool) -> void:
 		_look_game(region)
 		snap = _snap()
 		view.apply_snapshot(snap)
-		var want: Dictionary = WineryStyleT.defaults(region)
-		var reg_ok: bool = wy.get("style") == want
-		print("WINERYLOOK default_%s %s" % [region, "ok" if reg_ok else "FAIL"])
+		# a new Estate starts with the Region's own walls and floor and the plain working winery elsewhere (the Shop)
+		var want: Dictionary = snap["shop"]["inUse"]
+		var reg_ok: bool = wy.get("style") == want and String(want["walls"]) == String(WineryStyleT.defaults(region)["walls"]) and String(want["ceiling"]) == "steel"
+		print("WINERYLOOK start_%s %s" % [region, "ok" if reg_ok else "FAIL"])
 		ok = ok and reg_ok
+		await _look_shots(region + "_start", ["hall"])
+		_decor(WineryStyleT.defaults(region))
+		snap = _snap(); view.apply_snapshot(snap)
 		await _look_shots(region, LOOK_CAMS)
+	# the Shop's exterior looks, on each Region's building (facade paint and cladding, shutters, string lights, the sign)
+	var outside_looks := {"mosel": {"facade": "paint-sage", "shutters": "blue", "stringlights": "on", "sign": "on", "outside": "on"},
+		"cote-dor": {"facade": "ashlar", "shutters": "green", "stringlights": "on", "sign": "on", "outside": "on"},
+		"napa": {"facade": "timber", "shutters": "oak", "stringlights": "on", "sign": "off", "outside": "on"}}
+	for region in outside_looks:
+		_look_game(region)
+		_decor(outside_looks[region])
+		snap = _snap(); view.apply_snapshot(snap)
+		var st2: Dictionary = wy.get("style")
+		var out_ok := true
+		for k in outside_looks[region]:
+			out_ok = out_ok and String(st2.get(k, "")) == String(outside_looks[region][k])
+		print("WINERYLOOK outside_%s %s" % [region, "ok" if out_ok else "FAIL"])
+		ok = ok and out_ok
+		await _look_shots(region + "_outside", ["door", "yard"])
+	_look_game("mosel")
+	_decor({"walls": "paint-ochre", "lights": "warm", "corner": "table", "plants": "on"})
+	snap = _snap(); view.apply_snapshot(snap)
+	await _look_shots("mosel_paint", ["hall", "corner"])
 	_look_game("mosel")
 	_decor({"walls": "brick", "lights": "chandelier", "corner": "lounge"})
 	snap = _snap(); view.apply_snapshot(snap)
