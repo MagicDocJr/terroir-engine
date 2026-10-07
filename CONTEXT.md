@@ -77,8 +77,16 @@ _Avoid_: Event, notification, interrupt
 ### Management
 
 **Programme**:
-A standing instruction for one area of work (e.g. spraying, canopy, labour), set at a Low, Medium or High tier. Staff carry it out automatically each day.
+A standing instruction for one area of work (e.g. spraying, canopy, labour), set at a Low, Medium or High tier (frost protection is Off or On). Staff carry it out automatically each day.
 _Avoid_: Policy, plan, strategy, setting
+
+**Shop**:
+Where the Estate's cash buys winery looks (cosmetic: paint, lights, furniture, facade, shutters) and equipment (frost candles, wind machine, sprinklers, sorting table), which changes the simulation. Owned looks switch freely.
+_Avoid_: Store, market, upgrades
+
+**Equipment**:
+A Shop item that changes the simulation, bought once: a wind machine, overhead sprinklers or a sorting table (frost candles are owned from the start).
+_Avoid_: Upgrade, gear, tool
 
 **Vineyard manager**:
 The staff member who runs the vineyard Programmes and reports on the vines.

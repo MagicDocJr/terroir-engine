@@ -16,6 +16,7 @@ const SCREENS := {
 	"plot": ["Plot & Blocks", "res://src/ui/screens/plot.gd", ""],
 	"weather": ["Weather", "res://src/ui/screens/weather.gd", ""],
 	"programmes": ["Programmes", "res://src/ui/screens/programmes.gd", ""],
+	"shop": ["Shop", "res://src/ui/screens/shop.gd", ""],
 	"ripeness": ["Ripeness", "res://src/ui/screens/ripeness.gd", ""],
 	"winery": ["Winery", "res://src/ui/screens/winery.gd", ""],
 	"blending": ["Blending", "res://src/ui/screens/blending.gd", ""],
@@ -29,8 +30,8 @@ const SCREENS := {
 	"scenario_brief": ["Famous vintages", "res://src/ui/screens/scenarios.gd", "brief"],
 	"scenario": ["Famous vintage", "res://src/ui/screens/scenarios.gd", "status"],
 }
-const NAV := ["inbox", "estate", "plot", "weather", "programmes", "ripeness", "winery", "blending", "wines", "glossary", "practice"]
-const NAV_GLYPH := {"inbox": "▤", "estate": "◆", "plot": "▦", "weather": "☁", "programmes": "≡", "ripeness": "◔",
+const NAV := ["inbox", "estate", "plot", "weather", "programmes", "shop", "ripeness", "winery", "blending", "wines", "glossary", "practice"]
+const NAV_GLYPH := {"inbox": "▤", "estate": "◆", "plot": "▦", "weather": "☁", "programmes": "≡", "shop": "⌂", "ripeness": "◔",
 	"winery": "▥", "blending": "⋈", "wines": "✦", "glossary": "?", "practice": "◇"}
 const PREGAME := ["title", "region", "plots", "planting", "scenarios", "scenario_brief"]
 const TASTING := ["practice", "fair", "cellarbook"]   # open with or without a game; their state lives in `state`, so never cached
@@ -198,7 +199,10 @@ func _alert_ids() -> Dictionary:
 ## Run an inbox action button: goto <screen>, harvest <block>, restart <lot>, programme "<id>:<tier>", block "<id>:<key>:<value>".
 func run_action(action: String, arg: String) -> void:
 	match action:
-		"goto": state["return_to"] = "inbox"; show_screen(arg)
+		"goto":
+			state["return_to"] = "inbox"
+			if arg == "shop-equipment": state["shop_tab"] = "Vineyard & cellar"; arg = "shop"
+			show_screen(arg)
 		"harvest":
 			state["return_to"] = "inbox"
 			state["plot_sel"] = arg
@@ -208,7 +212,8 @@ func run_action(action: String, arg: String) -> void:
 		"spraynow": command("spraynow"); notify("Extra spray pass ordered for today — advance a day to carry it out.")
 		"acceptstuck": command("acceptstuck", arg); notify("Fermentation stopped; the Lot keeps its residual sugar.")
 		"programme":
-			var p := arg.split(":"); command("programme", p[0], p[1]); notify("%s set to %s. Your Vineyard manager applies it from today." % [p[0].capitalize(), p[1]], true)
+			var p := arg.split(":"); command("programme", p[0], p[1])
+			notify(("Frost protection is on. Your Vineyard manager uses it on frost nights from today." if p[0] == "frost" and p[1] != "Low" else "%s set to %s. Your Vineyard manager applies it from today." % [p[0].capitalize(), p[1]]), true)
 		"block":
 			var q := arg.split(":"); command("block", q[0], q[1], q[2]); notify("Block %s: %s updated." % [q[0], q[1]], true)
 		"task3d":
@@ -416,7 +421,21 @@ func _shot3d(name: String, kind: String) -> void:
 	await _shot(name)
 	_hide_3d()
 
+## The Shop's "Preview in 3D": the 3D winery with one look shown over the one in use, from a camera that sees it.
+## Leaving 3D ends the preview; nothing is saved and no cash moves.
+var previewing := false
+func preview_3d(look: Dictionary, view: String, cam: String) -> void:
+	if view3d != null and view3d.visible: _hide_3d()
+	toggle_3d(view)
+	if view3d == null or not view3d.visible: return
+	previewing = true
+	if view3d.has_method("set_preview"): view3d.set_preview(look)
+	if cam != "" and view3d.has_method("camera_preset"): view3d.camera_preset(cam)
+
 func _hide_3d() -> void:
+	if previewing and view3d and view3d.has_method("set_preview"):
+		previewing = false
+		view3d.set_preview({})
 	if view3d: view3d.visible = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	root_box.visible = true
@@ -607,7 +626,8 @@ func _refresh_nav() -> void:
 		row.custom_minimum_size = Vector2(0, 46)
 		row.mouse_filter = Control.MOUSE_FILTER_STOP
 		row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		row.tooltip_text = "%s  (key %s)" % [SCREENS[id][0], str((i + 1) % 10)]
+		var key_hint := str(i + 1) if i < 9 else ("0" if id == "glossary" else "")
+		row.tooltip_text = "%s  (key %s)" % [SCREENS[id][0], key_hint] if key_hint != "" else String(SCREENS[id][0])
 		row.gui_input.connect(func(e): if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT: state.erase("return_to"); show_screen(id))
 		var h := UI.hbox(14); row.add_child(h)
 		var ic := UI.label(NAV_GLYPH[id], 17, UI.GOLD if active else UI.MUTED); ic.custom_minimum_size = Vector2(20, 0); h.add_child(ic)
@@ -620,6 +640,9 @@ func _refresh_nav() -> void:
 		if id == "blending":
 			for l in D.get("lots", []):
 				if l.get("ready", false): badge_n += 1
+		if id == "shop" and not Onboarding.flags(D).has("visited_shop") and not D.get("shop", {}).is_empty():
+			h.add_child(UI.spacer())                       # a gold dot until the first visit (Shop spec §3)
+			var dot := UI.label("●", 13, UI.GOLD); dot.tooltip_text = "New: the Shop"; h.add_child(dot)
 		if badge_n > 0:
 			h.add_child(UI.spacer())
 			var badge := PanelContainer.new(); badge.add_theme_stylebox_override("panel", UI.sb(UI.CRIT if id != "blending" else UI.GOLD.darkened(0.3), 9, Color(0, 0, 0, 0), 0, 7))
@@ -819,6 +842,13 @@ func _run_capture() -> void:
 	show_screen("wines"); await _shot("%s_14_wines" % prefix)
 	show_screen("estate"); await _shot("%s_15_estate_end" % prefix)
 	show_screen("glossary"); await _shot("%s_16_glossary" % prefix)
+	# the Shop after the first Vintage sold: buy two looks, then the equipment tab
+	show_screen("shop"); await _shot("%s_16b_shop" % prefix)
+	for it in [["plants", "on"], ["lights", "warm"]]: command("buy", it[0], it[1])
+	var use: Dictionary = D.get("shop", {}).get("inUse", {})
+	print("SHOP BUY ", "ok" if String(use.get("plants", "")) == "on" and String(use.get("lights", "")) == "warm" else "BROKEN %s" % str(use))
+	await _shot("%s_16c_shop_bought" % prefix)
+	state["shop_tab"] = "Vineyard & cellar"; show_screen("shop"); await _shot("%s_16d_shop_equipment" % prefix); state.erase("shop_tab")
 	# second Vintage: the January message, the history, and a report selector with two Vintages
 	for m in D.get("inbox", []):
 		if String(m.get("kind", "")) == "newseason": state["inbox_sel"] = int(m["id"])
@@ -867,7 +897,7 @@ func _fuzz_screen(id: String) -> int:
 		if b is OptionButton:
 			var o := b as OptionButton
 			if o.item_count > 1: o.select(o.item_count - 1); o.item_selected.emit(o.item_count - 1)
-		elif (b as Button).text.begins_with("Bottle") or (b as Button).text.begins_with("Harvest Block") or "3D" in (b as Button).text:
+		elif (b as Button).text.begins_with("Bottle") or (b as Button).text.begins_with("Harvest Block") or "3D" in (b as Button).text or (b as Button).text == "Preview":
 			continue   # exercised by the capture run; pressing them here would change the game too early
 		else:
 			b.pressed.emit()

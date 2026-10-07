@@ -19,7 +19,7 @@ fermentation all come from `Sim.Snapshot()`.
 | `focus_task(id)` | Puts the walker in front of that task's demonstration vine (or its Lot's tank). |
 | `show_hud` | Small date/Block/weather overlay plus the key hint line (default on). |
 | `sound_volume_db`, `sound_on` | Master volume of the view's sound (dB, 0 = as mixed) and on/off. M toggles it. |
-| `D.decor` (the Winery look) | Cosmetic choices (`decor <key> <value>` in the sim, never read by it). `winery_style.gd resolve(region, decor)` lays them over the Region's default and `winery.gd apply_style` shows them; see "The Winery look" below. |
+| `D.shop.inUse` (the Winery look) | Cosmetic choices bought in the Shop and switched with `decor <key> <value>` (the sim decides what is owned and in use, and never reads it otherwise). `view3d.look_for(snap)` adds the Shop's preview on top and `winery.gd apply_style` shows it; older snapshots without "shop" fall back to `winery_style.gd resolve(region, decor)`. See "The Winery look" below. |
 | `camera_preset(name, block)` / `set_camera(pos, target)` / `capture()` | Used by the test harness. The eye is put exactly there, and the walker waits until the next move key. |
 
 Input is read only while the node is visible. Click to capture the mouse, then walk with WASD (or the arrow
@@ -46,7 +46,7 @@ view is hidden.
 | `ambience.gd` | Ambient sound per Region and place (see below). |
 | `workers.gd` | People and machines at work, staged from the snapshot (see below). One MultiMesh for all people, posed in `shaders/worker.gdshader`. |
 | `tasks3d.gd` | Staff tasks: a stake with a ribbon and label at each open task's demonstration vine (the real vine nearest the headland on the Block's middle row) or above its Lot's tank; the close-up parts (Guyot canes, Cordon arms with two-bud spurs or Einzelpfahl bows, with the Block's bud counts; lobed leaves on the morning / afternoon side, berry bunches, cellar tools), picking (collision layer 20; pruning picks the cane whose axis passes nearest the mouse ray, since the fanned canes' boxes overlap) and the confirm animations. |
-| `winery_style.gd` | The Winery look catalogue: elements, options, blurbs, each Region's default and `resolve()`. Shared with the Winery screen's "Winery look" panel (`ui/winery_look_panel.gd`). |
+| `winery_style.gd` | The Winery look catalogue mirrored from `data/shop.json` (the winerylook harness checks they match): elements, options, blurbs, each Region's look from before the Shop and `resolve()`. |
 | `view3d_test.gd` | Test harness: screenshots, FPS, the walk test and the LOD probe. |
 
 ## Time-lapse and the sky
@@ -120,8 +120,16 @@ view is hidden.
 
 ## The Winery look (cosmetic)
 
-Spec: `docs/superpowers/specs/2026-09-29-cozy-winery-design.md`. The player changes it on the Winery screen; each Region has a
-default (★). Nothing here affects the simulation.
+Specs: `docs/superpowers/specs/2026-09-29-cozy-winery-design.md`, then the Shop (`2026-10-07-equipment-shop-design.md`). A new
+Estate starts with its Region's walls and floor and the plain working winery; everything else is bought in the Shop and then
+switched on the Winery screen's "Your winery" panel. The Region columns below are the full cozy look games from before the
+Shop keep. Nothing here affects the simulation. The Shop's item pictures (`game/shop_thumbs/*.jpg`) are rendered by
+`scripts/shop_thumbs.sh` (`view3d_test.gd --shopthumbs`).
+
+Shop additions: interior paint (`paint-*` on the hall's plaster, tinted); facade (`region` · `paint-*` · `timber` ·
+`shingle` · `ashlar`: the shared `facade` material swapped in place, cladding triplanar); shutters (louvred leaves beside
+the south windows and the office window, painted with the office door); string lights (festoons from the east gable's
+corners to two poles and along the south wall, one glow each); the sign (`on`: gold letters and two sconces over the board).
 
 | Element | Options | Mosel | Côte d'Or | Napa | How it is drawn |
 |---|---|---|---|---|---|

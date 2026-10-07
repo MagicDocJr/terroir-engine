@@ -1,0 +1,450 @@
+{
+  "about": "The Shop (docs/superpowers/specs/2026-10-07-equipment-shop-design.md). 'look' sections are cosmetic (the sim never reads them; prices are UNVERIFIED design values, roughly the real cost of the work for a small winery). 'equipment' items change the simulation; their numbers are cited in docs/science/economy.md and phenology.md §6.",
+  "look": [
+    {
+      "key": "walls",
+      "label": "Interior walls",
+      "options": [
+        {
+          "value": "render",
+          "label": "Plain render",
+          "blurb": "Grey rendered walls: the working hall as built.",
+          "price": 0
+        },
+        {
+          "value": "paint-whitewash",
+          "label": "Whitewash",
+          "blurb": "A fresh coat of whitewash over the render: bright and clean.",
+          "price": 2500
+        },
+        {
+          "value": "paint-cream",
+          "label": "Cream",
+          "blurb": "Warm cream paint: soft light on the tanks.",
+          "price": 2500
+        },
+        {
+          "value": "paint-ochre",
+          "label": "Ochre",
+          "blurb": "Earthy ochre, like old southern farmhouses.",
+          "price": 2500
+        },
+        {
+          "value": "paint-sage",
+          "label": "Sage green",
+          "blurb": "Muted sage green: calm and countryside.",
+          "price": 2500
+        },
+        {
+          "value": "paint-burgundy",
+          "label": "Burgundy red",
+          "blurb": "Deep wine red on the walls.",
+          "price": 2500
+        },
+        {
+          "value": "brick",
+          "label": "Whitewashed brick",
+          "blurb": "Brick under a coat of whitewash: bright and rustic.",
+          "price": 6000
+        },
+        {
+          "value": "limestone",
+          "label": "Limestone",
+          "blurb": "Pale dressed limestone blocks.",
+          "price": 8000
+        },
+        {
+          "value": "slate",
+          "label": "Slate stone",
+          "blurb": "Dark split slate, laid dry-stone style.",
+          "price": 8000
+        },
+        {
+          "value": "redwood",
+          "label": "Redwood boards",
+          "blurb": "Warm vertical timber boards.",
+          "price": 7000
+        }
+      ]
+    },
+    {
+      "key": "floor",
+      "label": "Floor",
+      "options": [
+        {
+          "value": "concrete",
+          "label": "Concrete",
+          "blurb": "Polished concrete: easy to hose down.",
+          "price": 0
+        },
+        {
+          "value": "terracotta",
+          "label": "Terracotta",
+          "blurb": "Warm terracotta tiles.",
+          "price": 5000
+        },
+        {
+          "value": "herringbone",
+          "label": "Herringbone brick",
+          "blurb": "Brick pavers laid in herringbone.",
+          "price": 6000
+        },
+        {
+          "value": "stone",
+          "label": "Stone flags",
+          "blurb": "Worn stone flags, as in an old cuverie.",
+          "price": 8000
+        },
+        {
+          "value": "slate",
+          "label": "Slate flags",
+          "blurb": "Dark slate slabs.",
+          "price": 8000
+        }
+      ]
+    },
+    {
+      "key": "ceiling",
+      "label": "Ceiling",
+      "options": [
+        {
+          "value": "steel",
+          "label": "Steel trusses",
+          "blurb": "The steel roof trusses of the working hall.",
+          "price": 0
+        },
+        {
+          "value": "oak",
+          "label": "Oak beams",
+          "blurb": "Dark oak beams and a timber ceiling.",
+          "price": 12000
+        }
+      ]
+    },
+    {
+      "key": "lights",
+      "label": "Lights",
+      "options": [
+        {
+          "value": "workshop",
+          "label": "Workshop",
+          "blurb": "Bright, neutral working light.",
+          "price": 0
+        },
+        {
+          "value": "warm",
+          "label": "Warm pendants",
+          "blurb": "The same pendants with warm bulbs.",
+          "price": 1500
+        },
+        {
+          "value": "chandelier",
+          "label": "Chandeliers",
+          "blurb": "Iron lantern chandeliers over the aisle.",
+          "price": 5000
+        }
+      ]
+    },
+    {
+      "key": "corner",
+      "label": "Tasting corner",
+      "options": [
+        {
+          "value": "none",
+          "label": "None",
+          "blurb": "The corner stays free for crates.",
+          "price": 0
+        },
+        {
+          "value": "table",
+          "label": "Tasting table",
+          "blurb": "A wooden table and chairs, bottles and a barrel side table.",
+          "price": 2500
+        },
+        {
+          "value": "lounge",
+          "label": "Lounge",
+          "blurb": "A sofa, armchairs and a coffee table on a rug.",
+          "price": 6000
+        }
+      ]
+    },
+    {
+      "key": "plants",
+      "label": "Plants",
+      "options": [
+        {
+          "value": "off",
+          "label": "None",
+          "blurb": "No plants.",
+          "price": 0
+        },
+        {
+          "value": "on",
+          "label": "Plants",
+          "blurb": "Potted plants by the door and the corner; planter boxes outside.",
+          "price": 800
+        }
+      ]
+    },
+    {
+      "key": "cellar",
+      "label": "Cellar",
+      "options": [
+        {
+          "value": "off",
+          "label": "Plain",
+          "blurb": "The cellar's own lamps only.",
+          "price": 0
+        },
+        {
+          "value": "on",
+          "label": "Candlelit",
+          "blurb": "Candles and lanterns along the barrel racks, a shelf of bottles at the end.",
+          "price": 1500
+        }
+      ]
+    },
+    {
+      "key": "facade",
+      "label": "Facade",
+      "options": [
+        {
+          "value": "region",
+          "label": "The Region's render",
+          "blurb": "The building as it was built, in the local render.",
+          "price": 0
+        },
+        {
+          "value": "paint-white",
+          "label": "White paint",
+          "blurb": "Crisp white walls in the sun.",
+          "price": 3500
+        },
+        {
+          "value": "paint-cream",
+          "label": "Cream paint",
+          "blurb": "Soft cream walls.",
+          "price": 3500
+        },
+        {
+          "value": "paint-ochre",
+          "label": "Ochre paint",
+          "blurb": "Warm ochre walls.",
+          "price": 3500
+        },
+        {
+          "value": "paint-sage",
+          "label": "Sage paint",
+          "blurb": "Sage green walls.",
+          "price": 3500
+        },
+        {
+          "value": "paint-grey",
+          "label": "Slate-grey paint",
+          "blurb": "Dark grey walls, modern and calm.",
+          "price": 3500
+        },
+        {
+          "value": "timber",
+          "label": "Timber cladding",
+          "blurb": "Larch boards over the walls, weathering to silver.",
+          "price": 12000
+        },
+        {
+          "value": "shingle",
+          "label": "Slate shingles",
+          "blurb": "Hand-cut slate shingles, as on old Mosel houses.",
+          "price": 15000
+        },
+        {
+          "value": "ashlar",
+          "label": "Limestone ashlar",
+          "blurb": "Dressed limestone blocks, like a Burgundy cuverie.",
+          "price": 16000
+        }
+      ]
+    },
+    {
+      "key": "shutters",
+      "label": "Shutters and doors",
+      "options": [
+        {
+          "value": "none",
+          "label": "Plain",
+          "blurb": "Plain doors, no shutters.",
+          "price": 0
+        },
+        {
+          "value": "green",
+          "label": "Green",
+          "blurb": "Shutters and doors painted bottle green.",
+          "price": 3000
+        },
+        {
+          "value": "blue",
+          "label": "Blue",
+          "blurb": "Shutters and doors painted French blue.",
+          "price": 3000
+        },
+        {
+          "value": "oxblood",
+          "label": "Oxblood",
+          "blurb": "Shutters and doors painted oxblood red.",
+          "price": 3000
+        },
+        {
+          "value": "oak",
+          "label": "Natural oak",
+          "blurb": "Oiled oak shutters and doors.",
+          "price": 4000
+        }
+      ]
+    },
+    {
+      "key": "outside",
+      "label": "Yard",
+      "options": [
+        {
+          "value": "off",
+          "label": "Plain",
+          "blurb": "The yard as it is.",
+          "price": 0
+        },
+        {
+          "value": "on",
+          "label": "Cozy yard",
+          "blurb": "A bench, lanterns by the doors and a warm glow in the windows.",
+          "price": 4000
+        }
+      ]
+    },
+    {
+      "key": "stringlights",
+      "label": "String lights",
+      "options": [
+        {
+          "value": "off",
+          "label": "None",
+          "blurb": "No string lights.",
+          "price": 0
+        },
+        {
+          "value": "on",
+          "label": "String lights",
+          "blurb": "Warm bulbs strung over the yard.",
+          "price": 1000
+        }
+      ]
+    },
+    {
+      "key": "sign",
+      "label": "Estate sign",
+      "options": [
+        {
+          "value": "off",
+          "label": "Painted board",
+          "blurb": "The Estate's name painted on a plain board over the door.",
+          "price": 0
+        },
+        {
+          "value": "on",
+          "label": "Gilded, lit sign",
+          "blurb": "Gold-leaf letters and two lamps over the door that light the name after dark.",
+          "price": 2000
+        }
+      ]
+    }
+  ],
+  "regionalStart": {
+    "mosel": {
+      "walls": "slate",
+      "floor": "slate"
+    },
+    "cote-dor": {
+      "walls": "limestone",
+      "floor": "stone"
+    },
+    "napa": {
+      "walls": "redwood",
+      "floor": "terracotta"
+    }
+  },
+  "equipment": [
+    {
+      "id": "candles",
+      "label": "Frost candles",
+      "category": "frost",
+      "price": 0,
+      "owned": true,
+      "blurb": "Paraffin candles set out between the rows, about 450 per hectare, and lit on a still, clear frost night.",
+      "what": "lift the vine-level temperature by about 2 °C on clear, calm frost nights; useless in wind. About €4,500 per hectare per night.",
+      "when": "frost warnings and the Programmes frost row.",
+      "params": {}
+    },
+    {
+      "id": "wind-machine",
+      "label": "Wind machine",
+      "category": "frost",
+      "price": 45000,
+      "blurb": "A 10 m tower with a big fan that pulls the warmer air from above a frost inversion down into the vines. One covers about 5 ha.",
+      "what": "on clear, calm frost nights it lifts the vines by about a third of the inversion (about 0.5–1.5 °C), for about €490 per hectare per night instead of candles; the crew still lights candles on the hardest nights. Useless in wind. Upkeep about €340 per hectare a year. It takes about three weeks to put up.",
+      "when": "frost warnings and the Programmes frost row.",
+      "params": {}
+    },
+    {
+      "id": "sprinklers",
+      "label": "Overhead sprinklers",
+      "category": "frost",
+      "price": 0,
+      "blurb": "Sprinklers over the rows, run all night: as the water freezes on the shoots it releases heat and holds them near 0 °C.",
+      "what": "hold the buds near 0 °C down to about −6 °C air, in clear and windy frosts alike, for about 10 nights a season before the reservoir runs dry (then candles). About €15,000 per hectare to install, €650 per hectare a year upkeep. About three weeks to install.",
+      "when": "frost warnings and the Programmes frost row.",
+      "params": {
+        "perHa": 15000
+      }
+    },
+    {
+      "id": "sorting-table",
+      "label": "Vibrating sorting table",
+      "category": "harvest",
+      "price": 19500,
+      "blurb": "A vibrating table and conveyor where up to four people pick out rotten, raisined and damaged berries before the press.",
+      "what": "makes Rigorous sorting possible at harvest: more of the rot removed, at the cost of more sound fruit and labour. Without it, sorting stays at Table level.",
+      "when": "the harvest order's sorting choice on Plot & Blocks.",
+      "params": {}
+    }
+  ],
+  "legacyStart": {
+    "mosel": {
+      "walls": "slate",
+      "floor": "slate",
+      "ceiling": "oak",
+      "lights": "warm",
+      "corner": "table",
+      "plants": "on",
+      "outside": "on",
+      "cellar": "on"
+    },
+    "cote-dor": {
+      "walls": "limestone",
+      "floor": "stone",
+      "ceiling": "oak",
+      "lights": "chandelier",
+      "corner": "table",
+      "plants": "on",
+      "outside": "on",
+      "cellar": "on"
+    },
+    "napa": {
+      "walls": "redwood",
+      "floor": "terracotta",
+      "ceiling": "oak",
+      "lights": "warm",
+      "corner": "lounge",
+      "plants": "on",
+      "outside": "on",
+      "cellar": "on"
+    }
+  }
+}

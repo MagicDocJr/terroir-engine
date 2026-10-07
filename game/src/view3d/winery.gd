@@ -344,7 +344,7 @@ func _mat(name: String) -> Material:
 			m = StandardMaterial3D.new(); m.albedo_color = Color(0.58, 0.6, 0.62); m.metallic = 0.7; m.roughness = 0.38
 		"sign_board":
 			m = A.pbr("oak_veneer_01", 0.5, Color(0.16, 0.24, 0.2), 1.0)
-		"door_wood":
+		"door_wood", "shutter_wood":
 			m = A.pbr("oak_veneer_01", 0.7, Color(0.42, 0.28, 0.18), 1.0)
 		"window_dark":
 			m = StandardMaterial3D.new(); m.albedo_color = Color(0.02, 0.025, 0.03); m.metallic = 0.3; m.roughness = 0.06
@@ -875,6 +875,13 @@ func _build_cellar() -> void:
 # hall's own materials. Tints and scales are chosen by eye from the screenshots (look only).
 const WALL_LOOK := {"slate": ["castle_wall_slates", 0.42, Color(0.62, 0.64, 0.70)], "limestone": ["white_sandstone_blocks_02", 0.3, Color(0.98, 0.95, 0.90)],
 	"brick": ["whitewashed_brick", 0.5, Color(1.0, 1.0, 1.0)], "redwood": ["brown_planks_07", 0.45, Color(0.74, 0.54, 0.44)]}
+# interior paint over the hall's render: the same plaster, tinted
+const PAINT := {"paint-whitewash": Color(1.0, 1.0, 0.97), "paint-cream": Color(0.98, 0.91, 0.76), "paint-ochre": Color(0.90, 0.72, 0.48),
+	"paint-sage": Color(0.67, 0.75, 0.60), "paint-burgundy": Color(0.55, 0.18, 0.20), "paint-white": Color(1.0, 1.0, 0.98), "paint-grey": Color(0.42, 0.45, 0.48)}
+# the facade: painted render, or cladding laid over it (triplanar, so boards and blocks keep their size on every wall)
+const FACADE_LOOK := {"timber": ["brown_planks_07", 0.5, Color(0.80, 0.66, 0.52)], "shingle": ["grey_roof_tiles_02", 0.7, Color(0.52, 0.55, 0.62)],
+	"ashlar": ["white_sandstone_blocks_02", 0.32, Color(0.98, 0.94, 0.86)]}
+const SHUTTER_PAINT := {"green": Color(0.20, 0.36, 0.25), "blue": Color(0.25, 0.40, 0.60), "oxblood": Color(0.45, 0.12, 0.10), "oak": Color(0.72, 0.55, 0.38)}
 const FLOOR_LOOK := {"stone": ["monastery_stone_floor", 0.4, Color(0.82, 0.80, 0.78)], "slate": ["slate_floor_03", 0.45, Color(0.50, 0.54, 0.60)],
 	"terracotta": ["terracotta_floor_tiles", 0.55, Color(0.90, 0.82, 0.78)], "herringbone": ["herringbone_brick", 0.6, Color(1.0, 1.0, 1.0)]}
 const WARM := Color(1.0, 0.86, 0.70)          # warm pendants (≈ 3000 K; warmer turned the steel tanks copper)
@@ -895,6 +902,9 @@ func apply_style(s: Dictionary) -> bool:
 		var w: Array = WALL_LOOK.get(String(s.get("walls", "")), [])
 		var f: Array = FLOOR_LOOK.get(String(s.get("floor", "")), [])
 		var oak := String(s.get("ceiling", "")) == "oak"
+		var wv := String(s.get("walls", ""))
+		if PAINT.has(wv):
+			w = ["grey_plaster_02", 0.35, PAINT[wv]]
 		if hall_surf.has("hall_wall"):
 			hall_mesh.set_surface_override_material(int(hall_surf["hall_wall"]), null if w.is_empty() else _look_mat(w[0], w[1], w[2]))
 		if hall_surf.has("hall_floor"):
@@ -915,6 +925,14 @@ func apply_style(s: Dictionary) -> bool:
 	_show("plants", String(s.get("plants", "")) == "on")
 	_show("outside", String(s.get("outside", "")) == "on")
 	_show("cellar_candles", String(s.get("cellar", "")) == "on")
+	_apply_facade(String(s.get("facade", "region")))
+	var sh := String(s.get("shutters", "none"))
+	_show("shutters", SHUTTER_PAINT.has(sh))
+	_paint_shutters(sh)
+	_show("stringlights", String(s.get("stringlights", "")) == "on")
+	_show("sign_lamps", String(s.get("sign", "")) == "on")
+	if sign_label:
+		sign_label.modulate = Color(1.0, 0.84, 0.38) if String(s.get("sign", "")) == "on" else Color(0.93, 0.86, 0.62)
 	_update_windows()
 	if surfaces and baked:
 		bake_gi()
@@ -922,6 +940,37 @@ func apply_style(s: Dictionary) -> bool:
 	if baked:
 		refresh_probes()
 	return false
+
+
+## The facade: the Region's render, a paint colour on the same render, or cladding (timber, slate shingle, ashlar). Swaps
+## the shared "facade" material in place, so every wall, reveal and gable of the exterior follows.
+func _apply_facade(v: String) -> void:
+	if not mats.has("facade"):
+		return
+	var m: StandardMaterial3D = mats["facade"]
+	_region_material("facade", m)
+	m.uv1_triplanar = false
+	if PAINT.has(v):
+		m.albedo_color = PAINT[v]
+	elif FACADE_LOOK.has(v):
+		var f: Array = FACADE_LOOK[v]
+		var src := A.pbr(f[0], f[1], f[2], 1.0)
+		m.albedo_texture = src.albedo_texture
+		m.albedo_color = f[2]
+		m.normal_texture = src.normal_texture
+		m.roughness_texture = src.roughness_texture
+		m.ao_enabled = src.ao_enabled
+		m.ao_texture = src.ao_texture
+		m.uv1_triplanar = true
+		m.uv1_scale = Vector3(f[1], f[1], f[1])
+
+
+## Shutters and the office door take the paint (natural oak: oiled wood).
+const DOOR_WOOD := Color(0.42, 0.28, 0.18)
+func _paint_shutters(v: String) -> void:
+	var col: Color = SHUTTER_PAINT.get(v, DOOR_WOOD)
+	(_mat("shutter_wood") as StandardMaterial3D).albedo_color = col
+	(_mat("door_wood") as StandardMaterial3D).albedo_color = col
 
 
 ## A PBR set mapped triplanar in the mesh's own frame, so blocks and planks keep their real size on every wall.
@@ -1096,6 +1145,113 @@ func _build_outside(g: Node3D) -> void:
 		_look_prop(g, "wooden_lantern_01", at, PI / 2.0)
 		_flame(g, at + Vector3(0.0, 0.07, 0.0), 0.014)
 		_glow(g, at + Vector3(0.25, 0.15, 0.0), CANDLE, 0.8, 3.5)
+
+
+## Shutters folded back beside each window: the south windows of the hall and the office window on the east gable.
+## Window openings from build_winery.py (SWX, SWIN_Y, OFFICE_WIN). Look only.
+const SOUTH_WINDOWS := [[-7.0, -5.4], [-2.8, -1.2], [1.2, 2.8], [5.4, 7.0], [8.9, 10.5]]
+func _build_shutters(g: Node3D) -> void:
+	var ext: Array = L["building"]["extent"]
+	var zs := float(ext[3])
+	var xe := float(ext[1])
+	for w in SOUTH_WINDOWS:
+		var half := (float(w[1]) - float(w[0])) / 2.0
+		for side in [-1, 1]:
+			var cx := (float(w[0]) - half / 2.0 - 0.04) if side < 0 else (float(w[1]) + half / 2.0 + 0.04)
+			_shutter(g, Vector3(cx, 2.1, zs + 0.04), Vector3(half, 1.66, 0.045))
+	# office window (z 5.1–6.7, y 1.0–2.3): narrow leaves fit between the office door (to 4.5) and the corner (7.3)
+	for cz in [4.78, 7.02]:
+		_shutter(g, Vector3(xe + 0.04, 1.65, cz), Vector3(0.045, 1.36, 0.46))
+
+
+func _shutter(g: Node3D, c: Vector3, size: Vector3) -> void:
+	var mi := MeshInstance3D.new()
+	var bm := BoxMesh.new(); bm.size = size
+	mi.mesh = bm
+	mi.material_override = _mat("shutter_wood")
+	mi.position = c
+	g.add_child(mi)
+	# horizontal louvre lines: thin dark slats on the outer face
+	var n := int(size.y / 0.16)
+	for i in n:
+		var sl := MeshInstance3D.new()
+		var sb := BoxMesh.new()
+		var thin := Vector3(size.x * 0.86, 0.018, 0.012) if size.z < size.x else Vector3(0.012, 0.018, size.z * 0.86)
+		sb.size = thin
+		sl.mesh = sb
+		sl.material_override = _mat("fascia")
+		var out := Vector3(0, 0, size.z / 2.0 + 0.004) if size.z < size.x else Vector3(size.x / 2.0 + 0.004, 0, 0)
+		sl.position = c + out + Vector3(0, -size.y / 2.0 + 0.12 + i * 0.16, 0)
+		sl.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		g.add_child(sl)
+
+
+## Festoon string lights over the yard: from the east gable's corners out to two timber poles, clear of the roller
+## door's view.
+const FESTOON_BULB := Color(1.0, 0.78, 0.50)
+func _build_stringlights(g: Node3D) -> void:
+	var ext: Array = L["building"]["extent"]
+	var xe := float(ext[1]) + 0.1
+	var poles := [Vector3(18.0, 0.0, 10.8), Vector3(18.0, 0.0, -10.8)]
+	for p in poles:
+		var mi := MeshInstance3D.new()
+		var cm := CylinderMesh.new(); cm.top_radius = 0.06; cm.bottom_radius = 0.075; cm.height = 3.6; cm.radial_segments = 10
+		mi.mesh = cm
+		mi.material_override = _mat("rack_wood")
+		mi.position = p + Vector3(0, 1.8, 0)
+		g.add_child(mi)
+	_solid(g, [[poles[0] + Vector3(0, 1.8, 0), Vector3(0.2, 3.6, 0.2)], [poles[1] + Vector3(0, 1.8, 0), Vector3(0.2, 3.6, 0.2)]])
+	var top := Vector3(0, 3.5, 0)
+	_festoon(g, Vector3(xe, 4.6, float(ext[3]) - 0.2), poles[0] + top, 12)
+	_festoon(g, Vector3(xe, 4.6, float(ext[2]) + 0.2), poles[1] + top, 12)
+	# and along the south wall above the windows, back to the lean-to
+	_festoon(g, Vector3(xe - 0.2, 4.6, float(ext[3]) + 0.12), Vector3(1.0, 4.6, float(ext[3]) + 0.12), 16)
+
+
+func _festoon(g: Node3D, a: Vector3, b: Vector3, bulbs: int) -> void:
+	var sag := 0.08 * a.distance_to(b)
+	var bulb_mat := StandardMaterial3D.new()
+	bulb_mat.albedo_color = Color(1.0, 0.95, 0.85)
+	bulb_mat.emission_enabled = true
+	bulb_mat.emission = FESTOON_BULB
+	bulb_mat.emission_energy_multiplier = 5.0
+	var wire := StandardMaterial3D.new(); wire.albedo_color = Color(0.05, 0.05, 0.05); wire.roughness = 0.7
+	var segs := bulbs * 2
+	var prev := a
+	for i in range(1, segs + 1):
+		var t := float(i) / segs
+		var p := a.lerp(b, t) - Vector3(0, sag * 4.0 * t * (1.0 - t), 0)
+		var mi := MeshInstance3D.new()
+		var cm := CylinderMesh.new(); cm.top_radius = 0.006; cm.bottom_radius = 0.006; cm.height = prev.distance_to(p); cm.radial_segments = 4
+		mi.mesh = cm
+		mi.material_override = wire
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var dir := (p - prev).normalized()               # the cylinder's axis (+y) along the wire
+		var side := dir.cross(Vector3.UP).normalized()
+		mi.transform = Transform3D(Basis(side, dir, side.cross(dir)), (prev + p) / 2.0)
+		g.add_child(mi)
+		if i % 2 == 1:
+			var bu := MeshInstance3D.new()
+			var sm := SphereMesh.new(); sm.radius = 0.035; sm.height = 0.085; sm.radial_segments = 8; sm.rings = 4
+			bu.mesh = sm
+			bu.material_override = bulb_mat
+			bu.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			bu.position = p - Vector3(0, 0.07, 0)
+			g.add_child(bu)
+		prev = p
+	_glow(g, a.lerp(b, 0.5) - Vector3(0, sag, 0), FESTOON_BULB, 0.9, 7.0)
+
+
+## The gilded sign's two lamps: caged sconces over the board, lighting the name.
+func _build_sign_lamps(g: Node3D) -> void:
+	if Y.is_empty():
+		return
+	var sp: Array = Y["sign"]["pos"]
+	var half := float(Y["sign"]["w"]) / 2.0
+	for z in [-half + 0.5, half - 0.5]:
+		var at := Vector3(float(sp[0]) + 0.05, float(sp[1]) + 0.75, z)
+		_prop(g, "props/industrial_caged_sconce/industrial_caged_sconce.gltf", Transform3D(A.look_basis(Vector3(1, 0, 0)), at), "industrial_caged_sconce_c")
+		_glow(g, at + Vector3(0.45, -0.3, 0), Color(1.0, 0.82, 0.55), 0.7, 3.0)
 
 
 func _build_cellar_candles(g: Node3D) -> void:

@@ -111,6 +111,9 @@ func _ready() -> void:
 	if "--winerylook" in args:
 		_winery_look("--perf" in args)
 		return
+	if "--shopthumbs" in args:
+		_shop_thumbs()
+		return
 	var i := args.find("--capture3d")
 	if i < 0:
 		_manual()
@@ -165,6 +168,7 @@ func _play(shot: Dictionary) -> Dictionary:
 	if not Sim.NewGame(JSON.stringify(g)):
 		push_error("NewGame failed: " + Sim.LastError())
 		return {}
+	Sim.ShopOwnAll()        # some scenes show rigorous sorting (the Shop's sorting table); the look in use is unchanged
 	var until := String(shot["until"])
 	var s := _snap()
 	var guard := 0
@@ -1236,11 +1240,12 @@ const LOOK_CAMS := ["hall", "hall_stairs", "corner", "cellar", "door"]
 const WineryStyleT := preload("res://src/view3d/winery_style.gd")
 
 
-func _look_game(region: String) -> void:
+func _look_game(region: String, estate := "Look Test") -> void:
 	var g: Dictionary = LOOK_GAMES[region].duplicate()
 	g["seed"] = 5
-	g["estateName"] = "Look Test"
+	g["estateName"] = estate
 	Sim.NewGame(JSON.stringify(g))
+	Sim.ShopOwnAll()
 
 
 func _decor(look: Dictionary) -> void:
@@ -1254,7 +1259,7 @@ func _look_cam(cam: String) -> void:
 		view.set_view("hall")
 		view.set_camera(wy.to_global(Vector3(5.6, 1.6, 2.3)), wy.to_global(Vector3(8.2, 0.75, 5.9)))
 	else:
-		view.set_view("cellar" if cam.begins_with("cellar") else ("vineyard" if cam == "door" else "hall"))
+		view.set_view("cellar" if cam.begins_with("cellar") else ("vineyard" if cam in ["door", "yard"] else "hall"))
 		view.camera_preset(cam)
 
 
@@ -1354,6 +1359,25 @@ func _winery_look(perf_mode: bool) -> void:
 	var col_ok: bool = shown_solid and not hidden_solid
 	print("WINERYLOOK furniture_collides_only_when_shown %s (shown %s, hidden %s)" % ["ok" if col_ok else "FAIL", shown_solid, hidden_solid])
 	ok = ok and col_ok
+	# the 3D catalogue (winery_style.gd) matches the Shop's (data/shop.json via the snapshot)
+	var cat_ok := true
+	for sec in snap["shop"]["look"]:
+		for o in sec["options"]:
+			if WineryStyleT.option(String(sec["key"]), String(o["value"])).is_empty():
+				cat_ok = false; print("  not in winery_style.gd: %s %s" % [sec["key"], o["value"]])
+	print("WINERYLOOK catalogue_matches_shop %s" % ("ok" if cat_ok else "FAIL"))
+	ok = ok and cat_ok
+	# "Preview in 3D" shows a look without changing the save or the cash
+	var before_use: String = JSON.stringify(snap["shop"]["inUse"])
+	var before_cash: float = float(snap["shop"]["cash"])
+	view.set_preview({"facade": "shingle", "walls": "redwood"})
+	var pv_shown: bool = String((wy.get("style") as Dictionary).get("facade", "")) == "shingle"
+	snap = _snap()
+	var pv_ok: bool = pv_shown and JSON.stringify(snap["shop"]["inUse"]) == before_use and float(snap["shop"]["cash"]) == before_cash
+	view.set_preview({})
+	pv_ok = pv_ok and String((wy.get("style") as Dictionary).get("facade", "")) == String(snap["shop"]["inUse"]["facade"])
+	print("WINERYLOOK preview_changes_nothing %s" % ("ok" if pv_ok else "FAIL"))
+	ok = ok and pv_ok
 	if "--checks" in OS.get_cmdline_user_args():      # checks only, no screenshots
 		print("WINERYLOOK %s" % ("ok" if ok else "FAIL"))
 		get_tree().quit()
@@ -1363,11 +1387,34 @@ func _winery_look(perf_mode: bool) -> void:
 		_look_game(region)
 		snap = _snap()
 		view.apply_snapshot(snap)
-		var want: Dictionary = WineryStyleT.defaults(region)
-		var reg_ok: bool = wy.get("style") == want
-		print("WINERYLOOK default_%s %s" % [region, "ok" if reg_ok else "FAIL"])
+		# a new Estate starts with the Region's own walls and floor and the plain working winery elsewhere (the Shop)
+		var want: Dictionary = snap["shop"]["inUse"]
+		var reg_ok: bool = wy.get("style") == want and String(want["walls"]) == String(WineryStyleT.defaults(region)["walls"]) and String(want["ceiling"]) == "steel"
+		print("WINERYLOOK start_%s %s" % [region, "ok" if reg_ok else "FAIL"])
 		ok = ok and reg_ok
+		await _look_shots(region + "_start", ["hall"])
+		_decor(WineryStyleT.defaults(region))
+		snap = _snap(); view.apply_snapshot(snap)
 		await _look_shots(region, LOOK_CAMS)
+	# the Shop's exterior looks, on each Region's building (facade paint and cladding, shutters, string lights, the sign)
+	var outside_looks := {"mosel": {"facade": "paint-sage", "shutters": "blue", "stringlights": "on", "sign": "on", "outside": "on"},
+		"cote-dor": {"facade": "ashlar", "shutters": "green", "stringlights": "on", "sign": "on", "outside": "on"},
+		"napa": {"facade": "timber", "shutters": "oak", "stringlights": "on", "sign": "off", "outside": "on"}}
+	for region in outside_looks:
+		_look_game(region)
+		_decor(outside_looks[region])
+		snap = _snap(); view.apply_snapshot(snap)
+		var st2: Dictionary = wy.get("style")
+		var out_ok := true
+		for k in outside_looks[region]:
+			out_ok = out_ok and String(st2.get(k, "")) == String(outside_looks[region][k])
+		print("WINERYLOOK outside_%s %s" % [region, "ok" if out_ok else "FAIL"])
+		ok = ok and out_ok
+		await _look_shots(region + "_outside", ["door", "yard"])
+	_look_game("mosel")
+	_decor({"walls": "paint-ochre", "lights": "warm", "corner": "table", "plants": "on"})
+	snap = _snap(); view.apply_snapshot(snap)
+	await _look_shots("mosel_paint", ["hall", "corner"])
 	_look_game("mosel")
 	_decor({"walls": "brick", "lights": "chandelier", "corner": "lounge"})
 	snap = _snap(); view.apply_snapshot(snap)
@@ -1377,6 +1424,39 @@ func _winery_look(perf_mode: bool) -> void:
 	snap = _snap(); view.apply_snapshot(snap)
 	await _look_shots("napa_plain", ["hall"])
 	print("WINERYLOOK %s" % ("ok" if ok else "FAIL"))
+	get_tree().quit()
+
+
+# ------------------------------------------------------------------ Shop pictures (--shopthumbs; scripts/shop_thumbs.sh)
+## One small picture per Shop look, rendered on Côte d'Or's cozy regional look with only that item changed, from a camera
+## that shows it. Written to game/shop_thumbs/<key>_<value>.jpg (committed; shop.gd shows them on the item cards).
+const THUMB_CAM := {"walls": "hall", "floor": "hall", "ceiling": "hall", "lights": "hall", "corner": "corner", "plants": "corner",
+	"cellar": "cellar", "facade": "yard", "shutters": "door", "outside": "door", "stringlights": "yard", "sign": "door"}
+func _shop_thumbs() -> void:
+	_look_game("cote-dor", "Domaine")
+	var base: Dictionary = WineryStyleT.defaults("cote-dor")
+	var only := OS.get_environment("THUMB_KEY").split(",", false)
+	var n := 0
+	for e in WineryStyleT.ELEMENTS:
+		var key := String(e["key"])
+		if not only.is_empty() and not key in only:
+			continue
+		for o in e["options"]:
+			var look := base.duplicate()
+			look[key] = String(o["value"])
+			_decor(look)
+			snap = _snap(); view.apply_snapshot(snap)
+			_look_cam(THUMB_CAM.get(key, "hall"))
+			await _frames(120)
+			await RenderingServer.frame_post_draw
+			var img: Image = view.capture()
+			img.resize(400, 225, Image.INTERPOLATE_LANCZOS)
+			var out := ProjectSettings.globalize_path("res://shop_thumbs/%s_%s.jpg" % [key, o["value"]])
+			DirAccess.make_dir_recursive_absolute(out.get_base_dir())
+			img.save_jpg(out, 0.82)
+			n += 1
+			print("SHOPTHUMB %s_%s" % [key, o["value"]])
+	print("SHOPTHUMBS %d" % n)
 	get_tree().quit()
 
 

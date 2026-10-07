@@ -130,13 +130,24 @@ static func build(D: Dictionary, shell) -> Control:
 		h1.add_child(UI.segmented(["Hand"] if steep else ["Hand", "Machine"], method if not steep else "Hand", func(x): shell.state["h_method"] = x; shell.show_screen("plot"), 110))
 		h1.add_child(UI.label("Machines can't work this slope or single-stake vines." if steep else "Machines are fast and cheap but can't select bunches.", 13, UI.MUTED))
 		hp[1].add_child(h1)
+		# Rigorous sorting needs the Shop's sorting table (equipment-shop design §6)
+		var has_table := true
+		for e in D.get("shop", {}).get("equipment", []):
+			if String(e["id"]) == "sorting-table": has_table = bool(e["owned"])
+		if not has_table and sorting == "Rigorous": sorting = "Table"
 		var h2 := UI.hbox(12); var l2 := UI.label("Sorting", 15, UI.INK2); l2.custom_minimum_size = Vector2(110, 0); h2.add_child(l2)
-		h2.add_child(UI.segmented(["None", "Table", "Rigorous"], sorting, func(x): shell.state["h_sort"] = x; shell.show_screen("plot"), 110))
+		h2.add_child(UI.segmented(["None", "Table", "Rigorous"] if has_table else ["None", "Table"], sorting, func(x): shell.state["h_sort"] = x; shell.show_screen("plot"), 110))
+		if not has_table:
+			h2.add_child(UI.label("Rigorous sorting needs a sorting table.", 13, UI.MUTED))
+			var st := UI.button("In the Shop", false, 13)
+			st.pressed.connect(func(): shell.state["shop_tab"] = "Vineyard & cellar"; shell.show_screen("shop"))
+			h2.add_child(st)
 		hp[1].add_child(h2)
 		# the trade-off of each sorting level for this Block's fruit today (numbers from the simulation)
 		var sg := GridContainer.new(); sg.columns = 5; sg.add_theme_constant_override("h_separation", 18); sg.add_theme_constant_override("v_separation", 3)
 		for hname in ["", "Rot left in the wine", "Crop lost", "Extra labour", ""]: sg.add_child(UI.label(hname, 12, UI.MUTED, UI.f_body_b))
 		for so in B.get("sortingOptions", []):
+			if not has_table and String(so["level"]) == "Rigorous": continue
 			var chosen: bool = String(so["level"]) == sorting
 			var col := UI.GOLD if chosen else UI.INK2
 			sg.add_child(UI.label(("▸ " if chosen else "  ") + String(so["level"]), 14, col, UI.f_body_b if chosen else null))
