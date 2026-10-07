@@ -28,6 +28,9 @@ public static class Shop
     public const string LookCategory = "Winery", EquipmentCategory = "Equipment";
     /// <summary>The frost methods, best first: the frost Programme uses the best one you own (spec §6).</summary>
     public static readonly string[] FrostMethods = { "sprinklers", "wind-machine", "candles" };
+    /// <summary>Days from buying frost equipment to its first protected night: a fan tower or a sprinkler line takes weeks
+    /// to put up (game simplification, UNVERIFIED). Equipment cannot be bought on the eve of a frost.</summary>
+    public const int InstallDays = 21;
 
     private static readonly ConcurrentDictionary<string, ShopCatalog> Cache = new();
 

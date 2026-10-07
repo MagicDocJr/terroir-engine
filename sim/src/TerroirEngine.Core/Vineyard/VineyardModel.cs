@@ -27,6 +27,11 @@ public sealed class VineyardContext
     public bool FrostWindMachine, FrostSprinklers;
     /// <summary>Block-nights protected today, per method (for the night's cost).</summary>
     public int FrostCandleNights, FrostFanNights, FrostSprinklerNights;
+    /// <summary>Sprinkler nights the reservoir still holds this season (reset each 1 January).</summary>
+    public int SprinklerNightsLeft = SprinklerSeasonNights;
+    /// <summary>A reservoir for about 100 hours of sprinkling a season, ≈ 10 nights (Beine, Chablis: a 450,000 m³ lake for
+    /// 100 ha; Réussir Vigne 2021). Sized the same everywhere: game simplification, UNVERIFIED.</summary>
+    public const int SprinklerSeasonNights = 10;
     public int SprayPassesToday;
     public bool ForceSprayToday;   // the player's one-off override: an extra spray pass today (spec §5.1)
 }

@@ -47,7 +47,7 @@ public sealed partial class GameSession
             switch (e.Kind)
             {
                 case "budburst":
-                    if (Gate($"budburst-{Date.Year}")) Post(SeasonalRole, "Budburst — the season has started", $"The first buds have burst in Block {blocks}. From now until the shoots are ~15 cm long, a radiation frost below about −2 °C can kill the young shoots. {FrostAdvice()}",
+                    if (Gate($"budburst-{Date.Year}")) Post(SeasonalRole, "Budburst — the season has started", $"The first buds have burst in Block {blocks}. From now until the shoots are ~15 cm long, a radiation frost below about −2 °C can kill the young shoots. {FrostAdvice(withShop: true)}",
                         SeasonalWhy("Critical temperatures rise from about −2.2 °C at budburst to about −1 °C at four leaves (UMD Extension; Gardea 1987)."), "high", "budburst", stop: true);
                     break;
                 case "frost":
@@ -150,16 +150,19 @@ public sealed partial class GameSession
     };
 
     /// <summary>What frost protection we have (the Shop's frost equipment) and whether it is on.</summary>
-    public string FrostKit() => OwnsEquipment("sprinklers") && ShopUnavailable("sprinklers") == "" ? "overhead sprinklers"
-        : OwnsEquipment("wind-machine") && ShopUnavailable("wind-machine") == "" ? "a wind machine, with candles for the hardest nights" : "frost candles";
+    public string FrostKit() => EquipmentWorking("sprinklers") && ShopUnavailable("sprinklers") == "" ? "overhead sprinklers, with candles once the reservoir runs dry"
+        : EquipmentWorking("wind-machine") && ShopUnavailable("wind-machine") == "" ? "a wind machine, with candles for the hardest nights" : "frost candles";
 
     /// <summary>Better frost equipment the Shop can still sell for this Plot.</summary>
     public bool FrostUpgradeForSale => !LegacyShop && !OwnsEquipment("sprinklers") && new[] { "wind-machine", "sprinklers" }.Any(id => !OwnsEquipment(id) && ShopUnavailable(id) == "");
 
-    private string FrostAdvice() => Ctx.Frost == Tier.Low
+    /// <summary>The frost advice in the budburst message (withShop: once a season, the Shop's equipment is mentioned) and in
+    /// every frost warning (never selling: equipment bought then would not be up in time).</summary>
+    private string FrostAdvice(bool withShop = false) => Ctx.Frost == Tier.Low
         ? $"We have no frost protection running. Our kit: {FrostKit()}. If the forecast shows a clear, calm night near freezing, switch the frost Programme on" +
-          (OwnsEquipment("wind-machine") || OwnsEquipment("sprinklers") ? "." : $" (candles: about €{EconomyTables.CandlesPerHaNight:N0} per ha per night{(FrostUpgradeForSale ? "; the Shop sells equipment that is cheaper to run" : "")}).")
-        : $"Frost protection is on, with {FrostKit()}. " + (OwnsEquipment("sprinklers") && ShopUnavailable("sprinklers") == ""
+          (EquipmentWorking("wind-machine") || EquipmentWorking("sprinklers") ? "." : $" (candles: about €{EconomyTables.CandlesPerHaNight:N0} per ha per night).") +
+          (withShop && FrostUpgradeForSale ? " The Shop sells frost equipment that is cheaper to run; it takes a few weeks to install." : "")
+        : $"Frost protection is on, with {FrostKit()}. " + (EquipmentWorking("sprinklers") && ShopUnavailable("sprinklers") == ""
             ? "They hold the buds near 0 °C down to about −6 °C, on clear or windy nights."
             : "It helps only on clear, calm nights, when the cold air settles under warmer air.");
 
@@ -182,7 +185,6 @@ public sealed partial class GameSession
                     (VineyardManager == StaffLevel.Senior ? $" The frost-pocket Blocks ({string.Join(", ", Blocks.Where(b => b.Data.Microclimate.FrostPocket > 0.5).Select(b => b.Data.Id).DefaultIfEmpty("none"))}) run 2–4 °C colder than the forecast on clear, calm nights." : ""),
                     "Radiation frosts form on clear, calm nights when cold air drains into hollows and valley floors.", "high", "frost-warning", stop: true);
                 if (Ctx.Frost == Tier.Low) m.Actions.Add(("Switch frost protection on", "programme", "frost:Medium"));
-                if (FrostUpgradeForSale) m.Actions.Add(("Frost equipment in the Shop", "goto", "shop-equipment"));
             }
         }
         // heatwave warning (sunburn)
@@ -243,8 +245,9 @@ public sealed partial class GameSession
         // late season: force a decision
         foreach (var b in Blocks.Where(b => !b.Harvested && !b.Picking && b.Veraison != null && Date >= new DateOnly(Date.Year, 12, 1)))
         {
-            Apply(new Command { Type = "harvest", A = b.Data.Id, B = "hand", C = "Rigorous" }, record: false);
-            Post(SeasonalRole, $"I had Block {b.Data.Id} picked", "It's December — anything left would rot or be eaten by birds. I sent the crew in with rigorous sorting. (Game rule: unpicked fruit is harvested on 1 December.)", SeasonalWhy("Game rule: unpicked fruit is harvested on 1 December."), "high", "forced-harvest", stop: true, blockId: b.Data.Id);
+            bool table = OwnsEquipment("sorting-table");
+            Apply(new Command { Type = "harvest", A = b.Data.Id, B = "hand", C = table ? "Rigorous" : "Table" }, record: false);
+            Post(SeasonalRole, $"I had Block {b.Data.Id} picked", $"It's December — anything left would rot or be eaten by birds. I sent the crew in with {(table ? "rigorous sorting on the sorting table" : "sorting at the table")}. (Game rule: unpicked fruit is harvested on 1 December.)", SeasonalWhy("Game rule: unpicked fruit is harvested on 1 December."), "high", "forced-harvest", stop: true, blockId: b.Data.Id);
         }
     }
 }

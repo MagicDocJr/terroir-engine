@@ -19,8 +19,8 @@ you walk into the 3D hall.
 
 **Rules:**
 - Purely cosmetic: the simulation never reads it (ADR 0001).
-- Prices are real money from the Estate's cash, so decor competes with running the vineyard. Overspending can push you
-  into overdraft, as for a real grower: a gentle trade-off, not a trap.
+- Prices are real money from the Estate's cash, so decor competes with running the vineyard. A purchase needs the cash in
+  hand (revised in the plan: no overdraft for the Shop), so it is a gentle trade-off, not a trap.
 - No study currency, no random rewards, no time pressure.
 
 **Success:**

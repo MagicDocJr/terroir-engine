@@ -33,6 +33,14 @@ public sealed partial class GameSession
     }
 
     /// <summary>Games from before the shop keep rigorous sorting (they had it without a table), so they own the sorting table.</summary>
+    private readonly Dictionary<string, int> _boughtDay = new();
+
+    /// <summary>The first day a bought piece of equipment works (null: not bought in this game, or working from the start).</summary>
+    public DateOnly? WorkingFrom(string id) => _boughtDay.TryGetValue(id, out var d) ? DateOnly.FromDayNumber(d + (ShopData.Item(id)?.Category == "frost" ? Shop.InstallDays : 0)) : null;
+
+    /// <summary>Owned, and installed by today.</summary>
+    public bool EquipmentWorking(string id) => OwnsEquipment(id) && (WorkingFrom(id) is not { } d || Date >= d);
+
     public bool OwnsEquipment(string id) => ShopData.Item(id) is { } e && (e.Owned || _bought.Contains($"equipment:{id}") || Setup.ShopGrants.Contains($"equipment:{id}") || (LegacyShop && e.Id == "sorting-table"));
 
     /// <summary>The look in use: the player's choice if owned, else the start look.</summary>
@@ -60,6 +68,9 @@ public sealed partial class GameSession
     {
         // Overhead sprinklers need a big, reliable water supply and a pump; on the steep Mosel slate there is none (spec §6)
         "sprinklers" when Region.Id == "mosel" && Plot.SlopePct >= 30 => "Not on these steep slate slopes: there is no water supply for overhead sprinklers.",
+        // aspersion needs a reservoir; in Burgundy it is a Chablis practice (Beine), while Côte d'Or growers use candles, fires
+        // and wind machines (UNVERIFIED as a rule)
+        "sprinklers" when Region.Id == "cote-dor" => "Not on the Côte d'Or slopes: there is no reservoir for overhead sprinklers here.",
         // a fan tower needs flat or gently sloping ground; on steep slopes the cold air drains away downhill anyway (UNVERIFIED rule)
         "wind-machine" when Plot.SlopePct >= 30 => "Not on a slope this steep: a fan tower needs gentle ground, and cold air drains off steep slopes by itself.",
         _ => "",
@@ -88,6 +99,7 @@ public sealed partial class GameSession
         double gap = ShopGap(section, value);
         if (gap > 0) { ShopRefusal = $"Not enough cash for {label}: €{gap:N0} short."; return; }
         _bought.Add($"{section}:{value}");
+        if (equip) _boughtDay[value] = Date.DayNumber;
         Ledger.Post(Date, equip ? Shop.EquipmentCategory : Shop.LookCategory, -price, $"Shop: {label}");
         if (!equip) Decor[section] = value;   // a new look goes straight into use
     }

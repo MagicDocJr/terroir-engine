@@ -111,4 +111,56 @@ public class EquipmentTests
         while (g.Date < new DateOnly(2016, 6, 1)) g.Advance(10, stopAtAlerts: false);
         Assert.Contains(g.Ledger.Entries, e => e.Category == "Frost protection" && e.Note.Contains("candles"));
     }
+
+    [Fact]
+    public void FrostEquipment_NeedsInstalling_ItDoesNotProtectTheNightItIsBought()
+    {
+        var g = New("cotedor-hautes");
+        g.Apply(new Command { Type = "buy", A = "equipment", B = "wind-machine" });
+        g.Advance(1, stopAtAlerts: false);
+        Assert.True(g.OwnsEquipment("wind-machine"));
+        Assert.False(g.Ctx.FrostWindMachine, "a tower is not up the day after it is ordered");
+        g.Advance(Shop.InstallDays + 1, stopAtAlerts: false);
+        Assert.True(g.Ctx.FrostWindMachine);
+    }
+
+    [Fact]
+    public void CoteDor_OffersNoSprinklers_NoWaterReservoir()
+    {
+        Assert.NotEqual("", New("cotedor-plaine").ShopUnavailable("sprinklers"));
+        Assert.Equal("", New("cotedor-plaine").ShopUnavailable("wind-machine"));
+        Assert.Equal("", New("napa-floor").ShopUnavailable("sprinklers"));
+    }
+
+    [Fact]
+    public void Sprinklers_StopWhenTheSeasonsWaterRunsOut()
+    {
+        var g = New("napa-floor");
+        g.Setup.ShopGrants.Add("equipment:sprinklers");
+        g.Advance(1, stopAtAlerts: false);
+        Assert.True(g.Ctx.FrostSprinklers);
+        g.Ctx.SprinklerNightsLeft = 0;
+        g.Advance(1, stopAtAlerts: false);
+        Assert.False(g.Ctx.FrostSprinklers, "an empty reservoir runs no sprinklers");
+    }
+
+    [Fact]
+    public void FrostWarning_DoesNotSellEquipment()
+    {
+        var g = new GameSession(Fixture.Data, new GameSetup { PlotId = "cotedor-plaine", PlantingYear = 2013, Seed = 2016, ShopVersion = 1 });
+        while (g.Date < new DateOnly(2016, 6, 1)) g.Advance(10, stopAtAlerts: false);
+        var warnings = g.Inbox.Where(m => m.Kind == "frost-warning").ToList();
+        Assert.NotEmpty(warnings);
+        Assert.DoesNotContain(warnings, m => m.Actions.Any(a => a.Arg == "shop-equipment") || m.Body.Contains("Shop"));
+    }
+
+    [Fact]
+    public void ForcedDecemberHarvest_SaysTheSortingItReallyUsed()
+    {
+        var g = New("mosel-seitental");
+        while (g.Date < new DateOnly(g.FirstVintage, 12, 3)) g.Advance(20, stopAtAlerts: false);
+        var m = g.Inbox.First(x => x.Kind == "forced-harvest");
+        Assert.DoesNotContain("rigorous", m.Body);
+        Assert.All(g.Blocks, b => Assert.Equal(SortingLevel.Table, b.Order!.Sorting));
+    }
 }

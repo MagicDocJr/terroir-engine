@@ -388,7 +388,7 @@
       "category": "frost",
       "price": 45000,
       "blurb": "A 10 m tower with a big fan that pulls the warmer air from above a frost inversion down into the vines. One covers about 5 ha.",
-      "what": "on clear, calm frost nights it lifts the vines by about a third of the inversion (about 0.5–1.5 °C), for about €490 per hectare per night instead of candles; the crew still lights candles on the hardest nights. Useless in wind. Upkeep about €340 per hectare a year.",
+      "what": "on clear, calm frost nights it lifts the vines by about a third of the inversion (about 0.5–1.5 °C), for about €490 per hectare per night instead of candles; the crew still lights candles on the hardest nights. Useless in wind. Upkeep about €340 per hectare a year. It takes about three weeks to put up.",
       "when": "frost warnings and the Programmes frost row.",
       "params": {}
     },
@@ -398,7 +398,7 @@
       "category": "frost",
       "price": 0,
       "blurb": "Sprinklers over the rows, run all night: as the water freezes on the shoots it releases heat and holds them near 0 °C.",
-      "what": "hold the buds near 0 °C down to about −6 °C air, in clear and windy frosts alike. About €15,000 per hectare to install, €650 per hectare a year upkeep.",
+      "what": "hold the buds near 0 °C down to about −6 °C air, in clear and windy frosts alike, for about 10 nights a season before the reservoir runs dry (then candles). About €15,000 per hectare to install, €650 per hectare a year upkeep. About three weeks to install.",
       "when": "frost warnings and the Programmes frost row.",
       "params": {
         "perHa": 15000

@@ -349,9 +349,11 @@ public sealed partial class GameSession
         Today = w;
         Ctx.LabourFactor = Ctx.Labour switch { Tier.Low => 0.85, Tier.High => 1.2, _ => 1.0 };
         Ctx.SprayPassesToday = 0; Ctx.FrostProtectionNights = 0; Ctx.FrostCandleNights = 0; Ctx.FrostFanNights = 0; Ctx.FrostSprinklerNights = 0;
-        Ctx.FrostWindMachine = OwnsEquipment("wind-machine") && ShopUnavailable("wind-machine") == "";
-        Ctx.FrostSprinklers = OwnsEquipment("sprinklers") && ShopUnavailable("sprinklers") == "";
+        if (Date.Month == 1 && Date.Day == 1) Ctx.SprinklerNightsLeft = VineyardContext.SprinklerSeasonNights;
+        Ctx.FrostWindMachine = EquipmentWorking("wind-machine") && ShopUnavailable("wind-machine") == "";
+        Ctx.FrostSprinklers = EquipmentWorking("sprinklers") && ShopUnavailable("sprinklers") == "" && Ctx.SprinklerNightsLeft > 0;
         foreach (var b in Blocks) VineyardModel.Step(b, w, Ctx, Setup.Seed);
+        if (Ctx.FrostSprinklerNights > 0) Ctx.SprinklerNightsLeft--;
         if (Date.Month == 1 && Date.Day == 1) ApplyDiseaseCarryOver();
         if (Ctx.ForceSprayToday)
         {
@@ -594,8 +596,8 @@ public sealed partial class GameSession
         FrostNight(Ctx.FrostSprinklerNights, EconomyTables.SprinklersPerHaNight, "sprinklers");
         if (Date.Month == 3 && Date.Day == 1)
         {
-            if (Ctx.FrostWindMachine) Ledger.Post(Date, "Equipment", -EconomyTables.WindMachineUpkeepPerHaYear * ha, "Wind machine upkeep");
-            if (Ctx.FrostSprinklers) Ledger.Post(Date, "Equipment", -EconomyTables.SprinklerUpkeepPerHaYear * ha, "Sprinkler system upkeep");
+            if (EquipmentWorking("wind-machine") && ShopUnavailable("wind-machine") == "") Ledger.Post(Date, "Equipment", -EconomyTables.WindMachineUpkeepPerHaYear * ha, "Wind machine upkeep");
+            if (EquipmentWorking("sprinklers") && ShopUnavailable("sprinklers") == "") Ledger.Post(Date, "Equipment", -EconomyTables.SprinklerUpkeepPerHaYear * ha, "Sprinkler system upkeep");
         }
         if (Ctx.IrrigationLegal)
         {

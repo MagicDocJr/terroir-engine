@@ -125,6 +125,7 @@ public static class Snapshot
                 ["id"] = e.Id, ["label"] = e.Label, ["category"] = e.Category, ["price"] = g.EquipmentPrice(e.Id), ["blurb"] = e.Blurb, ["what"] = e.What, ["when"] = e.When,
                 ["owned"] = g.OwnsEquipment(e.Id), ["gap"] = Math.Round(g.ShopGap("equipment", e.Id), 0), ["affordable"] = g.ShopGap("equipment", e.Id) <= 0,
                 ["unavailable"] = g.ShopUnavailable(e.Id),
+                ["workingFrom"] = g.EquipmentWorking(e.Id) || !g.OwnsEquipment(e.Id) ? null : Dates.Short(g.WorkingFrom(e.Id)!.Value),
             })),
         };
     }
@@ -341,9 +342,9 @@ public static class Snapshot
         // frost protection is off or on (the Shop spec §6): on, it uses the best equipment owned. Old saves' High counts as on.
         JsonObject Frost()
         {
-            bool spr = c.FrostSprinklers || (g.OwnsEquipment("sprinklers") && g.ShopUnavailable("sprinklers") == "");
-            bool fan = c.FrostWindMachine || (g.OwnsEquipment("wind-machine") && g.ShopUnavailable("wind-machine") == "");
-            var (on, perNight) = spr ? ("overhead sprinklers hold the buds near 0 °C down to about −6 °C, on clear or windy nights", EconomyTables.SprinklersPerHaNight)
+            bool spr = g.EquipmentWorking("sprinklers") && g.ShopUnavailable("sprinklers") == "";
+            bool fan = g.EquipmentWorking("wind-machine") && g.ShopUnavailable("wind-machine") == "";
+            var (on, perNight) = spr ? ("overhead sprinklers hold the buds near 0 °C down to about −6 °C, on clear or windy nights, for about 10 nights a season", EconomyTables.SprinklersPerHaNight)
                 : fan ? ("wind machine on clear, calm nights (≈ +0.5–1.5 °C), candles added on the hardest nights", EconomyTables.WindMachinePerHaNight)
                 : ("frost candles on clear, calm nights (≈ +2 °C at vine level)", EconomyTables.CandlesPerHaNight);
             var o = P("frost", "Frost protection", c.Frost == Tier.Low ? Tier.Low : Tier.Medium, true,

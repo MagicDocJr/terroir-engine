@@ -190,7 +190,7 @@ same in every Region (game simplification).
 | Overhead sprinklers | **€15,000 per ha** (€8–14k/ha, La RVF; ≈ €15k/ha, Réussir) | €50 per ha of pumping (US$4.10/h running, Washington State 2000; `UNVERIFIED` as a per-ha figure) | **€650 per ha a year** (Beine, Chablis) | [REUSSIR-ASPERSION-2021], [LARVF-2021], [FAO-2005], [REUSSIR-BEINE-2021] |
 | Vibrating sorting table | **€19,500** (CMA vibrating and hand-sorting table, 2–10 t/h, up to 4 sorters) | sorting labour (below) | — | [REUSSIR-TRI-2023] |
 
-All plots in the game are under 5 ha, so one wind machine covers any of them. A capital purchase is a one-off ledger line
+All plots in the game are under 5 ha, so one wind machine covers any of them. Sprinklers are cheaper per hectare on these small Plots but are limited by water: none on the Côte d'Or slopes or the steep Mosel slate, and about 10 nights a season elsewhere (phenology.md §6). Frost equipment takes 21 days to install (`UNVERIFIED`). A capital purchase is a one-off ledger line
 ("Equipment"); upkeep is charged on 1 March.
 
 ### 4.7 The Shop's winery looks (cosmetic)

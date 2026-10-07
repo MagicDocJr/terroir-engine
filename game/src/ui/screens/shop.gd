@@ -158,6 +158,8 @@ static func _equipment(v: VBoxContainer, shop: Dictionary, shell) -> void:
 		var unavailable := String(e.get("unavailable", ""))
 		if owned:
 			right.add_child(UI.label("✓ Owned", 15, UI.GOLD, UI.f_body_b))
+			if e.get("workingFrom") != null:
+				right.add_child(UI.label("Being installed: works from %s" % e["workingFrom"], 13, UI.MUTED, null, true))
 		elif unavailable != "":
 			right.add_child(UI.label(unavailable, 13, UI.MUTED, null, true))
 		else:
