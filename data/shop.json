@@ -377,19 +377,19 @@
       "category": "frost",
       "price": 0,
       "owned": true,
-      "blurb": "Paraffin candles lit between the rows on a still, clear frost night.",
-      "what": "PENDING",
-      "when": "PENDING",
+      "blurb": "Paraffin candles set out between the rows, about 450 per hectare, and lit on a still, clear frost night.",
+      "what": "lift the vine-level temperature by about 2 °C on clear, calm frost nights; useless in wind. About €4,500 per hectare per night.",
+      "when": "frost warnings and the Programmes frost row.",
       "params": {}
     },
     {
       "id": "wind-machine",
       "label": "Wind machine",
       "category": "frost",
-      "price": 0,
-      "blurb": "A tall fan that pulls warmer air down from the inversion above the vines.",
-      "what": "PENDING",
-      "when": "PENDING",
+      "price": 45000,
+      "blurb": "A 10 m tower with a big fan that pulls the warmer air from above a frost inversion down into the vines. One covers about 5 ha.",
+      "what": "on clear, calm frost nights it lifts the vines by about a third of the inversion (about 0.5–1.5 °C), for about €490 per hectare per night instead of candles; the crew still lights candles on the hardest nights. Useless in wind. Upkeep about €340 per hectare a year.",
+      "when": "frost warnings and the Programmes frost row.",
       "params": {}
     },
     {
@@ -397,19 +397,21 @@
       "label": "Overhead sprinklers",
       "category": "frost",
       "price": 0,
-      "blurb": "Water sprayed onto the shoots all night: as it freezes it releases heat.",
-      "what": "PENDING",
-      "when": "PENDING",
-      "params": {}
+      "blurb": "Sprinklers over the rows, run all night: as the water freezes on the shoots it releases heat and holds them near 0 °C.",
+      "what": "hold the buds near 0 °C down to about −6 °C air, in clear and windy frosts alike. About €15,000 per hectare to install, €650 per hectare a year upkeep.",
+      "when": "frost warnings and the Programmes frost row.",
+      "params": {
+        "perHa": 15000
+      }
     },
     {
       "id": "sorting-table",
-      "label": "Sorting table",
+      "label": "Vibrating sorting table",
       "category": "harvest",
-      "price": 0,
-      "blurb": "A vibrating table where pickers remove rotten and damaged berries before the press.",
-      "what": "PENDING",
-      "when": "PENDING",
+      "price": 19500,
+      "blurb": "A vibrating table and conveyor where up to four people pick out rotten, raisined and damaged berries before the press.",
+      "what": "makes Rigorous sorting possible at harvest: more of the rot removed, at the cost of more sound fruit and labour. Without it, sorting stays at Table level.",
+      "when": "the harvest order's sorting choice on Plot & Blocks.",
       "params": {}
     }
   ],

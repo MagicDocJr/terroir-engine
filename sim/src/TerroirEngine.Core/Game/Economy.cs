@@ -29,6 +29,11 @@ public static class EconomyTables
     /// <summary>Overdraft interest, a year rate charged monthly (economy.md; UNVERIFIED design value — euro-area business overdrafts run in the high single digits).</summary>
     public const double OverdraftRate = 0.09;
     public static double OverdraftInterest(double cash) => cash < 0 ? cash * OverdraftRate / 12 : 0;
+    /// <summary>Frost protection per hectare per night and upkeep per hectare per year (economy.md, frost equipment): candles
+    /// €4,500 (Réussir Vigne 2021/2023: €4–5k/ha a night); a wind machine US$18/acre/hour × 12 h ≈ €490 and upkeep US$150/acre ≈
+    /// €340 (UC Davis Napa cost study 2020); sprinklers about €50 of pumping (FAO 2005: US$4.10/h, UNVERIFIED as a per-ha
+    /// figure) and €650 upkeep (Beine, Chablis; Réussir Vigne 2021).</summary>
+    public const double CandlesPerHaNight = 4500, WindMachinePerHaNight = 490, SprinklersPerHaNight = 50, WindMachineUpkeepPerHaYear = 340, SprinklerUpkeepPerHaYear = 650;
     public static double LabourRate(string region) => region == "napa" ? 29 : 17;          // €/h seasonal hand labour
     public static double SkilledRate(string region) => region == "napa" ? 33 : region == "cote-dor" ? 22 : 23;
     /// <summary>Labour hours per ha per year for a mature vineyard, by work class (economy.md table; KTBL/UC Davis anchors).</summary>

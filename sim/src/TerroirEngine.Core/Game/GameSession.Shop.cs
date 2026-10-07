@@ -46,8 +46,11 @@ public sealed partial class GameSession
 
     /// <summary>Price of an item (0 if unknown or owned).</summary>
     public double ShopPrice(string section, string value) => section == "equipment"
-        ? (OwnsEquipment(value) ? 0 : ShopData.Item(value)?.Price ?? 0)
+        ? (OwnsEquipment(value) ? 0 : EquipmentPrice(value))
         : (OwnsLook(section, value) ? 0 : ShopData.Option(section, value)?.Price ?? 0);
+
+    /// <summary>An item's list price on this Plot: per-hectare items (sprinklers) scale with the Plot's area.</summary>
+    public double EquipmentPrice(string id) => ShopData.Item(id) is { } e ? (e.P("perHa") > 0 ? Math.Round(e.P("perHa") * Blocks.Sum(b => b.AreaHa) / 100) * 100 : e.Price) : 0;
 
     /// <summary>How much cash is missing to buy it (0 = affordable).</summary>
     public double ShopGap(string section, string value) => Math.Max(0, ShopPrice(section, value) - Math.Max(0, Ledger.Cash));
@@ -57,6 +60,8 @@ public sealed partial class GameSession
     {
         // Overhead sprinklers need a big, reliable water supply and a pump; on the steep Mosel slate there is none (spec §6)
         "sprinklers" when Region.Id == "mosel" && Plot.SlopePct >= 30 => "Not on these steep slate slopes: there is no water supply for overhead sprinklers.",
+        // a fan tower needs flat or gently sloping ground; on steep slopes the cold air drains away downhill anyway (UNVERIFIED rule)
+        "wind-machine" when Plot.SlopePct >= 30 => "Not on a slope this steep: a fan tower needs gentle ground, and cold air drains off steep slopes by itself.",
         _ => "",
     };
 
@@ -72,7 +77,7 @@ public sealed partial class GameSession
             var e = ShopData.Item(value);
             if (e == null || OwnsEquipment(value)) return;
             if (ShopUnavailable(value) is { Length: > 0 } why) { ShopRefusal = why; return; }
-            label = e.Label; price = e.Price;
+            label = e.Label; price = EquipmentPrice(value);
         }
         else
         {

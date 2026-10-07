@@ -23,6 +23,10 @@ public sealed class VineyardContext
     public bool AutoManage;                     // Establishment years: vines managed by the Mentor, fruit dropped
     public List<VineEvent> Events { get; } = new();
     public int FrostProtectionNights;
+    /// <summary>Frost equipment owned and usable on this Plot (the Shop; candles are always there).</summary>
+    public bool FrostWindMachine, FrostSprinklers;
+    /// <summary>Block-nights protected today, per method (for the night's cost).</summary>
+    public int FrostCandleNights, FrostFanNights, FrostSprinklerNights;
     public int SprayPassesToday;
     public bool ForceSprayToday;   // the player's one-off override: an extra spray pass today (spec §5.1)
 }
@@ -34,6 +38,40 @@ public static class VineyardModel
     /// <summary>Chill units (Bidabe action, from 1 Nov) needed before forcing starts. Game simplification of BRIN's chilling phase
     /// (phenology.md §3); calibrated so Napa budburst falls in late March. UNVERIFIED.</summary>
     public const double ChillRequirementDays = 120;
+
+    // ------------------------------------------------------------------------------------------ frost protection (phenology.md §6)
+    /// <summary>Candles (≈ 400–500 per ha) lift the vine-level minimum by about 2.2 °C under an inversion (FAO 2005 ch. 7,
+    /// Parsons et al. 1967: 375 heaters/ha gave +2.2 °C; Réussir Vigne 2023: +2–3 °C at 400–500/ha).</summary>
+    public const double CandleGainC = 2.2;
+    /// <summary>Wind machines give about a third of the inversion (FAO 2005 ch. 2 and 7; OMAFA 2026: ⅓–½) and are useless
+    /// once the night wind passes about 2.5 m/s (FAO). Game simplification: the weather data has the daily mean wind, which
+    /// overstates the night wind, so the fan runs on every radiation night (daily mean below 11 km/h, as for the frost
+    /// itself) and the inversion shrinks as that wind rises.</summary>
+    public const double FanInversionFraction = 0.33, FanMaxWindKmh = 11.0;
+    /// <summary>Overhead sprinklers hold the buds near 0 °C while ice keeps forming, down to about −6 °C air, in any frost
+    /// type (FAO 2005 ch. 7: to about −7 °C; Réussir Vigne 2021/2023 and the IFV: −6 to −7 °C).</summary>
+    public const double SprinklerLimitC = -6.0;
+
+    /// <summary>The inversion strength (warmer air at 10 m than at the vines) on a radiation night: 1.5 °C plus up to 3 °C more
+    /// on the clearest, stillest nights. Game simplification: the weather data has no upper-air temperature (UNVERIFIED
+    /// range; FAO advises a wind machine only where frost-night inversions are usually at least 1.5 °C).</summary>
+    public static double Inversion(double windKmh, double clear) => 1.5 + 3.0 * M.Clamp(clear, 0, 1) * Math.Max(0, 1 - windKmh / FanMaxWindKmh);
+
+    /// <summary>One frost night with the frost Programme on: the best method owned. Sprinklers protect alone and in any frost;
+    /// otherwise, on a radiation night, the wind machine runs if the air is calm enough, and the crew lights candles when
+    /// there is no fan or the fan alone leaves the buds within 1.5 °C of damage (gains add: game simplification, UNVERIFIED;
+    /// FAO notes heaters and fans together beat either alone). Returns the vine-level minimum and the methods used.</summary>
+    public static (double TMin, bool Candles, bool Fan, bool Sprinklers) FrostProtection(double tMin, double tCrit, bool radiationNight, double windKmh, double clear, bool windMachine, bool sprinklers)
+    {
+        if (sprinklers)   // the ice-water mix holds the buds at 0 °C; below the limit the protection gives way
+            return (tMin >= SprinklerLimitC ? Math.Max(tMin, 0.0) : tMin - SprinklerLimitC, false, false, true);
+        if (!radiationNight) return (tMin, false, false, false);
+        bool fan = windMachine && windKmh < FanMaxWindKmh;
+        double t = tMin + (fan ? FanInversionFraction * Inversion(windKmh, clear) : 0);
+        bool candles = !fan || t < tCrit + 1.5;
+        if (candles) t += CandleGainC;
+        return (t, candles, fan, false);
+    }
 
     // ------------------------------------------------------------------------------------------ season set-up
     public static void StartSeason(BlockState b, int year)
@@ -208,13 +246,18 @@ public static class VineyardModel
             double tCrit = dsb <= 4 ? -2.2 : dsb <= 14 ? -1.7 : -1.1;
             // wet buds: ice forming on surface water ends the supercooling that protects young buds (Fuller & Telli 1999); older, water-rich
             // shoots have little supercooling left to lose, so the effect is limited to the first two weeks (UNVERIFIED size)
-            if (b.PrecipYesterday >= 1 && dsb <= 14) tCrit += 1.0;
+            // (not under sprinklers: the ice-water coat holds the buds at 0 °C, which is what they are for)
+            if (b.PrecipYesterday >= 1 && dsb <= 14 && !(ctx.FrostSprinklers && ctx.Frost != Tier.Low)) tCrit += 1.0;
             double tMin = w.Tmin;
             bool radiationNight = clear > 0.6 && w.WindKmh < 11;
-            if (tMin < tCrit + 2 && radiationNight && ctx.Frost != Tier.Low)
+            if (tMin < tCrit + 2 && ctx.Frost != Tier.Low && (radiationNight || ctx.FrostSprinklers))
             {
-                tMin += ctx.Frost == Tier.High ? 2.0 : 1.0;   // candles / wind machine under an inversion (UNVERIFIED magnitudes)
-                ctx.FrostProtectionNights++;
+                var fp = FrostProtection(tMin, tCrit, radiationNight, w.WindKmh, clear, ctx.FrostWindMachine, ctx.FrostSprinklers);
+                tMin = fp.TMin;
+                if (fp.Candles) ctx.FrostCandleNights++;
+                if (fp.Fan) ctx.FrostFanNights++;
+                if (fp.Sprinklers) ctx.FrostSprinklerNights++;
+                if (fp.Candles || fp.Fan || fp.Sprinklers) ctx.FrostProtectionNights++;
             }
             double dmg = M.Clamp((tCrit + 1.0 - tMin) / 2.0, 0, 1);
             if (dmg > 0.02)

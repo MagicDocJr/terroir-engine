@@ -5,7 +5,7 @@
 extends RefCounted
 
 const UI := preload("res://src/ui/ui.gd")
-const THUMBS := "res://assets/shop_thumbs/%s_%s.png"
+const THUMBS := "res://shop_thumbs/%s_%s.jpg"      # rendered by scripts/shop_thumbs.sh, committed
 const INTERIOR := ["walls", "floor", "ceiling", "lights", "corner", "plants"]
 
 static func build(D: Dictionary, shell) -> Control:
@@ -28,6 +28,16 @@ static func build(D: Dictionary, shell) -> Control:
 	else:
 		_looks(v, shop, shell)
 	return UI.scroll(v)
+
+
+## The item's picture, read from the JPEG at run time (no import step needed); cached for the session.
+static var _thumbs := {}
+static func _thumb(key: String, value: String) -> Texture2D:
+	var path := THUMBS % [key, value]
+	if not _thumbs.has(path):
+		var img := Image.load_from_file(path) if FileAccess.file_exists(path) else null
+		_thumbs[path] = ImageTexture.create_from_image(img) if img else null
+	return _thumbs[path]
 
 
 static func _intro(shell) -> Control:
@@ -64,10 +74,10 @@ static func _look_card(key: String, section: String, o: Dictionary, shop: Dictio
 	c.custom_minimum_size = Vector2(250, 0)
 	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var cv := UI.vbox(6); c.add_child(cv)
-	var path := THUMBS % [key, value]
-	if ResourceLoader.exists(path):
+	var tex := _thumb(key, value)
+	if tex:
 		var tr := TextureRect.new()
-		tr.texture = load(path)
+		tr.texture = tex
 		tr.custom_minimum_size = Vector2(0, 120)
 		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
@@ -131,10 +141,10 @@ static func _equipment(v: VBoxContainer, shop: Dictionary, shell) -> void:
 		var owned := bool(e["owned"])
 		var c := UI.card(owned, 14)
 		var h := UI.hbox(16); c.add_child(h)
-		var path := THUMBS % ["equipment", String(e["id"])]
-		if ResourceLoader.exists(path):
+		var tex := _thumb("equipment", String(e["id"]))
+		if tex:
 			var tr := TextureRect.new()
-			tr.texture = load(path)
+			tr.texture = tex
 			tr.custom_minimum_size = Vector2(180, 110)
 			tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED

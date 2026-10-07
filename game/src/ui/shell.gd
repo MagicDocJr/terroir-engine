@@ -199,7 +199,10 @@ func _alert_ids() -> Dictionary:
 ## Run an inbox action button: goto <screen>, harvest <block>, restart <lot>, programme "<id>:<tier>", block "<id>:<key>:<value>".
 func run_action(action: String, arg: String) -> void:
 	match action:
-		"goto": state["return_to"] = "inbox"; show_screen(arg)
+		"goto":
+			state["return_to"] = "inbox"
+			if arg == "shop-equipment": state["shop_tab"] = "Vineyard & cellar"; arg = "shop"
+			show_screen(arg)
 		"harvest":
 			state["return_to"] = "inbox"
 			state["plot_sel"] = arg
@@ -209,7 +212,8 @@ func run_action(action: String, arg: String) -> void:
 		"spraynow": command("spraynow"); notify("Extra spray pass ordered for today — advance a day to carry it out.")
 		"acceptstuck": command("acceptstuck", arg); notify("Fermentation stopped; the Lot keeps its residual sugar.")
 		"programme":
-			var p := arg.split(":"); command("programme", p[0], p[1]); notify("%s set to %s. Your Vineyard manager applies it from today." % [p[0].capitalize(), p[1]], true)
+			var p := arg.split(":"); command("programme", p[0], p[1])
+			notify(("Frost protection is on. Your Vineyard manager uses it on frost nights from today." if p[0] == "frost" and p[1] != "Low" else "%s set to %s. Your Vineyard manager applies it from today." % [p[0].capitalize(), p[1]]), true)
 		"block":
 			var q := arg.split(":"); command("block", q[0], q[1], q[2]); notify("Block %s: %s updated." % [q[0], q[1]], true)
 		"task3d":
@@ -838,6 +842,13 @@ func _run_capture() -> void:
 	show_screen("wines"); await _shot("%s_14_wines" % prefix)
 	show_screen("estate"); await _shot("%s_15_estate_end" % prefix)
 	show_screen("glossary"); await _shot("%s_16_glossary" % prefix)
+	# the Shop after the first Vintage sold: buy two looks, then the equipment tab
+	show_screen("shop"); await _shot("%s_16b_shop" % prefix)
+	for it in [["plants", "on"], ["lights", "warm"]]: command("buy", it[0], it[1])
+	var use: Dictionary = D.get("shop", {}).get("inUse", {})
+	print("SHOP BUY ", "ok" if String(use.get("plants", "")) == "on" and String(use.get("lights", "")) == "warm" else "BROKEN %s" % str(use))
+	await _shot("%s_16c_shop_bought" % prefix)
+	state["shop_tab"] = "Vineyard & cellar"; show_screen("shop"); await _shot("%s_16d_shop_equipment" % prefix); state.erase("shop_tab")
 	# second Vintage: the January message, the history, and a report selector with two Vintages
 	for m in D.get("inbox", []):
 		if String(m.get("kind", "")) == "newseason": state["inbox_sel"] = int(m["id"])
@@ -886,7 +897,7 @@ func _fuzz_screen(id: String) -> int:
 		if b is OptionButton:
 			var o := b as OptionButton
 			if o.item_count > 1: o.select(o.item_count - 1); o.item_selected.emit(o.item_count - 1)
-		elif (b as Button).text.begins_with("Bottle") or (b as Button).text.begins_with("Harvest Block") or "3D" in (b as Button).text:
+		elif (b as Button).text.begins_with("Bottle") or (b as Button).text.begins_with("Harvest Block") or "3D" in (b as Button).text or (b as Button).text == "Preview":
 			continue   # exercised by the capture run; pressing them here would change the game too early
 		else:
 			b.pressed.emit()

@@ -288,6 +288,7 @@ public sealed partial class GameSession
                 var hb = Blocks.First(x => x.Data.Id == c.A);
                 if (hb.Harvested || hb.Picking || hb.Veraison == null) break;
                 hb.Order = new HarvestOrder { HandPick = c.B != "machine", Sorting = Enum.Parse<SortingLevel>(string.IsNullOrEmpty(c.C) ? "Table" : c.C) };
+                if (hb.Order.Sorting == SortingLevel.Rigorous && !OwnsEquipment("sorting-table")) hb.Order.Sorting = SortingLevel.Table;   // needs the Shop's sorting table
                 if (!hb.Order.HandPick && (Plot.SlopePct >= 30 || hb.Planting.Training == TrainingSystem.Einzelpfahl)) hb.Order.HandPick = true;
                 hb.Picking = true; hb.PickedKg = 0; hb.PickTargetKg = hb.CropKg;
                 CloseGreenHarvestAtPicking(hb.Data.Id);
@@ -347,7 +348,9 @@ public sealed partial class GameSession
         var w = Weather.Get(Date);
         Today = w;
         Ctx.LabourFactor = Ctx.Labour switch { Tier.Low => 0.85, Tier.High => 1.2, _ => 1.0 };
-        Ctx.SprayPassesToday = 0; Ctx.FrostProtectionNights = 0;
+        Ctx.SprayPassesToday = 0; Ctx.FrostProtectionNights = 0; Ctx.FrostCandleNights = 0; Ctx.FrostFanNights = 0; Ctx.FrostSprinklerNights = 0;
+        Ctx.FrostWindMachine = OwnsEquipment("wind-machine") && ShopUnavailable("wind-machine") == "";
+        Ctx.FrostSprinklers = OwnsEquipment("sprinklers") && ShopUnavailable("sprinklers") == "";
         foreach (var b in Blocks) VineyardModel.Step(b, w, Ctx, Setup.Seed);
         if (Date.Month == 1 && Date.Day == 1) ApplyDiseaseCarryOver();
         if (Ctx.ForceSprayToday)
@@ -582,7 +585,18 @@ public sealed partial class GameSession
             double passFraction = (double)Ctx.SprayPassesToday / Math.Max(1, Blocks.Count);
             Ledger.Post(Date, "Sprays", -perPass * ha * passFraction, "Spray pass (materials + application)");
         }
-        if (Ctx.FrostProtectionNights > 0) Ledger.Post(Date, "Frost protection", -600 * ha * Math.Min(1, (double)Ctx.FrostProtectionNights / Blocks.Count) * (Ctx.Frost == Tier.High ? 1.5 : 1), "Frost protection night (candles / wind machine)");
+        void FrostNight(int nights, double perHa, string what)
+        {
+            if (nights > 0) Ledger.Post(Date, "Frost protection", -perHa * ha * Math.Min(1, (double)nights / Blocks.Count), $"Frost protection night ({what})");
+        }
+        FrostNight(Ctx.FrostCandleNights, EconomyTables.CandlesPerHaNight, "candles");
+        FrostNight(Ctx.FrostFanNights, EconomyTables.WindMachinePerHaNight, "wind machine");
+        FrostNight(Ctx.FrostSprinklerNights, EconomyTables.SprinklersPerHaNight, "sprinklers");
+        if (Date.Month == 3 && Date.Day == 1)
+        {
+            if (Ctx.FrostWindMachine) Ledger.Post(Date, "Equipment", -EconomyTables.WindMachineUpkeepPerHaYear * ha, "Wind machine upkeep");
+            if (Ctx.FrostSprinklers) Ledger.Post(Date, "Equipment", -EconomyTables.SprinklerUpkeepPerHaYear * ha, "Sprinkler system upkeep");
+        }
         if (Ctx.IrrigationLegal)
         {
             double mm = Blocks.Sum(b => b.IrrigationMmSeason);

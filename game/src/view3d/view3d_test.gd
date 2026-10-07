@@ -111,6 +111,9 @@ func _ready() -> void:
 	if "--winerylook" in args:
 		_winery_look("--perf" in args)
 		return
+	if "--shopthumbs" in args:
+		_shop_thumbs()
+		return
 	var i := args.find("--capture3d")
 	if i < 0:
 		_manual()
@@ -165,6 +168,7 @@ func _play(shot: Dictionary) -> Dictionary:
 	if not Sim.NewGame(JSON.stringify(g)):
 		push_error("NewGame failed: " + Sim.LastError())
 		return {}
+	Sim.ShopOwnAll()        # some scenes show rigorous sorting (the Shop's sorting table); the look in use is unchanged
 	var until := String(shot["until"])
 	var s := _snap()
 	var guard := 0
@@ -1236,10 +1240,10 @@ const LOOK_CAMS := ["hall", "hall_stairs", "corner", "cellar", "door"]
 const WineryStyleT := preload("res://src/view3d/winery_style.gd")
 
 
-func _look_game(region: String) -> void:
+func _look_game(region: String, estate := "Look Test") -> void:
 	var g: Dictionary = LOOK_GAMES[region].duplicate()
 	g["seed"] = 5
-	g["estateName"] = "Look Test"
+	g["estateName"] = estate
 	Sim.NewGame(JSON.stringify(g))
 	Sim.ShopOwnAll()
 
@@ -1255,7 +1259,7 @@ func _look_cam(cam: String) -> void:
 		view.set_view("hall")
 		view.set_camera(wy.to_global(Vector3(5.6, 1.6, 2.3)), wy.to_global(Vector3(8.2, 0.75, 5.9)))
 	else:
-		view.set_view("cellar" if cam.begins_with("cellar") else ("vineyard" if cam == "door" else "hall"))
+		view.set_view("cellar" if cam.begins_with("cellar") else ("vineyard" if cam in ["door", "yard"] else "hall"))
 		view.camera_preset(cam)
 
 
@@ -1420,6 +1424,39 @@ func _winery_look(perf_mode: bool) -> void:
 	snap = _snap(); view.apply_snapshot(snap)
 	await _look_shots("napa_plain", ["hall"])
 	print("WINERYLOOK %s" % ("ok" if ok else "FAIL"))
+	get_tree().quit()
+
+
+# ------------------------------------------------------------------ Shop pictures (--shopthumbs; scripts/shop_thumbs.sh)
+## One small picture per Shop look, rendered on Côte d'Or's cozy regional look with only that item changed, from a camera
+## that shows it. Written to game/shop_thumbs/<key>_<value>.jpg (committed; shop.gd shows them on the item cards).
+const THUMB_CAM := {"walls": "hall", "floor": "hall", "ceiling": "hall", "lights": "hall", "corner": "corner", "plants": "corner",
+	"cellar": "cellar", "facade": "yard", "shutters": "door", "outside": "door", "stringlights": "yard", "sign": "door"}
+func _shop_thumbs() -> void:
+	_look_game("cote-dor", "Domaine")
+	var base: Dictionary = WineryStyleT.defaults("cote-dor")
+	var only := OS.get_environment("THUMB_KEY").split(",", false)
+	var n := 0
+	for e in WineryStyleT.ELEMENTS:
+		var key := String(e["key"])
+		if not only.is_empty() and not key in only:
+			continue
+		for o in e["options"]:
+			var look := base.duplicate()
+			look[key] = String(o["value"])
+			_decor(look)
+			snap = _snap(); view.apply_snapshot(snap)
+			_look_cam(THUMB_CAM.get(key, "hall"))
+			await _frames(120)
+			await RenderingServer.frame_post_draw
+			var img: Image = view.capture()
+			img.resize(400, 225, Image.INTERPOLATE_LANCZOS)
+			var out := ProjectSettings.globalize_path("res://shop_thumbs/%s_%s.jpg" % [key, o["value"]])
+			DirAccess.make_dir_recursive_absolute(out.get_base_dir())
+			img.save_jpg(out, 0.82)
+			n += 1
+			print("SHOPTHUMB %s_%s" % [key, o["value"]])
+	print("SHOPTHUMBS %d" % n)
 	get_tree().quit()
 
 

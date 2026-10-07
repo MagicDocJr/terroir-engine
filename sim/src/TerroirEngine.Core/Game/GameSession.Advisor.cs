@@ -149,9 +149,19 @@ public sealed partial class GameSession
         _ => full,
     };
 
+    /// <summary>What frost protection we have (the Shop's frost equipment) and whether it is on.</summary>
+    public string FrostKit() => OwnsEquipment("sprinklers") && ShopUnavailable("sprinklers") == "" ? "overhead sprinklers"
+        : OwnsEquipment("wind-machine") && ShopUnavailable("wind-machine") == "" ? "a wind machine, with candles for the hardest nights" : "frost candles";
+
+    /// <summary>Better frost equipment the Shop can still sell for this Plot.</summary>
+    public bool FrostUpgradeForSale => !LegacyShop && !OwnsEquipment("sprinklers") && new[] { "wind-machine", "sprinklers" }.Any(id => !OwnsEquipment(id) && ShopUnavailable(id) == "");
+
     private string FrostAdvice() => Ctx.Frost == Tier.Low
-        ? "We have no frost protection running. If the forecast shows a clear, calm night near freezing, consider raising the frost Programme (candles or wind machine, ≈ €600 per ha per night)."
-        : $"Frost protection is on ({Ctx.Frost}): it lifts the vine-level temperature by {(Ctx.Frost == Tier.High ? "≈2" : "≈1")} °C on calm, clear nights.";
+        ? $"We have no frost protection running. Our kit: {FrostKit()}. If the forecast shows a clear, calm night near freezing, switch the frost Programme on" +
+          (OwnsEquipment("wind-machine") || OwnsEquipment("sprinklers") ? "." : $" (candles: about €{EconomyTables.CandlesPerHaNight:N0} per ha per night{(FrostUpgradeForSale ? "; the Shop sells equipment that is cheaper to run" : "")}).")
+        : $"Frost protection is on, with {FrostKit()}. " + (OwnsEquipment("sprinklers") && ShopUnavailable("sprinklers") == ""
+            ? "They hold the buds near 0 °C down to about −6 °C, on clear or windy nights."
+            : "It helps only on clear, calm nights, when the cold air settles under warmer air.");
 
     private void Advisor()
     {
@@ -171,7 +181,8 @@ public sealed partial class GameSession
                     $"Forecast minimum {cold.Tmin:0.0} °C (±{cold.TminSpread:0.0}) on {Dates.Short(cold.Date)} — the buds are out. {FrostAdvice()}" +
                     (VineyardManager == StaffLevel.Senior ? $" The frost-pocket Blocks ({string.Join(", ", Blocks.Where(b => b.Data.Microclimate.FrostPocket > 0.5).Select(b => b.Data.Id).DefaultIfEmpty("none"))}) run 2–4 °C colder than the forecast on clear, calm nights." : ""),
                     "Radiation frosts form on clear, calm nights when cold air drains into hollows and valley floors.", "high", "frost-warning", stop: true);
-                m.Actions.Add(("Raise frost protection", "programme", "frost:High"));
+                if (Ctx.Frost == Tier.Low) m.Actions.Add(("Switch frost protection on", "programme", "frost:Medium"));
+                if (FrostUpgradeForSale) m.Actions.Add(("Frost equipment in the Shop", "goto", "shop-equipment"));
             }
         }
         // heatwave warning (sunburn)

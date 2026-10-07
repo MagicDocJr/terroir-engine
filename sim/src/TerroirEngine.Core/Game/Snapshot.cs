@@ -122,7 +122,7 @@ public static class Snapshot
             })),
             ["equipment"] = Arr(cat.Equipment.Select(e => (JsonNode)new JsonObject
             {
-                ["id"] = e.Id, ["label"] = e.Label, ["category"] = e.Category, ["price"] = e.Price, ["blurb"] = e.Blurb, ["what"] = e.What, ["when"] = e.When,
+                ["id"] = e.Id, ["label"] = e.Label, ["category"] = e.Category, ["price"] = g.EquipmentPrice(e.Id), ["blurb"] = e.Blurb, ["what"] = e.What, ["when"] = e.When,
                 ["owned"] = g.OwnsEquipment(e.Id), ["gap"] = Math.Round(g.ShopGap("equipment", e.Id), 0), ["affordable"] = g.ShopGap("equipment", e.Id) <= 0,
                 ["unavailable"] = g.ShopUnavailable(e.Id),
             })),
@@ -338,6 +338,24 @@ public static class Snapshot
         };
         JsonObject T((string effect, double cost) t) => new() { ["effect"] = t.effect, ["cost"] = R(t.cost, 0) };
         double lab = EconomyTables.LabourHoursPerHa(g.Plot) * ha * EconomyTables.LabourRate(g.Region.Id);
+        // frost protection is off or on (the Shop spec §6): on, it uses the best equipment owned. Old saves' High counts as on.
+        JsonObject Frost()
+        {
+            bool spr = c.FrostSprinklers || (g.OwnsEquipment("sprinklers") && g.ShopUnavailable("sprinklers") == "");
+            bool fan = c.FrostWindMachine || (g.OwnsEquipment("wind-machine") && g.ShopUnavailable("wind-machine") == "");
+            var (on, perNight) = spr ? ("overhead sprinklers hold the buds near 0 °C down to about −6 °C, on clear or windy nights", EconomyTables.SprinklersPerHaNight)
+                : fan ? ("wind machine on clear, calm nights (≈ +0.5–1.5 °C), candles added on the hardest nights", EconomyTables.WindMachinePerHaNight)
+                : ("frost candles on clear, calm nights (≈ +2 °C at vine level)", EconomyTables.CandlesPerHaNight);
+            var o = P("frost", "Frost protection", c.Frost == Tier.Low ? Tier.Low : Tier.Medium, true,
+                $"On frost nights after budburst your Vineyard manager uses the best equipment you own: now {g.FrostKit()}. Costs are per frost night.", new[] { ("no protection: frost nights can kill young shoots", 0.0), (on, perNight * ha), ("", 0.0) });
+            o["tiers"]!.AsObject().Remove("High");
+            o["tiers"]!["Low"]!["label"] = "Off";
+            o["tiers"]!["Medium"]!["label"] = "On";
+            o["order"] = new JsonArray("Low", "Medium");
+            o["perNight"] = true;
+            o["shopLink"] = g.FrostUpgradeForSale;
+            return o;
+        }
         return new JsonArray
         {
             P("spray", "Spray programme", c.Spray, true, "One programme covers downy mildew, powdery mildew and botrytis. The Vineyard manager times the passes.", new[]
@@ -362,10 +380,7 @@ public static class Snapshot
             {
                 ("none · vines rely on the soil reserve", 0.0), ("regulated deficit · water only under moderate stress", 300 * ha), ("full · keep vines unstressed (bigger berries, dilution)", 500 * ha),
             }),
-            P("frost", "Frost protection", c.Frost, true, "Candles or wind machines on clear, calm nights after budburst. Only works under an inversion.", new[]
-            {
-                ("none", 0.0), ("≈ +1 °C at vine level · €600/ha per frost night", 600 * ha), ("≈ +2 °C · €900/ha per frost night", 900 * ha),
-            }),
+            Frost(),
             P("labour", "Labour", c.Labour, true, "Crew size. Short-handed crews do canopy work late and harvest slowly (grapes hang longer).", new[]
             {
                 ("85 % of the hours needed · 8 pickers", lab * 0.85), ("100 % · 12 pickers", lab), ("120 % · 20 pickers, fast harvest", lab * 1.2),
