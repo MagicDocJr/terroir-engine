@@ -22,6 +22,12 @@ public sealed class GameSetup
     public Dictionary<string, PlantingChoice> Planting { get; set; } = new();
     /// <summary>A famous-vintage scenario (data/scenarios.json), or null for a normal game. Saved with the setup.</summary>
     public string? ScenarioId { get; set; }
+    /// <summary>0 = a game from before the Shop (free looks; migrated on load), 1 = the Shop. New games set 1.</summary>
+    public int ShopVersion { get; set; }
+    /// <summary>The look this game started with, when it is not the Region's Shop start (games migrated from before the Shop).</summary>
+    public Dictionary<string, string>? StartLook { get; set; }
+    /// <summary>Items owned for free ("key:value", "equipment:id"): what a game from before the Shop already had.</summary>
+    public List<string> ShopGrants { get; set; } = new();
 }
 
 public sealed class Command
@@ -217,7 +223,7 @@ public sealed partial class GameSession
     private void IntroMessages()
     {
         string est = string.Join("\n\n", EstablishmentReports);
-        Post("mentor", "Welcome — three years of Establishment are behind us", $"Your vines are now in their fourth leaf. Here is what happened while they grew:\n\n{est}\n\nThis year is the first real vintage. I will guide you through it — every decision, and why it matters — until the wine is in bottle. Then I retire, and the Estate is yours.",
+        Post("mentor", "Welcome — three years of Establishment are behind us", $"Your vines are now in their fourth leaf. Here is what happened while they grew:\n\n{est}\n\nThis year is the first real vintage. I will guide you through it — every decision, and why it matters — until the wine is in bottle. Then I retire, and the Estate is yours.{(LegacyShop ? "" : "\n\nOnce your wine sells, the Shop (in the menu on the left) has paint, lights and more to make the winery yours, and equipment such as a wind machine against spring frost.")}",
             "Young vines crop lightly and give less concentrated fruit; the 4th leaf is the first near-full crop (flagged 'young vines').", "high", "intro", stop: false);
         OpenPruningTasks();   // the Mentor's pruning message is the first Vintage's pruning task (tasks-in-3d design §4.3)
         Post("mentor", "Set your Programmes for the season", "Your Vineyard manager runs the spray, canopy, floor, frost-protection and labour Programmes every day at the tier you choose. Low saves money but lets problems through; High costs more. You can change them any time.",
@@ -300,7 +306,8 @@ public sealed partial class GameSession
                 break;
             case "flag": if (!string.IsNullOrWhiteSpace(c.A)) Flags.Add(c.A); break;
             case "unflag": Flags.Remove(c.A); break;
-            case "decor": if (!string.IsNullOrWhiteSpace(c.A)) Decor[c.A] = c.B ?? ""; break;
+            case "decor": SetDecor(c); break;
+            case "buy": Buy(c); break;
             case "spraynow": if (Blocks.Any(b => b.Budburst != null && !b.Harvested)) Ctx.ForceSprayToday = true; break;
             case "acceptstuck":
                 var al = Lots.FirstOrDefault(x => x.Id == c.A);
@@ -541,8 +548,11 @@ public sealed partial class GameSession
             if (p.lot.VolumeL < 5) { p.lot.Phase = LotPhase.Blended; p.lot.VolumeL = 0; }
         }
         Wines.Add(wine);
-        Post("cellar", $"{wine.Name} is bottled: {wine.Legal.Label}", $"{wine.Bottles:N0} bottles. Legal category: {wine.Legal.Category}. Quality: {wine.Sheet.Quality}. Price €{wine.PricePerBottle:0.00} per bottle.\n{string.Join("\n", wine.Legal.Notes)}",
-            "Open the Tasting sheet: every descriptor links back to the decision or condition that caused it.", "high", "bottled", stop: false).Actions.Add(("Open Wines", "goto", "wines"));
+        bool treat = ShopTreat(wine.Vintage);
+        var bm = Post("cellar", $"{wine.Name} is bottled: {wine.Legal.Label}", $"{wine.Bottles:N0} bottles. Legal category: {wine.Legal.Category}. Quality: {wine.Sheet.Quality}. Price €{wine.PricePerBottle:0.00} per bottle.\n{string.Join("\n", wine.Legal.Notes)}{(treat ? "\n\nThe first wine of the Vintage is sold. Your winery could use a treat: see the Shop." : "")}",
+            "Open the Tasting sheet: every descriptor links back to the decision or condition that caused it.", "high", "bottled", stop: false);
+        bm.Actions.Add(("Open Wines", "goto", "wines"));
+        if (treat) bm.Actions.Add(("Visit the Shop", "goto", "shop"));
         CheckBottledVintages();   // bottling the last Lot completes its Vintage at once (the report opens straight away)
     }
 
@@ -628,6 +638,7 @@ public sealed partial class GameSession
         while (queue.Count > 0) s.ApplyInternal(queue.Dequeue());
         s._replaying = false;
         s.Commands.AddRange(sf.Commands);
+        s.MigrateShop();
         return s;
     }
 

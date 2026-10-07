@@ -60,6 +60,7 @@ public static class Snapshot
             ["tasks"] = TasksObj(g),
             ["flags"] = Arr(g.Flags.OrderBy(f => f).Select(f => (JsonNode)f)),
             ["decor"] = DecorObj(g),
+            ["shop"] = ShopObj(g),
             ["establishment"] = Arr(g.EstablishmentReports.Select(x => (JsonNode)x)),
         };
         return o;
@@ -93,6 +94,45 @@ public static class Snapshot
     {
         var o = new JsonObject();
         foreach (var kv in g.Decor.OrderBy(kv => kv.Key, StringComparer.Ordinal)) o[kv.Key] = kv.Value;
+        return o;
+    }
+
+    /// <summary>The Shop: each look section with its options (owned, in use, price, affordable), the look in use, and the
+    /// equipment (owned, available on this Plot).</summary>
+    private static JsonObject ShopObj(GameSession g)
+    {
+        var cat = Shop.Catalog(g.Data);
+        var inUse = g.LookInUse();
+        var use = new JsonObject();
+        foreach (var kv in inUse) use[kv.Key] = kv.Value;
+        return new JsonObject
+        {
+            ["inUse"] = use,
+            ["start"] = Obj(g.StartLook()),
+            ["cash"] = Math.Round(g.Ledger.Cash, 0),
+            ["look"] = Arr(cat.Look.Select(s => (JsonNode)new JsonObject
+            {
+                ["key"] = s.Key, ["label"] = s.Label,
+                ["options"] = Arr(s.Options.Select(o => (JsonNode)new JsonObject
+                {
+                    ["value"] = o.Value, ["label"] = o.Label, ["blurb"] = o.Blurb, ["price"] = o.Price,
+                    ["owned"] = g.OwnsLook(s.Key, o.Value), ["inUse"] = inUse[s.Key] == o.Value, ["gap"] = Math.Round(g.ShopGap(s.Key, o.Value), 0),
+                    ["affordable"] = g.ShopGap(s.Key, o.Value) <= 0,
+                })),
+            })),
+            ["equipment"] = Arr(cat.Equipment.Select(e => (JsonNode)new JsonObject
+            {
+                ["id"] = e.Id, ["label"] = e.Label, ["category"] = e.Category, ["price"] = e.Price, ["blurb"] = e.Blurb, ["what"] = e.What, ["when"] = e.When,
+                ["owned"] = g.OwnsEquipment(e.Id), ["gap"] = Math.Round(g.ShopGap("equipment", e.Id), 0), ["affordable"] = g.ShopGap("equipment", e.Id) <= 0,
+                ["unavailable"] = g.ShopUnavailable(e.Id),
+            })),
+        };
+    }
+
+    private static JsonObject Obj(Dictionary<string, string> d)
+    {
+        var o = new JsonObject();
+        foreach (var kv in d) o[kv.Key] = kv.Value;
         return o;
     }
 

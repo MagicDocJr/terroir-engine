@@ -53,6 +53,7 @@ public partial class SimBridge : Node
                 Seed = r.TryGetProperty("seed", out var sd) ? (ulong)sd.GetInt64() : (ulong)DateTime.Now.Ticks,
                 VineyardManager = r.TryGetProperty("vineyardManager", out var vm) ? Enum.Parse<StaffLevel>(vm.GetString()!) : StaffLevel.Junior,
                 CellarMaster = r.TryGetProperty("cellarMaster", out var cm) ? Enum.Parse<StaffLevel>(cm.GetString()!) : StaffLevel.Junior,
+                ShopVersion = 1,
             };
             if (r.TryGetProperty("planting", out var pl))
                 foreach (var b in pl.EnumerateObject())
@@ -137,6 +138,9 @@ public partial class SimBridge : Node
         var ch = (JsonNode.Parse(string.IsNullOrEmpty(choicesJson) ? "{}" : choicesJson) as JsonObject ?? new()).ToDictionary(kv => kv.Key, kv => (int)kv.Value!);
         Scenarios.Autoplay(_game, targetOe, ch);
     }
+
+    /// <summary>Why the last Shop purchase was refused ("" if it went through).</summary>
+    public string ShopRefusal() => _game?.ShopRefusal ?? "";
 
     public string Snapshot() => _game == null ? "{}" : TerroirEngine.Game.Snapshot.Json(_game);
 

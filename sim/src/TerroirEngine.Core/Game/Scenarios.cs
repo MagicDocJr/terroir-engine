@@ -88,7 +88,7 @@ public static class Scenarios
     public static GameSetup Setup(GameData data, string id)
     {
         var s = Find(data, id) ?? throw new ArgumentException($"no scenario {id}");
-        return new GameSetup { PlotId = s.Plot, PlantingYear = s.Vintage - 3, EstateName = s.Title, ScenarioId = s.Id, Seed = (ulong)s.Vintage };
+        return new GameSetup { PlotId = s.Plot, PlantingYear = s.Vintage - 3, EstateName = s.Title, ScenarioId = s.Id, Seed = (ulong)s.Vintage, ShopVersion = 1 };
     }
 
     // ------------------------------------------------------------------------------------------------ judging

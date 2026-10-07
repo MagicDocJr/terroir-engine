@@ -14,11 +14,11 @@ public class DecorTests
     public void Decor_IsStored_AndReplays_AndChangesNothingElse()
     {
         var g = New();
-        var before = Snapshot.Build(g); before.Remove("decor");
+        var before = Snapshot.Build(g); before.Remove("decor"); before.Remove("shop");
         g.Apply(new Command { Type = "decor", A = "walls", B = "brick" });
         var after = Snapshot.Build(g);
         Assert.Equal("brick", after["decor"]!["walls"]!.GetValue<string>());
-        after.Remove("decor");
+        after.Remove("decor"); after.Remove("shop");
         Assert.Equal(before.ToJsonString(), after.ToJsonString());
         var g2 = GameSession.Load(Fixture.Data, g.Save());
         Assert.Equal("brick", Snapshot.Build(g2)["decor"]!["walls"]!.GetValue<string>());
