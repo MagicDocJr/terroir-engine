@@ -124,7 +124,7 @@ Anchor, Napa 2020 (a powdery-mildew region) [UCD-NAPA-2020]:
 |---|---|---|---|---|
 | Canopy and floor materials, repairs, fuel | €1,500 | €2,000 | €2,500 | `UNVERIFIED` |
 | Irrigation (where allowed) | — (steep: rarely) | forbidden | ≈ €300 (water + labour ≈ US$206 per acre; system maintenance US$126 per acre) | [UCD-NAPA-2020] |
-| Frost protection, **Medium/High tier** | candles: €600 per night-event | candles or wind machine: €600 per night | wind machine ≈ €600 per season (12 h × US$18, plus maintenance US$150 per acre) | [UCD-NAPA-2020]; EU values `UNVERIFIED` |
+| Frost protection | see §4.6 (per frost night, by method) | | | |
 | Property tax and insurance | €150 | €400 | ≈ 1 % of land value per year (property tax US$2,229 per acre in the study) | [UCD-NAPA-2020]; EU values `UNVERIFIED` |
 | Associations and assessments | €100 | €300 | ≈ US$95 per acre (grower dues, housing, pest district) | [UCD-NAPA-2020]; EU values `UNVERIFIED` |
 
@@ -178,6 +178,29 @@ Lifetime: a barrique is "new" for one fill, gives **most of its oak flavour in t
   - **Vineyard manager:** max(0.25, the Plot's needed hours ÷ 3,400) of a full-time post.
   - **Cellar master:** max(0.25, hL of wine made ÷ 400) of a full-time post.
 
+### 4.6 Frost protection and the Shop's equipment
+
+The frost Programme is off or on; on, the night's cost follows the method used (phenology.md §6). Prices and costs are the
+same in every Region (game simplification).
+
+| Method | Capital | Per protected night | Upkeep | Source |
+|---|---|---|---|---|
+| Candles (≈ 450/ha) | — (owned from the start) | **€4,500 per ha** (€4–5k/ha a night; €6.20–8 a candle, 8–12 h burn; 2–3 people per ha) | — | [REUSSIR-GEL-2023], [REUSSIR-RULLY-2021]; La RVF's lower €2,500/ha for three nights does not agree |
+| Wind machine (one tower ≈ 4–5 ha) | **€45,000** (€40k excl. VAT per 5 ha; ≈ €50k per tower at 2020 prices; US$20k in 2005) | **€490 per ha** (US$18 per acre-hour × 12 h) | **€340 per ha a year** (US$150 per acre) | [LARVF-2021], [REUSSIR-GEL-2023], [FAO-2005]; [UCD-NAPA-2020] |
+| Overhead sprinklers | **€15,000 per ha** (€8–14k/ha, La RVF; ≈ €15k/ha, Réussir) | €50 per ha of pumping (US$4.10/h running, Washington State 2000; `UNVERIFIED` as a per-ha figure) | **€650 per ha a year** (Beine, Chablis) | [REUSSIR-ASPERSION-2021], [LARVF-2021], [FAO-2005], [REUSSIR-BEINE-2021] |
+| Vibrating sorting table | **€19,500** (CMA vibrating and hand-sorting table, 2–10 t/h, up to 4 sorters) | sorting labour (below) | — | [REUSSIR-TRI-2023] |
+
+All plots in the game are under 5 ha, so one wind machine covers any of them. A capital purchase is a one-off ledger line
+("Equipment"); upkeep is charged on 1 March.
+
+### 4.7 The Shop's winery looks (cosmetic)
+
+Paint, floors, lights, furniture, facade cladding, shutters, string lights and the sign cost €800–16,000 each, about the
+real cost of the work for a small winery (`UNVERIFIED` design values in `data/shop.json`). The full set costs about
+€178,000. That is one to three typical Vintages' sales, pinned by the test `PriceBand_TheFullLookCosts_OneToThreeTypicalVintages`
+(the scripted player's Mosel Vintage sells for about €160,000). Looks are cosmetic: the simulation never reads them.
+A purchase needs the cash in hand (no overdraft for the Shop, a design choice).
+
 ---
 
 ### Sorting at harvest (game simplification, `UNVERIFIED`)
@@ -187,7 +210,15 @@ Lifetime: a barrique is "new" for one fill, gives **most of its oak flavour in t
 | Table | 60 % | 3 % | 0.004 h/kg |
 | Rigorous (berry by berry) | 90 % | 8 % | 0.012 h/kg |
 
-The extra labour is added to the picking hours, so sorting also slows the harvest.
+The extra labour is added to the picking hours, so sorting also slows the harvest. Rigorous sorting needs the Shop's
+vibrating sorting table (§4.6); games from before the Shop own it.
+
+**What the research found** (2026-10-07): a manual sorting table's share of rot removed has no source (`UNVERIFIED`).
+Densimetric sorters remove 80–85 % of defective berries and debris at 4–6 t/h (IFV trials, [REUSSIR-TRI-2017]), which
+supports the order of magnitude of the Rigorous row. Sorting rejected 4 % (w/w) of hand-picked Chardonnay (stems, raisins,
+rotten and sunburnt berries; Falconer et al., AJEV 2006), and 1.5–14.9 % depending on variety (Bruce et al., *Foods* 2021,
+doi:10.3390/foods10020402), in line with the sound fruit lost. Optical sorting changed the wine's sensory profile only a
+little in two studies (Hendrickson & Oberholster, *Catalyst* 2017, doi:10.5344/catalyst.2016.16004).
 
 ## 8. Bottling and packaging (per 0.75 L bottle)
 
@@ -280,6 +311,14 @@ Total = land + Planting + 3 × (0.6 × running cost) + first-vintage running cos
 4. Balancing Napa margins against Mosel margins; playtest.
 
 ## Sources
+- [FAO-2005] Snyder RL, de Melo-Abreu JP, *Frost protection: fundamentals, practice and economics*, FAO 2005, ch. 2 (https://www.fao.org/4/y7223e/y7223e08.htm) and ch. 7 (https://www.fao.org/4/y7223e/y7223e0d.htm)
+- [REUSSIR-GEL-2023] Réussir Vigne (2023), *Comment lutter contre le gel de la vigne : 7 choses à savoir*: https://www.reussir.fr/vigne/comment-lutter-contre-le-gel-de-la-vigne-7-choses-savoir-absolument
+- [REUSSIR-RULLY-2021] Réussir Vigne (Mar 2021), *Rully : les vignerons se sont groupés pour acheter des bougies antigel*: https://www.reussir.fr/vigne/rully-les-vignerons-se-sont-groupes-pour-acheter-des-bougies-antigel
+- [REUSSIR-ASPERSION-2021] Réussir Vigne (7 Dec 2021), *L'aspersion, contraignante mais efficace*: https://www.reussir.fr/vigne/laspersion-contraignante-mais-efficace
+- [REUSSIR-BEINE-2021] Réussir Vigne (9 Mar 2021), *Beine : 40 ans d'aspersion gérée en collectif*: https://www.reussir.fr/vigne/beine-40-ans-daspersion-geree-en-collectif
+- [LARVF-2021] La Revue du vin de France (14 Apr 2021), *Face au gel dans les vignes, que peuvent faire les vignerons ?*: https://www.larvf.com/face-au-gel-dans-les-vignes-que-peuvent-faire-les-vignerons,4740902.asp
+- [REUSSIR-TRI-2023] Réussir Vigne (2023), *Tri de la vendange : CMA propose une table vibrante et de tri en une seule machine*: https://www.reussir.fr/vigne/tri-de-la-vendange-cma-propose-une-table-vibrante-et-de-tri-en-une-seule-machine
+- [REUSSIR-TRI-2017] Réussir Vigne (2017), *Des trieurs densimétriques pour tous les chais*: https://www.reussir.fr/vigne/des-trieurs-densimetriques-pour-tous-les-chais
 - [SAFER-2024 via REUSSIR] Réussir Vigne, "Prix des vignes 2024 : quelle évolution par région ?" (SAFER data): https://www.reussir.fr/vigne/prix-des-vignes-2024-quelle-evolution-par-regions
 - [UCD-NAPA-2020] UC Cooperative Extension / UC Davis ARE, *2020 Sample Costs to Establish a Vineyard and Produce Winegrapes, Cabernet Sauvignon, North Coast Region, Napa County*: https://coststudyfiles.ucdavis.edu/uploads/cs_public/fe/24/fe24e27a-5c29-4cc3-a83c-63a31cd0c767/2020napawinegrape.pdf
 - [KTBL-DS] KTBL, *Datensammlung Weinbau und Kellerwirtschaft* (the primary data behind the labour figures): https://www.ktbl.de/service/presse/pressemeldung/ktbl-datensammlung-weinbau-und-kellerwirtschaft
