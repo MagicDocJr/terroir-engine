@@ -24,7 +24,7 @@ touch "$DEST/.gdignore"
 blender_run() {  # script out_dir [extra args]
   local script="$1" out="$2"; shift 2
   "$BLENDER" -b --factory-startup -P "$(wslpath -w "$HERE/blender/$script")" -- "$(wslpath -w "$out")" "$@" 2>&1 \
-    | grep -E "exported|DONE|Error|Traceback|line [0-9]+|layout" || true
+    | grep -E "exported|DONE|Error|Traceback|line [0-9]+|layout|INWARD" || true
 }
 
 if [[ "$STEP" == "all" || "$STEP" == "fetch" ]]; then

@@ -320,7 +320,7 @@ def build_cellar(R):
             c.append((hx + ux * u + nx * n, hz_ + uz * u + nz * n))
         for (y0, y1) in ((0.0, DOOR_H - 0.02),):
             pts = [(c[i][0], y, c[i][1]) for i in range(4) for y in (y0, y1)]
-            faces = [(0, 2, 3, 1), (4, 6, 7, 5), (0, 1, 7, 6), (2, 4, 5, 3), (1, 3, 5, 7), (0, 6, 4, 2)]
+            faces = [(1, 3, 2, 0), (5, 7, 6, 4), (6, 7, 1, 0), (3, 5, 4, 2), (7, 5, 3, 1), (2, 4, 6, 0)]   # outward
             uvs = [(0, 0), (0, 1), (1, 0), (1, 1), (0, 0), (0, 1), (1, 0), (1, 1)]
             P["cellar_door"].add([gl(*q) for q in pts], faces, [(u * DOOR, v * DOOR_H) for (u, v) in uvs], [(1, 1, 1)] * 8)
     door_leaf = {"hinge": [hx, hz_], "angle": ang, "len": DOOR, "t": t}
@@ -335,7 +335,7 @@ def build_cellar(R):
             for (x, y, z) in ((-10.5, 0, bz - 0.06), (xmax + 0.4, 0, bz - 0.06), (xmax + 0.4, 0.12, bz - 0.06), (-10.5, 0.12, bz - 0.06),
                               (-10.5, 0, bz + 0.06), (xmax + 0.4, 0, bz + 0.06), (xmax + 0.4, 0.12, bz + 0.06), (-10.5, 0.12, bz + 0.06)):
                 vs.append(gl(x, y, z))
-            P["rack_wood"].add(vs, [(3, 2, 6, 7), (0, 1, 2, 3), (4, 7, 6, 5), (1, 5, 6, 2), (0, 3, 7, 4)],
+            P["rack_wood"].add(vs, [(7, 6, 2, 3), (3, 2, 1, 0), (5, 6, 7, 4), (2, 6, 5, 1), (4, 7, 3, 0)],   # outward
                                [(0, 0), (8, 0), (8, 0.1), (0, 0.1), (0, 0.3), (8, 0.3), (8, 0.4), (0, 0.4)], [(1, 1, 1)] * 8)
         x = -10.1
         tier0 = []
@@ -730,6 +730,8 @@ def cylinder(acc, c, axis, r, length, sides=12, caps=True):
     if caps:
         faces.append(tuple(range(sides - 1, -1, -1)))
         faces.append(tuple(range(sides, 2 * sides)))
+    if axis == "y":                    # u, v run clockwise seen from +y: turn the faces outward (before 2026-10-11 inward)
+        faces = [tuple(reversed(f)) for f in faces]
     acc.add(verts, faces, uvs, [(1, 1, 1)] * len(verts))
 
 

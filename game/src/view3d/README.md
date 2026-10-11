@@ -45,7 +45,7 @@ view is hidden.
 | `player.gd` | Capsule walker (`CharacterBody3D`): gravity, slopes up to ~50°, and stairs (a ramp collider under the steps). |
 | `ambience.gd` | Ambient sound per Region and place (see below). |
 | `workers.gd` | People and machines at work, staged from the snapshot (see below). One MultiMesh for all people, posed in `shaders/worker.gdshader`. |
-| `tasks3d.gd` | Staff tasks: a stake with a ribbon and label at each open task's demonstration vine (the real vine nearest the headland on the Block's middle row) or above its Lot's tank; the close-up parts (Guyot canes at 7.5 cm per bud, two canes once a vine carries more than 12 buds (double Guyot) plus a renewal spur; Cordon's two permanent arms with the option's two-bud spurs evenly spaced; two Einzelpfahl bows sharing the buds; all with the Block's bud counts, see canopy-and-yield.md §3.7; lobed leaves on the morning / afternoon side, berry bunches, cellar tools), picking (collision layer 20; pruning picks the cane whose axis passes nearest the mouse ray, since the fanned canes' boxes overlap) and the confirm animations. |
+| `tasks3d.gd` | Staff tasks: a stake with a ribbon and label at each open task's demonstration vine (the real vine nearest the headland on the Block's middle row) or above its Lot's tank; the close-up parts (pruning: the vine as the pruner finds it in January, drawn here while the real one is hidden with `vineyard.gd hide_vines_near`, with each option's cut marked by a ring at its bud count and a tag, a gold/red preview of what stays and goes, and on confirm the prunings falling and the kept canes tied to the wire or bent into bows, see canopy-and-yield.md §3.7; lobed leaves on the morning / afternoon side, berry bunches, cellar tools), picking (collision layer 20, a physics ray on the parts) and the confirm animations. |
 | `winery_style.gd` | The Winery look catalogue mirrored from `data/shop.json` (the winerylook harness checks they match): elements, options, blurbs, each Region's look from before the Shop and `resolve()`. |
 | `view3d_test.gd` | Test harness: screenshots, FPS, the walk test and the LOD probe. |
 
@@ -254,11 +254,16 @@ low-pass filter, and the fermentation is a simmering pot plus bubbles blown thro
   with posts and wires. Spacing follows `density`.
 - **Cues**: downy mildew oil spots (`downyLeaf`), interveinal lime chlorosis (`chlorosis`), and pale drooping
   leaves under moderate–severe/severe water stress (`waterClass`). Also grey rot, powdery mildew, sunburn and
-  noble-rot berries, fruit-zone leaf removal (`leafSide`: `leaf.gdshader` drops that share of the basal leaves, both
-  sides 0.9, one side 0.5; it was sent but not drawn before 2026-10-10), and thinner bunches after frost losses.
+  noble-rot berries, fruit-zone leaf removal (`leafSide`: `leaf.gdshader` drops 0.9 of the basal leaves on the chosen side;
+  each leaf carries the way it faces out from its vine as a 16-sector code in the whole-number part of UV2.x, turned into the
+  world and compared with `east_dir`, so Morning pulls the east-facing leaves; shots `3d_cotedor_leaves_east/_west`), and
+  thinner bunches after frost losses.
 - **Buds and berries**: dormant wood (growth 0) carries its winter buds (LOD 0–1, `build_vineyard.py dormant_bud`), so the
   count buds on a cane or spur can be seen. Berries and the workers' heads are spheres wound outward (`common.berry_sphere`;
-  before 2026-10-10 they were wound inside out and lit from below).
+  before 2026-10-10 they were wound inside out and lit from below). `common.export` warns `INWARD` for any closed part wound
+  inward (rooms seen from inside are exempt; the scanned plants and trees are not checked), and `sync_assets3d.sh` shows it;
+  the winery's vertical cylinders, rack beams and cellar door leaf were inward until 2026-10-11. Red berries' bloom is a
+  dusky blue haze (it was a pale lilac).
 - **Training-system learn card** (`game/src/ui/training_model.gd`): three of these vines on the vineyard's trellis (posts and
   the six wires of `_build_trellis`), with the vineyard's own materials (`vineyard.gd make_mat`), the Block's Variety leaf,
   winter (growth 0), spring (2) and summer (4, fruit-zone leaves pulled), and the parts named in a 2D overlay.

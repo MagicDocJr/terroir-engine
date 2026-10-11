@@ -57,7 +57,13 @@ static func _row(t: Dictionary, shell) -> Control:
 	for c in seg.get_children():
 		if c is Button:
 			var o: Dictionary = by_label.get((c as Button).text, {})
-			(c as Button).tooltip_text = String(o.get("why", ""))
+			var tip := String(o.get("why", ""))
+			if o.get("detail") != null: tip = "On each vine: %s. %s" % [o["detail"], tip]
+			if o.get("warning") != null:
+				tip += "\n\n⚠ " + String(o["warning"])
+				(c as Button).text = "⚠ " + (c as Button).text
+				(c as Button).add_theme_color_override("font_color", UI.SERIOUS)
+			(c as Button).tooltip_text = tip
 	row.add_child(seg)
 	if kind == "LeafRemoval": row.add_child(late)
 	row.add_child(UI.spacer())

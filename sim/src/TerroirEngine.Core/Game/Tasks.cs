@@ -35,7 +35,22 @@ public static class TaskCatalog
     /// <summary>Hours per hectare for the crew to finish the Block after the decision (visual only; UNVERIFIED design values).</summary>
     public static double CrewHoursPerHa(TaskKind k) => k switch { TaskKind.Prune => 80, TaskKind.LeafRemoval => 40, TaskKind.GreenHarvest => 30, _ => 0 };
 
-    /// <summary>Options with the pruning words of the Block's training system: Guyot canes, Cordon spurs, Einzelpfahl bows.</summary>
+    /// <summary>What a bud count means on the vine, in the training system's words: "16 buds: two canes of 8" (Guyot carries
+    /// up to 12 buds on one cane, then a second: double Guyot), "8 spurs of 2 buds" (Cordon), "two bows of 7 + 7" (Einzelpfahl).
+    /// The 3D close-up draws the same split (tasks3d.gd).</summary>
+    public static string PruneDetail(TrainingSystem? training, double budsPerVine)
+    {
+        int n = (int)Math.Round(budsPerVine);
+        int a = (n + 1) / 2, b = n / 2;
+        return training switch
+        {
+            TrainingSystem.Cordon => $"{Math.Max(2, (int)Math.Round(n / 2.0))} spurs of 2 buds",
+            TrainingSystem.Einzelpfahl => $"{n} buds: two bows of {a} + {b}",
+            _ => n > 12 ? $"{n} buds: two canes of {a} + {b} (double Guyot)" : $"{n} buds on one cane",
+        };
+    }
+
+    /// <summary>Options with the pruning words of the Block's training system: Guyot buds, Cordon spurs, Einzelpfahl bows.</summary>
     public static IReadOnlyList<Option> Options(TaskKind k, TrainingSystem? training)
     {
         var o = Options(k);
@@ -50,9 +65,9 @@ public static class TaskCatalog
     {
         TaskKind.Prune => new Option[]
         {
-            new("Low", "Short cane · 6 buds per m²", "Fewer buds, fewer bunches: a smaller crop that ripens more fully and concentrates more. Burgundy growers prune short to stay inside the yield limits."),
-            new("Balanced", "Medium cane · 8 buds per m²", "The usual compromise between crop size and ripeness."),
-            new("High", "Long cane · 11 buds per m²", "A big crop. Over about 1 kg of fruit per m² of leaf area it ripens slowly and can taste diluted (Kliewer & Dokoozlian 2005)."),
+            new("Low", "Fewer buds · 6 buds per m²", "Fewer buds, fewer bunches: a smaller crop that ripens more fully and concentrates more. Burgundy growers prune short to stay inside the yield limits."),
+            new("Balanced", "Standard buds · 8 buds per m²", "The usual compromise between crop size and ripeness."),
+            new("High", "More buds · 11 buds per m²", "A big crop. Over about 1 kg of fruit per m² of leaf area it ripens slowly and can taste diluted (Kliewer & Dokoozlian 2005)."),
         },
         TaskKind.LeafRemoval => new Option[]
         {

@@ -2,7 +2,7 @@
 #   markers   each open task gets a stake with a coloured ribbon and a label at its demonstration vine (the vine nearest
 #             the headland on the Block's middle row) or above its Lot's tank in the hall
 #   close-up  E opens a close view of the vine (or the tank top) with the task's options as clickable parts:
-#             pruning   three canes of the option's bud count along the fruiting wire
+#             pruning   the vine as the pruner finds it, the options' cuts marked; the cut and the tie-down on confirm
 #             leaves    a leaf cluster on the morning and on the afternoon side of the row
 #             thinning  the bunches, and three tags (keep all / drop a fifth / drop two fifths)
 #             cap       four tools on the tank top (pump-over hose, plunger, délestage tank, gentle hose)
@@ -277,16 +277,14 @@ func open_closeup(task: Dictionary) -> Array:
 	var cam := v + W * 1.05 + U * 0.25 + Vector3(0, 1.25 * hs + 0.05, 0)
 	var target := v + U * 0.3 + Vector3(0, 0.76 * hs, 0)
 	if kind == "Prune":
-		var both := String(task.get("training", "Guyot")) != "Guyot"
-		for o in task.get("options", []):
-			both = both or int(o.get("buds", 0)) > 12
-		var reach := 0.0
-		for o in task.get("options", []):
-			reach = maxf(reach, 0.12 + float(o.get("buds", 8)) * INTERNODE / (2.0 if both else 1.0))
-		var c := U * (0.0 if both else 0.35)
-		# stay in the alley: on a square Einzelpfahl grid the next row's stake stands about a row width away
-		cam = v + c + W * minf(1.0 + 0.9 * reach, 0.75 * float(fr["row"])) + Vector3(0, 1.3 * hs + 0.1, 0)
-		target = v + c + Vector3(0, 0.95 * hs, 0)
+		# far enough back to see the vine whole, up to the tips of last summer's canes; vines in the line of sight are
+		# hidden with the demonstration vine (game simplification)
+		cam = v + W * 1.75 + U * 0.25 + Vector3(0, 1.2 * hs, 0)
+		target = v + Vector3(0, 1.0 * hs, 0)
+		var pts := [to_global(v)]
+		for f in [0.3, 0.55, 0.8]:
+			pts.append(to_global(v.lerp(cam, f)))
+		hidden_vines = vy.call("hide_vines_near", String(task["block"]), pts, 0.5)
 	return [to_global(cam), to_global(target)]
 
 
@@ -294,6 +292,10 @@ func close_closeup() -> void:
 	if parts:
 		parts.queue_free()
 	parts = null
+	if not hidden_vines.is_empty() and vy:
+		vy.call("restore_vines", hidden_vines)
+	hidden_vines = []
+	prune = {}
 	pickables.clear()
 	extras.clear()
 	if not active.is_empty() and markers.has(int(active["id"])):
@@ -394,114 +396,321 @@ static func _along(dir: Vector3) -> Basis:
 	return Basis(x, y, x.cross(y).normalized() * -1.0).orthonormalized()
 
 
+# ------------------------------------------------------------------ pruning: the vine before the cut, and the cut
+# The demonstration vine is shown as a pruner finds it in January (the real vine is hidden while the close-up is open):
+# last summer's growth still on it. Guyot: last year's fruiting cane along the wire with its upright canes, and three new
+# canes from the renewal spur at the head. Cordon: the permanent arms with one-year canes standing on every spur position.
+# Einzelpfahl: last year's two bows round the stake with their canes, and three new canes from the head.
+# Each option marks where it cuts (a ring at its bud count on the canes it keeps, and a tag); choosing one shows what stays
+# (gold) and what goes (red). On confirm the old wood and the cut-off tips fall, and the kept canes are tied down: along the
+# fruiting wire (Guyot; both ways for a double Guyot) or bent into bows round the stake (Einzelpfahl). Cordon keeps the
+# option's number of spur positions, each cut to two buds. Bud numbers come from the snapshot (canopy-and-yield.md §3.1, §3.7).
+const BUD0 := 0.05                    # m from a cane's base to its first bud
+var prune := {}                       # the close-up's pruning state (canes, pieces, plans, materials)
+var hidden_vines := []                # vineyard.gd hide_vines_near(): restored when the close-up closes
+
+
 func _prune_parts(task: Dictionary, v: Vector3, U: Vector3, W: Vector3) -> void:
-	# three alternatives fanned up from the head of the real vine's trunk, drawn as the Block's training system prunes, each
-	# with the option's buds per vine at a fixed bud spacing, so more buds really is more wood (canopy-and-yield.md §3.1):
-	#   Guyot        one cane of up to 12 buds, or two canes, one each way along the wire (double Guyot), with a renewal
-	#                spur of 2 buds at the head; the chosen cane(s) are tied down onto the fruiting wire on confirm
-	#   Cordon       the two permanent arms (as long as the vine's share of the row) carrying the option's two-bud spurs,
-	#                half on each arm, evenly spaced: more spurs sit closer together; laid on the wire on confirm
-	#   Einzelpfahl  two arched bows round the stake sharing the buds (no wire: they stay bent on confirm)
-	var wood := Color(0.36, 0.23, 0.13)
 	var training := str(task.get("training", "Guyot"))
-	var head_h: float = {"Cordon": 0.92, "Einzelpfahl": 0.62}.get(training, 0.72)
-	var head := v + Vector3(0, head_h * hs, 0) + W * 0.03
-	var opts: Array = task.get("options", [])
-	var angles: Array = {"Cordon": [10.0, 24.0, 38.0], "Einzelpfahl": [8.0, 24.0, 40.0]}.get(training, [14.0, 30.0, 46.0])
-	var bud := SphereMesh.new(); bud.radius = 0.012; bud.height = 0.026; bud.radial_segments = 8; bud.rings = 4
+	var bark: StandardMaterial3D = (vy.call("_mat", "vine_bark") as StandardMaterial3D)
+	var mats := {}
+	for base in [["old", Color(0.55, 0.50, 0.47)], ["cane", Color(0.80, 0.55, 0.38)]]:
+		var m0: StandardMaterial3D = bark.duplicate(); m0.albedo_color = base[1]
+		var mk: StandardMaterial3D = m0.duplicate(); mk.emission_enabled = true; mk.emission = Color(1.0, 0.75, 0.25); mk.emission_energy_multiplier = 0.55
+		var mc: StandardMaterial3D = m0.duplicate(); mc.albedo_color = Color(base[1]).lerp(Color(0.6, 0.12, 0.08), 0.55)
+		mc.emission_enabled = true; mc.emission = Color(0.9, 0.12, 0.08); mc.emission_energy_multiplier = 0.25
+		mats[base[0]] = {"": m0, "keep": mk, "cut": mc}
+	var trunk_mat: StandardMaterial3D = bark.duplicate()
+	prune = {"canes": {}, "pieces": [], "plans": {}, "mats": mats, "rings": [], "training": training, "U": U, "W": W, "v": v}
 	var up := Vector3.UP
-	if training == "Guyot":
-		# the renewal spur: two buds on a short stub at the head, kept whichever cane is chosen
-		var sm := _mat(wood)
-		var s0 := head - U * 0.03
-		var s1 := s0 - U * 0.035 + up * 0.08
-		_segment(s0, s1, 0.013, 0.011, sm, parts)
-		for b in 2:
-			_mesh(bud, sm, Transform3D(Basis(), s0.lerp(s1, 0.45 + 0.5 * b) - U * 0.01))
-		_label("renewal spur · 2 buds", s1 - U * 0.12 + up * 0.06, Color(0.86, 0.82, 0.74), 22)
+	var rng := RandomNumberGenerator.new(); rng.seed = int(task["id"]) * 13 + 5
+	var opts: Array = task.get("options", [])
+	var max_per := 2
+	for o in opts:
+		max_per = maxi(max_per, int(o.get("buds", 8)))
+	match training:
+		"Cordon":
+			var hw := 0.95 * hs
+			var head := v + up * (hw - 0.03)
+			_trunk(v, head, trunk_mat)
+			var npos := 2
+			for o in opts:
+				npos = maxi(npos, ceili(maxi(2, int(round(int(o.get("buds", 8)) / 2.0))) / 2.0) + 1)
+			var reach := 0.6 * hs
+			for sgn in [1.0, -1.0]:
+				var dir: Vector3 = U * sgn
+				var arm := [head, head + dir * 0.08 + up * 0.03, head + dir * reach + up * 0.03]
+				_piece(_segment(arm[0], arm[1], 0.021, 0.019, mats["old"][""], parts), "", 0.0, "arm")
+				_piece(_segment(arm[1], arm[2], 0.019, 0.014, mats["old"][""], parts), "", 0.0, "arm")
+				for k in npos:
+					var at: Vector3 = arm[1] + dir * ((reach - 0.08) * (float(k) + 0.5) / float(npos))
+					var stub := at + up * 0.035
+					_piece(_segment(at, stub, 0.011, 0.010, mats["old"][""], parts), "", 0.0, "stub")
+					var pos_id := "%s%d" % ["R" if sgn > 0 else "L", k]
+					for c in 2:                                   # two one-year canes on last year's spur
+						var lean: float = (0.05 + 0.04 * c) * (1.0 if c == 0 else -1.0) * float(sgn)
+						_cane("%s_%d" % [pos_id, c], stub, dir, 86.0 - 6.0 * c + rng.randf_range(-3, 3), rng.randf_range(0.8, 0.95), W * lean)
+			# a plan per option: which spur positions it keeps on each arm (evenly spread), each cut to two buds
+			for o in opts:
+				var spurs := maxi(2, int(round(int(o.get("buds", 8)) / 2.0)))
+				var keep := {}
+				for side in [["R", ceili(spurs / 2.0)], ["L", floori(spurs / 2.0)]]:
+					for j in int(side[1]):
+						var k := int(round((float(j) + 0.5) * float(npos) / float(side[1]) - 0.5))
+						keep["%s%d_0" % [side[0], clampi(k, 0, npos - 1)]] = 2
+				prune["plans"][String(o["value"])] = {"keep": keep, "bend": {}}
+		"Einzelpfahl":
+			var head := v + up * (0.62 * hs) + W * 0.06
+			var stake := CylinderMesh.new(); stake.top_radius = 0.026; stake.bottom_radius = 0.03; stake.height = 2.05 * hs; stake.radial_segments = 8
+			_mesh(stake, vy.call("_mat", "vine_wood"), Transform3D(Basis(), v + up * (stake.height / 2.0 - 0.2 * hs)))
+			_trunk(v + W * 0.06, head, trunk_mat)
+			for sgn in [1.0, -1.0]:                               # last year's bows, with the canes that grew on them
+				var dir: Vector3 = U * sgn
+				var bow := _arc_points(head, dir, 0.62, 80.0, -290.0, 14)
+				for i in bow.size() - 1:
+					_piece(_segment(bow[i], bow[i + 1], 0.012, 0.010, mats["old"][""], parts), "", 0.0, "old", "bow%d" % int(sgn))
+				for k in 5:
+					var at: Vector3 = bow[2 + k * 2]
+					_cane("old%s%d" % ["R" if sgn > 0 else "L", k], at, dir, 70.0 + rng.randf_range(-8, 8), rng.randf_range(0.75, 1.0), W * rng.randf_range(-0.12, 0.12), true)
+			_cane("A", head + up * 0.02, U, 78.0, 1.1, W * 0.03)
+			_cane("B", head + up * 0.03, -U, 80.0, 1.05, W * -0.03)
+			_cane("C", head + up * 0.04, U, 88.0, 0.95, W * 0.08)
+			for o in opts:
+				var n := int(o.get("buds", 8))
+				prune["plans"][String(o["value"])] = {"keep": {"A": ceili(n / 2.0), "B": floori(n / 2.0)}, "bend": {"A": "bow", "B": "bow"}}
+		_:
+			var hw := 0.80 * hs
+			var head := v + up * (hw - 0.08 * hs)
+			var post := CylinderMesh.new(); post.top_radius = 0.007; post.bottom_radius = 0.007; post.height = hw + 0.5; post.radial_segments = 6
+			_mesh(post, vy.call("_mat", "vine_wood"), Transform3D(Basis(), v - U * 0.035 + W * 0.03 + up * (post.height / 2.0 - 0.2)))
+			_trunk(v, head, trunk_mat)
+			# last year's fruiting cane, tied along the wire, with the upright canes that grew from its buds (topped)
+			var old := [head, head + U * 0.06 + up * 0.08, head + U * 0.17 + up * (hw - head.y + v.y), head + U * 0.84 + up * (hw - head.y + v.y)]
+			for i in old.size() - 1:
+				_piece(_segment(old[i], old[i + 1], 0.012 - 0.002 * i, 0.010 - 0.002 * i, mats["old"][""], parts), "", 0.0, "old")
+			for k in 7:
+				var at: Vector3 = (old[2] as Vector3).lerp(old[3], (float(k) + 0.4) / 7.0) + up * 0.008
+				_cane("old%d" % k, at, U, 84.0 + rng.randf_range(-5, 5), 1.75 * hs - (hw + 0.01), W * rng.randf_range(-0.06, 0.06), true)
+			# last year's renewal spur, and the new canes: A and B from its two buds, C from a base bud lower on the head
+			var stub := head - U * 0.035 + up * 0.05
+			_piece(_segment(head, stub, 0.013, 0.012, mats["old"][""], parts), "", 0.0, "stub")
+			_cane("A", stub, U, 80.0, 1.2, W * 0.04)
+			_cane("B", stub + up * 0.01, -U, 79.0, 1.1, W * -0.04)
+			_cane("C", head - U * 0.02 - up * 0.03, -U, 66.0, 0.85, W * 0.09)
+			for o in opts:
+				var n := int(o.get("buds", 8))
+				var plan := {"keep": {"C": 2}, "bend": {"A": "wire"}}
+				if n > 12:                                        # double Guyot: a cane each way along the wire
+					plan["keep"]["A"] = ceili(n / 2.0); plan["keep"]["B"] = floori(n / 2.0); plan["bend"]["B"] = "wire"
+				else:
+					plan["keep"]["A"] = n
+				prune["plans"][String(o["value"])] = plan
+	# where each option cuts (rings on the canes it keeps, at its bud count) and a tag per option
+	var ring_cols := [Color(0.45, 0.75, 1.0), Color(0.55, 0.95, 0.5), Color(1.0, 0.7, 0.3)]
 	for i in opts.size():
 		var o: Dictionary = opts[i]
-		var buds := int(o.get("buds", [6, 8, 11][mini(i, 2)]))
-		var mat := _mat(wood)
-		var dirs := [U]
-		var per := [buds]                                # buds (Cordon: spurs) on each arm
-		var count_label := "1 cane · %d buds" % buds
-		match training:
-			"Cordon":
-				var spurs := maxi(2, int(round(buds / 2.0)))
-				dirs = [U, -U]; per = [ceili(spurs / 2.0), floori(spurs / 2.0)]
-				count_label = "%d spurs · %d buds" % [spurs, spurs * 2]
-			"Einzelpfahl":
-				dirs = [U, -U]; per = [ceili(buds / 2.0), floori(buds / 2.0)]
-				count_label = "2 bows · %d buds" % buds
-			_:
-				if buds > 12:                            # more than one cane carries: double Guyot
-					dirs = [U, -U]; per = [ceili(buds / 2.0), floori(buds / 2.0)]
-					count_label = "2 canes · %d + %d buds" % [per[0], per[1]]
-		var arms := []                                   # [pivot, axis points in the pivot's frame]
-		var label_at := Vector3.ZERO
-		for a in dirs.size():
-			var dir: Vector3 = dirs[a]
-			var pivot := Node3D.new()                    # rotates the arm down onto the wire on confirm
-			pivot.position = head + W * (0.035 * (i - 1))
-			var axis := dir.cross(up)
-			pivot.basis = Basis(axis.normalized(), deg_to_rad(angles[mini(i, 2)])) if axis.length() > 0.01 else Basis()
-			parts.add_child(pivot)
-			var pts := []
-			var meshes := []
-			match training:
-				"Cordon":
-					var length := 0.6 * hs
-					var n: int = per[a]
-					var path := [Vector3.ZERO, dir * 0.08 + up * 0.03, dir * length + up * 0.03]
-					meshes.append(_segment(path[0], path[1], 0.021, 0.019, mat, pivot))
-					meshes.append(_segment(path[1], path[2], 0.019, 0.014, mat, pivot))
-					for k in n:
-						var base: Vector3 = path[1] + dir * ((length - 0.08) * (float(k) + 0.5) / float(n))
-						meshes.append(_segment(base, base + up * 0.055, 0.010, 0.008, mat, pivot))
-						for b in 2:
-							meshes.append(_mesh(bud, mat, Transform3D(Basis(), base + up * (0.022 + 0.027 * b) + dir * 0.009), pivot))
-					for k in 11:
-						pts.append(path[1] + dir * ((length - 0.08) * float(k) / 10.0))
-				"Einzelpfahl":
-					var length := 0.12 + float(per[a]) * INTERNODE
-					var prev := Vector3.ZERO
-					for k in range(1, 13):
-						var s := float(k) / 12.0
-						var q := dir * (length * 0.5 * (1.0 - cos(PI * s))) + up * (length * 0.42 * sin(PI * s))
-						meshes.append(_segment(prev, q, 0.012, 0.009, mat, pivot))
-						prev = q
-					for k in per[a]:
-						var s2 := (float(k) + 0.6) / float(per[a])
-						meshes.append(_mesh(bud, mat, Transform3D(Basis(), dir * (length * 0.5 * (1.0 - cos(PI * s2))) + up * (length * 0.42 * sin(PI * s2) + 0.011)), pivot))
-					for k in 13:
-						var s3 := float(k) / 12.0
-						pts.append(dir * (length * 0.5 * (1.0 - cos(PI * s3))) + up * (length * 0.42 * sin(PI * s3)))
-					pivot.set_meta("tied", true)         # a bow is bent, not laid on a wire
-				_:
-					# a short rise from the head to the wire, then the cane along it with its buds every INTERNODE
-					var length := 0.12 + float(per[a]) * INTERNODE
-					var rise := dir * 0.10 + up * 0.08
-					meshes.append(_segment(Vector3.ZERO, rise, 0.014, 0.012, mat, pivot))
-					meshes.append(_segment(rise, rise + dir * (length - 0.10), 0.012, 0.008, mat, pivot))
-					for k in per[a]:
-						meshes.append(_mesh(bud, mat, Transform3D(Basis(), rise + dir * (0.04 + INTERNODE * (float(k) + 0.5)) + up * 0.011), pivot))
-					for k in 11:
-						pts.append(rise + dir * ((length - 0.10) * float(k) / 10.0))
-			arms.append([pivot, pts])
-			for m in meshes:
-				extras.append({"mesh": m, "value": String(o["value"]), "role": "cane", "pivot": pivot})
-			if a == 0:
-				label_at = pivot.transform * ((pts[pts.size() - 1] as Vector3) + dir * 0.1)
-		var first: Array = arms[0]
-		var mid: Vector3 = (first[0] as Node3D).transform * (first[1] as Array)[(first[1] as Array).size() / 2]
-		var all_meshes := []
-		for e in extras:
-			if String(e["value"]) == String(o["value"]) and String(e["role"]) == "cane": all_meshes.append(e["mesh"])
-		var pk := _pickable(String(o["value"]), all_meshes, Vector3(0.12, 0.12, 0.12), mid)
-		pk["arms"] = arms
-		# the bud load's name and what it means on this vine (the sim's cane/spur/bow words depend on density)
-		_label("%s · %s" % [String(o["value"]), count_label], label_at + Vector3(0, 0.05, 0))
+		var val := String(o["value"])
+		var plan: Dictionary = prune["plans"][val]
+		var col: Color = ring_cols[mini(i, 2)]
+		var meshes := []
+		if training != "Cordon":
+			for cid in plan["bend"].keys():
+				var c: Dictionary = prune["canes"][cid]
+				var at := _cane_point(c, BUD0 + INTERNODE * float(plan["keep"][cid]) - INTERNODE * 0.35, 0.0)
+				var ring := _mesh(_torus(0.016, 0.026), _mat(col, 0.8), Transform3D(_along(_cane_dir(c, 0.0)), at))
+				meshes.append(ring)
+				prune["rings"].append(ring)
+				var lab := _label("%s · %d buds" % [val, int(plan["keep"][cid])] if cid == "A" else "%d" % int(plan["keep"][cid]),
+					at + (c["dir"] as Vector3) * 0.13 + Vector3.UP * 0.01 * (i - 1), col.lightened(0.3), 22)
+				prune["rings"].append(lab)
+				_pickable(val, [ring], Vector3(0.07, 0.07, 0.07), at)
+		var over: bool = o.get("warning") != null
+		# the tags hang below the wire, in front of the trunk, where nothing of the vine is behind them
+		var tag_at := v + W * 0.45 + U * 0.42 + Vector3(0, 0.66 * hs - 0.17 * i, 0)
+		var board := BoxMesh.new(); board.size = Vector3(0.62, 0.14, 0.01)
+		var bb := Basis(Vector3.UP, atan2(W.x, W.z))
+		var bm := _mesh(board, _mat(Color(0.82, 0.76, 0.62) if not over else Color(0.9, 0.6, 0.45)), Transform3D(bb, tag_at))
+		meshes.append(bm)
+		_pickable(val, [bm], Vector3(0.64, 0.15, 0.05), tag_at, bb)
+		var count := String(o.get("detail", "%d buds" % int(o.get("buds", 8))))
+		var tl := _label("%s · %s%s" % [val, count, "  ⚠ over the AOC limit" if over else ""], tag_at + W * 0.012, Color(0.14, 0.09, 0.04), 17)
+		tl.no_depth_test = false; tl.outline_size = 0; tl.billboard = BaseMaterial3D.BILLBOARD_DISABLED; tl.basis = bb
+		tl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; tl.width = 270.0
+		prune["rings"].append(tl)
+		for m in meshes:
+			extras.append({"mesh": m, "value": val, "role": "mark"})
+
+
+## The trunk from the ground to the head: a slightly crooked, tapering stem.
+func _trunk(foot: Vector3, head: Vector3, mat: Material) -> void:
+	var pts := []
+	for k in 6:
+		var t := float(k) / 5.0
+		var wob := Vector3(sin(t * 7.0 + foot.x) * 0.012, 0, cos(t * 5.0 + foot.z) * 0.012) * (1.0 - absf(t - 0.5) * 2.0)
+		pts.append(foot.lerp(head, t) + wob + Vector3(0, -0.1 if k == 0 else 0.0, 0))
+	for k in 5:
+		_piece(_segment(pts[k], pts[k + 1], 0.034 - 0.002 * k, 0.032 - 0.002 * k, mat, parts), "", 0.0, "trunk")
+
+
+## Points of an arc in the vertical plane of dir: starting at a0° above dir and turning by turn° over length L.
+func _arc_points(base: Vector3, dir: Vector3, L: float, a0: float, turn: float, n: int) -> Array:
+	var pts := [base]
+	for i in n:
+		var th := deg_to_rad(a0 + turn * (float(i) + 0.5) / float(n))
+		pts.append(pts[-1] + (dir * cos(th) + Vector3.UP * sin(th)) * (L / float(n)))
+	return pts
+
+
+## A one-year cane: n straight segments from base, leaning th° above dir (and sideways by lat at its tip), with a bud every
+## INTERNODE from BUD0. Old canes (last summer's growth on the wood that goes) are pieces with no cane id: they always go.
+func _cane(id: String, base: Vector3, dir: Vector3, th: float, L: float, lat: Vector3, old := false) -> void:
+	var n := maxi(6, int(ceil(L / 0.06)))
+	var c := {"id": id, "base": base, "dir": dir, "lat": lat, "n": n, "L": L, "seg": L / float(n), "up": [], "segs": [], "buds": [], "k": 0.0, "shape": ""}
+	for i in n:
+		c["up"].append(th + 4.0 * sin(float(i) * 0.9 + base.x * 3.0) - 6.0 * float(i) / float(n))   # a gentle natural curve
+	var mats: Dictionary = prune["mats"]["old" if old else "cane"]
+	for i in n:
+		var cm := CylinderMesh.new(); cm.top_radius = 0.0075 - 0.003 * float(i + 1) / float(n); cm.bottom_radius = 0.0075 - 0.003 * float(i) / float(n)
+		cm.height = c["seg"]; cm.radial_segments = 6
+		var mi := _mesh(cm, mats[""], Transform3D())
+		c["segs"].append(mi)
+		_piece(mi, "" if old else id, (float(i) + 0.5) * float(c["seg"]), "old" if old else "cane", id)
+	var bud := SphereMesh.new(); bud.radius = 0.0085; bud.height = 0.016; bud.radial_segments = 6; bud.rings = 3
+	var s := BUD0
+	while s < L - 0.02:
+		var bm := _mesh(bud, mats[""], Transform3D())
+		c["buds"].append({"mesh": bm, "s": s})
+		_piece(bm, "" if old else id, s, "old" if old else "cane", id)
+		s += INTERNODE
+	if not old:
+		prune["canes"][id] = c
+	_shape(c, 0.0, "")
+
+
+## A point at arc length s along the cane, bent by k (0 upright .. 1 its target shape).
+func _cane_point(c: Dictionary, s: float, k: float) -> Vector3:
+	var p: Vector3 = c["base"]
+	var seg: float = c["seg"]
+	for i in int(c["n"]):
+		var d := _seg_dir(c, i, k)
+		if s <= seg * float(i + 1):
+			return p + d * (s - seg * float(i))
+		p += d * seg
+	return p
+
+
+func _cane_dir(c: Dictionary, s: float) -> Vector3:
+	return _seg_dir(c, clampi(int(s / float(c["seg"])), 0, int(c["n"]) - 1), float(c["k"]))
+
+
+func _seg_dir(c: Dictionary, i: int, k: float) -> Vector3:
+	var th: float = c["up"][i]
+	var lat: Vector3 = c["lat"]
+	match String(c["shape"]):
+		"wire":                        # a short rise to the wire, then along it
+			th = lerpf(th, 28.0 if i < 2 else (-4.0 if i == 2 else 0.0), k)
+			lat = lat * (1.0 - k)
+		"bow":                         # over and down round the stake: the "heart"
+			var t := (float(i) + 0.5) / float(c["n"])
+			th = lerpf(th, 80.0 - 290.0 * t, k)
+			lat = lat * (1.0 - k)
+	var r := deg_to_rad(th)
+	return ((c["dir"] as Vector3) * cos(r) + Vector3.UP * sin(r) + lat / maxf(float(c["L"]), 0.1)).normalized()
+
+
+## Places the cane's segments and buds for bend k towards shape ("" upright, "wire", "bow").
+func _shape(c: Dictionary, k: float, shape: String) -> void:
+	if not is_instance_valid(parts):
+		return
+	c["k"] = k
+	c["shape"] = shape
+	var p: Vector3 = c["base"]
+	var seg: float = c["seg"]
+	for i in int(c["n"]):
+		var d := _seg_dir(c, i, k)
+		var mi = c["segs"][i]
+		if is_instance_valid(mi) and mi.get_parent() == parts:
+			mi.transform = Transform3D(_along(d), p + d * seg * 0.5)
+		p += d * seg
+	for b in c["buds"]:
+		var bm = b["mesh"]
+		if is_instance_valid(bm) and bm.get_parent() == parts:
+			var s: float = b["s"]
+			var at := _cane_point(c, s, k)
+			var side := (c["dir"] as Vector3).cross(Vector3.UP).normalized() * (0.007 if int(s / INTERNODE) % 2 == 0 else -0.007)
+			bm.position = at + side + Vector3.UP * 0.004
+
+
+## A part of the vine: cane = the new cane it belongs to ("" otherwise), s = its arc position on that cane, role = trunk /
+## arm / stub (permanent) · old (goes whatever the option) · cane (kept up to the option's cut); group = what falls together.
+func _piece(mi: MeshInstance3D, cane: String, s: float, role: String, group := "") -> void:
+	prune["pieces"].append({"mesh": mi, "cane": cane, "s": s, "role": role, "group": group if group != "" else cane})
+
+
+## What the option does to a piece: "keep" (gold), "cut" (red) or "" (the permanent wood).
+func _fate(pc: Dictionary, plan: Dictionary) -> String:
+	match String(pc["role"]):
+		"trunk", "arm", "stub":
+			return ""
+		"old":
+			return "cut"
+	var keep: Dictionary = plan["keep"]
+	var cid := String(pc["cane"])
+	if not keep.has(cid):
+		return "cut"
+	return "keep" if float(pc["s"]) <= BUD0 + INTERNODE * float(keep[cid]) - INTERNODE * 0.35 else "cut"
+
+
+## Choosing an option shows what stays and what goes.
+func _prune_preview(value: String) -> void:
+	var plan: Dictionary = prune["plans"].get(value, {})
+	for pc in prune["pieces"]:
+		var mi = pc["mesh"]
+		if not is_instance_valid(mi) or String(pc["role"]) in ["trunk", "arm", "stub"]:
+			continue
+		var base := "old" if String(pc["role"]) == "old" else "cane"
+		mi.material_override = prune["mats"][base][_fate(pc, plan) if not plan.is_empty() else ""]
+
+
+## The cut: the old wood and every cut-off part fall (each cane's part as one piece), the kept canes are tied down.
+func _prune_confirm(value: String) -> void:
+	var plan: Dictionary = prune["plans"].get(value, {})
+	if plan.is_empty():
+		return
+	for r in prune["rings"]:
+		if is_instance_valid(r): (r as Node3D).visible = false
+	for e in extras:                                   # the tags too: the cut speaks for itself
+		if String(e["role"]) == "mark" and is_instance_valid(e["mesh"]): (e["mesh"] as Node3D).visible = false
+	var groups := {}
+	for pc in prune["pieces"]:
+		var mi = pc["mesh"]
+		if not is_instance_valid(mi) or _fate(pc, plan) != "cut":
+			continue
+		var key := String(pc["group"]) if String(pc["group"]) != "" else "oldwood"
+		if not groups.has(key):
+			var holder := Node3D.new(); holder.position = mi.position
+			parts.add_child(holder)
+			groups[key] = holder
+		mi.reparent(groups[key], true)
+	var tw := parts.create_tween().set_parallel(true)         # tweens die with the close-up when it closes
+	var rng := RandomNumberGenerator.new(); rng.seed = 3
+	for key in groups:
+		var h: Node3D = groups[key]
+		var g: float = vy.call("ground_height", h.position.x, h.position.z)
+		tw.tween_property(h, "position:y", g + 0.04, 0.55 + rng.randf() * 0.25).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
+		tw.tween_property(h, "rotation", Vector3(rng.randf_range(0.8, 1.5), rng.randf_range(-0.6, 0.6), rng.randf_range(-0.4, 0.4)), 0.7)
+	# once down, the prunings lie in the alley in their own colour
+	tw.chain().tween_callback(func():
+		for pc in prune.get("pieces", []):
+			var m = pc["mesh"]
+			if is_instance_valid(m) and m.get_parent() != parts and String(pc["role"]) in ["old", "cane"]:
+				m.material_override = prune["mats"]["old" if String(pc["role"]) == "old" else "cane"][""])
+	for cid in plan["bend"]:
+		var c: Dictionary = prune["canes"][cid]
+		var shape := String(plan["bend"][cid])
+		var bend := parts.create_tween()
+		bend.tween_interval(0.2)
+		bend.tween_method(func(k): _shape(c, k, shape), 0.0, 1.0, 0.55).set_trans(Tween.TRANS_SINE)
 
 
 ## A cylinder from a to b (in parent's frame).
@@ -601,33 +810,12 @@ static func _torus(inner: float, outer: float) -> TorusMesh:
 func pick(from: Vector3, dir: Vector3) -> String:
 	if parts == null:
 		return ""
-	if String(active.get("kind", "")) == "Prune":
-		return _nearest_cane(from, dir)
 	var q := PhysicsRayQueryParameters3D.create(from, from + dir * 12.0, PICK_LAYER)
 	q.collide_with_areas = false
 	var hit := get_world_3d().direct_space_state.intersect_ray(q)
 	if hit.is_empty() or not (hit["collider"] as Object).has_meta("option"):
 		return ""
 	return String((hit["collider"] as Object).get_meta("option"))
-
-
-## Pruning: the cane whose axis passes closest to the ray (within 6 cm). The three canes fan from one head, so their
-## pick boxes overlap near it and the physics ray would often hit the neighbouring cane.
-func _nearest_cane(from: Vector3, dir: Vector3) -> String:
-	var d := dir.normalized()
-	var best := ""
-	var bd := 0.06
-	for p in pickables:
-		for arm in p["arms"]:
-			var pv: Node3D = arm[0]
-			for q0 in arm[1]:
-				var q: Vector3 = pv.global_transform * (q0 as Vector3)
-				var along := maxf((q - from).dot(d), 0.0)
-				var dist := (from + d * along).distance_to(q)
-				if dist < bd:
-					bd = dist
-					best = String(p["value"])
-	return best
 
 
 ## Leaf removal: a click toggles a side; returns the resulting option value.
@@ -641,9 +829,11 @@ func toggle_side(value: String) -> String:
 	return "Both" if m and a else "Morning" if m else "Afternoon" if a else "None"
 
 
-## Tints what the option acts on (the chosen cane, the leaves to pull, the bunches to drop, the tool).
+## Tints what the option acts on (what the cut keeps and removes, the leaves to pull, the bunches to drop, the tool).
 func highlight(value: String) -> void:
 	var kind := String(active.get("kind", ""))
+	if kind == "Prune":
+		_prune_preview(value)
 	for p in pickables:
 		var on := String(p["value"]) == value
 		if kind == "LeafRemoval":
@@ -670,6 +860,9 @@ func highlight(value: String) -> void:
 ## Late leaf removal: the chosen leaves stay and a tag says the crew pulls them at véraison.
 func play_confirm(value: String, timing: String) -> void:
 	var kind := String(active.get("kind", ""))
+	if kind == "Prune":
+		_prune_confirm(value)
+		return
 	var tw: Tween = null             # created on first use: an empty Tween logs an error when it starts
 	var later := kind == "LeafRemoval" and timing == "Late"
 	if later and parts:
@@ -685,12 +878,6 @@ func play_confirm(value: String, timing: String) -> void:
 		var role := String(e["role"])
 		var falls := false
 		match role:
-			"cane":
-				falls = String(e["value"]) != value
-				if not falls and e.has("pivot") and not (e["pivot"] as Node3D).has_meta("tied"):
-					var pv: Node3D = e["pivot"]
-					pv.set_meta("tied", true)
-					create_tween().tween_property(pv, "basis", Basis(), 0.7).set_trans(Tween.TRANS_SINE)
 			"leaf": falls = not later and ((String(e["value"]) == "Morning" and value in ["Morning", "Both"]) or (String(e["value"]) == "Afternoon" and value in ["Afternoon", "Both"]))
 			"bunch": falls = int(e["value"]) in THIN_DROP.get(value, [])
 			"tool":
@@ -701,15 +888,6 @@ func play_confirm(value: String, timing: String) -> void:
 					t2.tween_property(mi, "position", p0, 0.22)
 					t2.tween_property(mi, "position", p0 - Vector3(0, 0.35, 0), 0.22)
 					t2.tween_property(mi, "position", p0, 0.22)
-		if falls and role == "cane" and e.has("pivot"):
-			var pv2: Node3D = e["pivot"]
-			if not pv2.has_meta("dropped"):
-				pv2.set_meta("dropped", true)
-				var g2: float = vy.call("ground_height", pv2.position.x, pv2.position.z)
-				if tw == null: tw = create_tween().set_parallel(true)
-				tw.tween_property(pv2, "position:y", g2 + 0.05, 0.6).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
-				tw.tween_property(pv2, "rotation", pv2.rotation + Vector3(0.9, 0.5, 0.3), 0.6)
-			continue
 		if falls:
 			var ground: float = vy.call("ground_height", mi.position.x, mi.position.z) if kind != "CapManagement" else mi.position.y - 0.5
 			if tw == null: tw = create_tween().set_parallel(true)

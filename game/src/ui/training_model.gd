@@ -124,7 +124,7 @@ func _build() -> void:
 	var g: int = GROWTH[season]
 	# summer: the fruit-zone leaves pulled (as many growers do), so the bunches show
 	var red := 1.0 if variety in ["Pinot Noir", "Cabernet Sauvignon"] else 0.0
-	(_mat("vine_leaf") as ShaderMaterial).set_shader_parameter("leaf_state2", Vector4(0.0, red, 0.85 if season == "Summer" else 0.0, 0.0))
+	(_mat("vine_leaf") as ShaderMaterial).set_shader_parameter("leaf_state2", Vector4(0.0, red, 0.85 if season == "Summer" else 0.0, 0.85 if season == "Summer" else 0.0))
 	var center_surfs: Array = []
 	for i in [-1, 0, 1]:
 		var surfs := _surfaces(kind.to_lower(), g, 0 if i == 0 else 1)

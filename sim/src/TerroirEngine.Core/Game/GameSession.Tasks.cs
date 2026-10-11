@@ -151,6 +151,19 @@ public sealed partial class GameSession
     /// <summary>The training system of a task's Block (pruning words differ: canes, spurs, bows).</summary>
     public TrainingSystem? TaskTraining(FieldTask t) => Blocks.FirstOrDefault(b => b.Data.Id == t.BlockId)?.Planting.Training;
 
+    /// <summary>For a pruning option on a Block: buds per vine, what that means on the vine, and a warning when it is over the
+    /// appellation's bud limit (the Wine would be declassified at bottling, Law.Evaluate).</summary>
+    public (double Buds, string Detail, string? Warning) PruneOption(string blockId, string value)
+    {
+        var b = Blocks.First(x => x.Data.Id == blockId);
+        double buds = VineyardModel.BudsPerVine(b, Enum.Parse<BudLoad>(value));
+        int? max = TerroirEngine.Tasting.Law.MaxBudsPerVine(Plot.Id);
+        string? warn = max != null && buds > max + 0.5
+            ? $"Over the {Tasting.Law.BudLimitAppellation(Plot.Id)} limit of {max} buds per vine: the Wine would fall to Bourgogne."
+            : null;
+        return (buds, TaskCatalog.PruneDetail(b.Planting.Training, buds), warn);
+    }
+
     private void PostTaskMessage(TaskKind kind, List<FieldTask> opened)
     {
         var first = opened[0];
@@ -158,14 +171,23 @@ public sealed partial class GameSession
             ? (opened.Count == 1 ? $"Lot {opened[0].LotId}" : "Lots " + string.Join(", ", opened.Select(t => t.LotId)))
             : (opened.Count == 1 ? $"Block {opened[0].BlockId}" : "Blocks " + string.Join(", ", opened.Select(t => t.BlockId)));
         string due = Dates.Short(first.Due);
-        string plan = string.Join(", ", opened.Select(t => $"{(kind == TaskKind.CapManagement ? t.LotId : t.BlockId)}: {TaskCatalog.Label(kind, TaskPlan(t), TaskTraining(t))}"));
+        string plan = string.Join(", ", opened.Select(t => $"{(kind == TaskKind.CapManagement ? t.LotId : t.BlockId)}: {TaskCatalog.Label(kind, TaskPlan(t), TaskTraining(t))}"
+            + (kind == TaskKind.Prune ? $", {PruneOption(t.BlockId, TaskPlan(t)).Detail}" : "")));
+        string budRule = "";
+        if (kind == TaskKind.Prune && Tasting.Law.MaxBudsPerVine(Plot.Id) is int maxBuds)
+        {
+            var over = opened.SelectMany(t => new[] { "Low", "Balanced", "High" }.Where(v => PruneOption(t.BlockId, v).Warning != null)
+                .Select(v => $"{v} on Block {t.BlockId} ({PruneOption(t.BlockId, v).Buds:0} buds)")).ToList();
+            budRule = $"Remember: {Tasting.Law.BudLimitAppellation(Plot.Id)} rules allow at most {maxBuds} buds per vine; the Wine of a vine pruned longer falls to Bourgogne."
+                + (over.Count > 0 ? $" Here that is {string.Join(", ", over)}." : "");
+        }
         // only the Vintage's first message of a kind stops time; later openings (other Blocks, other Lots) arrive quietly
         bool stop = Gate($"taskmsg-{kind}-{Date.Year}");
         string role = kind == TaskKind.CapManagement ? "cellar" : kind == TaskKind.Prune && !MentorRetired ? "mentor" : "vineyard";
         (string subject, string body, string why, string msgKind) = kind switch
         {
             TaskKind.Prune => ($"Winter pruning: {blocks} (due {due})",
-                $"January is pruning time. The number of buds left per vine sets this year's crop, and how well it ripens.\n\n• Low (≈ 6 buds per m²): fewer, riper grapes.\n• Balanced (≈ 8): the usual compromise.\n• High (≈ 11): a big crop that ripens slowly and can taste diluted.\n\nGuyot vines are cane-pruned (one or two long canes laid on the wire), Cordon vines spur-pruned (short spurs along a permanent arm), and Einzelpfahl vines keep one or two arched bows round the stake.\n\n{(Region.Id == "cote-dor" ? "Remember: Village and Premier Cru rules allow at most 8 buds per vine." : Region.Id == "mosel" ? "Steep Einzelpfahl vines carry two bows; the buds are shared between them." : "On the valley floor vigour is high: too few buds and the canopy runs wild.")}\n\nWalk to a Block and prune its marked vine yourself; the crew then prunes the rest the same way. Or let the crew prune to the plan ({plan}).",
+                $"January is pruning time. The number of buds left per vine sets this year's crop, and how well it ripens.\n\n• Low (≈ 6 buds per m²): fewer, riper grapes.\n• Balanced (≈ 8): the usual compromise.\n• High (≈ 11): a big crop that ripens slowly and can taste diluted.\n\nGuyot vines are cane-pruned (one or two long canes laid on the wire), Cordon vines spur-pruned (short spurs along a permanent arm), and Einzelpfahl vines keep one or two arched bows round the stake.\n\n{(budRule != "" ? budRule : Region.Id == "cote-dor" ? "The Hautes-Côtes rules set no bud limit." : Region.Id == "mosel" ? "Steep Einzelpfahl vines carry two bows; the buds are shared between them." : "On the valley floor vigour is high: too few buds and the canopy runs wild.")}\n\nWalk to a Block and prune its marked vine yourself; the crew then prunes the rest the same way. Or let the crew prune to the plan ({plan}).",
                 "Bud load balances yield against ripening capacity: over ~1 kg of fruit per m² of leaf area ripens poorly (Kliewer & Dokoozlian 2005).", "task-prune"),
             TaskKind.LeafRemoval => ($"Leaf removal: {blocks} (due {due})",
                 $"The fruit has set. Pulling the leaves around the bunches now opens the fruit zone.\n\n• Morning side: bunches dry fast after dew and rain, without the afternoon heat.\n• Afternoon side: more warmth, but a sunburn risk in hot weather.\n• Both sides, or none.\nYou can also leave it until véraison (late leaf removal).\n\nDo the marked vine yourself, or let the crew keep the plan ({plan}).",

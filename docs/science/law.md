@@ -104,8 +104,8 @@ A Wine can always be **declassified downwards** (repli) to a broader appellation
 
 | Rule | Regional (Bourgogne) | Village (Pommard model) | Premier Cru (Pommard model) |
 |---|---|---|---|
-| Min planting density | `UNVERIFIED` ~5,500–6,400 vines/ha (varies by sub-area) [INAO-BOURGOGNE] | **9,000 vines/ha**, rows ≤ 1.25 m, vines ≥ 0.5 m apart | same |
-| Pruning | — | ≤ 8 buds/vine (Guyot simple or spur/cordon) | same |
+| Min planting density | `UNVERIFIED` ~5,500–6,400 vines/ha (varies by sub-area) [INAO-BOURGOGNE] | **9,000 vines/ha**, rows ≤ 1.25 m, vines ≥ 0.5 m apart (`Law.MinDensity`; the Planting screen warns below it) | same |
+| Pruning | — | ≤ 8 buds/vine (Guyot simple or spur/cordon); in the game (`Law.MaxBudsPerVine`) checked at bottling and warned at pruning and planting | same |
 | Max average crop on the vine | — | 9,000 kg/ha | same |
 | Min sugar in grapes | reds 162–175 g/L; whites 153–170 g/L (draft old/new) | 180 g/L | 189 g/L |
 | Natural minimum alcohol | reds 10.0–10.2 %; whites 10.5 % | 10.5 % vol | 11.0 % vol |

@@ -29,6 +29,9 @@ const SHOTS := [
 	{"name": "cotedor_winter", "game": COTEDOR, "until": "date:02-10", "dry": true, "view": "vineyard", "cam": "row", "block": 1},
 	{"name": "cotedor_august", "game": COTEDOR, "until": "date:08-16", "dry": true, "view": "vineyard", "cam": "row", "block": 0},
 	{"name": "napa_september", "game": NAPA, "until": "date:09-12", "dry": true, "view": "vineyard", "cam": "row", "block": 1},
+	# fruit-zone leaf removal on the morning side only: pulled on the east side of the row, full on the west
+	{"name": "cotedor_leaves_east", "game": COTEDOR, "cmds": [["block", "A", "leafside", "Morning"]], "until": "stage:BunchClosure", "extra": 4, "dry": true, "view": "vineyard", "cam": "close_east", "block": 0},
+	{"name": "cotedor_leaves_west", "game": COTEDOR, "cmds": [["block", "A", "leafside", "Morning"]], "until": "stage:BunchClosure", "extra": 4, "dry": true, "view": "vineyard", "cam": "close_west", "block": 0},
 	# the one walkable Estate: vineyard → track → door → hall → stairs → cellar
 	{"name": "mosel_estate", "game": MOSEL, "until": "winery", "dry": true, "view": "vineyard", "cam": "estate"},
 	{"name": "mosel_estate_high", "game": MOSEL, "until": "winery", "dry": true, "view": "vineyard", "cam": "estate_high"},
@@ -168,6 +171,9 @@ func _play(shot: Dictionary) -> Dictionary:
 	if not Sim.NewGame(JSON.stringify(g)):
 		push_error("NewGame failed: " + Sim.LastError())
 		return {}
+	for c in shot.get("cmds", []):
+		var a: Array = c + ["", "", "", "", "", ""]
+		Sim.Command(a[0], a[1], a[2], a[3], a[4], a[5])
 	Sim.ShopOwnAll()        # some scenes show rigorous sorting (the Shop's sorting table); the look in use is unchanged
 	var until := String(shot["until"])
 	var s := _snap()
@@ -278,7 +284,7 @@ func _play_winery() -> void:
 
 func _run() -> void:
 	for shot in queue:
-		var key := JSON.stringify(shot["game"]) + String(shot["until"]) + str(shot.get("extra", 0)) + str(shot.get("harvest", [])) + str(shot.get("dry", false))
+		var key := JSON.stringify(shot["game"]) + String(shot["until"]) + str(shot.get("extra", 0)) + str(shot.get("harvest", [])) + str(shot.get("dry", false)) + str(shot.get("cmds", []))
 		if key != last_game_key:
 			var t0 := Time.get_ticks_msec()
 			snap = _play(shot)

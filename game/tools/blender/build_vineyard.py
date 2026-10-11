@@ -88,6 +88,13 @@ def cluster(P, R, E, p, cdir, g, scale=1.0):
             berry_sphere(P["vine_berry"], c + axis * lc * 0.35, br * 4.2, col, (bid, 1.0), seg=4, rings=2)
 
 
+def sector(out):
+    """The way a leaf faces out from its vine as one of 16 compass sectors (0 = +X, counting towards +Y), added to the
+    whole-number part of its UV2.x (the fraction stays the per-leaf random): leaf.gdshader turns it into the world and
+    pulls the leaves on the side that leaf removal chose (the morning side faces east)."""
+    return float(round(math.atan2(out.y, out.x) / (2 * math.pi / 16)) % 16)
+
+
 def leaves_on_shoot(P, R, E, spts, L, g, out_fn, cluster_nodes, lateral_p, cluster_dir_fn):
     """Leaves (+laterals, clusters) at the nodes of a shoot polyline spts."""
     node = 0
@@ -103,6 +110,7 @@ def leaves_on_shoot(P, R, E, spts, L, g, out_fn, cluster_nodes, lateral_p, clust
         t_dir = (spts[min(i + 1, len(spts) - 1)] - spts[i - 1]).normalized()
         alt = 1 if node % 2 else -1
         out, pdir, normal, tip = out_fn(R, p, t_dir, alt)
+        side = sector(out)
         pet = R.uniform(0.05, 0.08) * LEAF_SCALE[g]
         attach = p + pdir * pet
         if C.LOD == 0:
@@ -112,7 +120,7 @@ def leaves_on_shoot(P, R, E, spts, L, g, out_fn, cluster_nodes, lateral_p, clust
         col = leaf_col(R, frac, g, node)
         lr = R.random()
         if E.keep_leaf():
-            leaf_card(P["vine_leaf"], attach, tip, normal, E.leaf_size(size), col, (lr, frac))
+            leaf_card(P["vine_leaf"], attach, tip, normal, E.leaf_size(size), col, (side + lr, frac))
         if g >= 4 and node >= 3 and R.random() < lateral_p:                  # lateral shoot, 2-3 leaves
             ldir = (out * 0.6 + V((0, 0, 0.55))).normalized()
             for q in range(R.randint(2, 3)):
@@ -124,7 +132,7 @@ def leaves_on_shoot(P, R, E, spts, L, g, out_fn, cluster_nodes, lateral_p, clust
                 s2 = size * R.uniform(0.55, 0.8)
                 lr2 = R.random()
                 if E.keep_leaf():
-                    leaf_card(P["vine_leaf"], la, lt, ln, E.leaf_size(s2), (0.10 + 0.02 * k, 0.26 + 0.04 * k, 0.04), (lr2, 0.9))
+                    leaf_card(P["vine_leaf"], la, lt, ln, E.leaf_size(s2), (0.10 + 0.02 * k, 0.26 + 0.04 * k, 0.04), (side + lr2, 0.9))
         if g >= 3 and node in cluster_nodes[0] and R.random() < cluster_nodes[1][cluster_nodes[0].index(node)]:
             cluster(P, R, E, p, cluster_dir_fn(p, alt, out), g)
 

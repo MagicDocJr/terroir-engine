@@ -350,6 +350,13 @@ static func _planting(shell) -> Control:
 		var note := UI.label(rs_notes.get(pc["rootstock"], ""), 13, UI.MUTED, null, true); note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		if float(b["lime"]) >= 12 and pc["rootstock"] != "Fercal":
 			note.text = "⚠ %d %% active lime: this rootstock risks lime-induced chlorosis." % int(b["lime"]); note.add_theme_color_override("font_color", UI.SERIOUS)
+		if P.get("minDensity") != null and int(pc["density"]) < int(P["minDensity"]):
+			note.text = "⚠ %s rules need at least %s vines/ha: at %s the Wine can only be Bourgogne." % [P["appellation"], UI.thousands(int(P["minDensity"])), UI.thousands(int(pc["density"]))]
+			note.add_theme_color_override("font_color", UI.SERIOUS)
+		elif P.get("maxBuds") != null and String(pc["training"]) != "Einzelpfahl" and 8.0 * 10000.0 / float(pc["density"]) > float(P["maxBuds"]) + 0.5:
+			# Balanced pruning is 8 buds per m² (VineyardModel.BudsPerVine): below 10,000 vines/ha that is over the limit
+			note.text = "⚠ At %s vines/ha a standard pruning leaves %.0f buds per vine, over the %s limit of %d: prune Fewer buds to keep the appellation." % [UI.thousands(int(pc["density"])), 8.0 * 10000.0 / float(pc["density"]), P["appellation"], int(P["maxBuds"])]
+			note.add_theme_color_override("font_color", UI.WARN)
 		right.add_child(note)
 		tp[1].add_child(row)
 		tp[1].add_child(UI.divider())

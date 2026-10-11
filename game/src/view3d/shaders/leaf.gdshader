@@ -1,8 +1,10 @@
 // Vine leaves (from the engine demo): vertex-colour albedo, double-sided, backlit translucency, wind,
 // wetness with droplet beads. Bound to the simulation per Block (one material per Block) through:
 //   leaf_state  = (downy mildew 0..1, lime chlorosis 0..1, autumn colour 0..1, leaves dropped 0..1)
-//   leaf_state2 = (water stress 0..1, red variety 0/1, fruit-zone leaf removal 0..1, -)
-// UV2 = (per-leaf random, position along the shoot: 0 base .. 1 tip).
+//   leaf_state2 = (water stress 0..1, red variety 0/1, fruit-zone leaf removal on the morning (east) side 0..1,
+//                  on the afternoon (west) side 0..1);  east_dir = the world's east on the ground plane
+// UV2 = (side sector 0..15 + per-leaf random, position along the shoot: 0 base .. 1 tip). The sector is the way the leaf
+// faces out from its vine in the model (build_vineyard.py sector(): 0 = model +X, counting towards Blender +Y).
 // Leaves are cards: the outline, veins and relief come from the Variety's cell in the leaf atlas (build_leaf_atlas.py):
 //   leaf_atlas RGB = albedo multiplier, A = coverage (alpha-tested); leaf_normal RG = normal, B = vein mask.
 shader_type spatial;
@@ -20,6 +22,7 @@ global uniform float wind_strength;
 global uniform vec2 wind_dir;
 uniform vec4 leaf_state = vec4(0.0);
 uniform vec4 leaf_state2 = vec4(0.0);
+uniform vec2 east_dir = vec2(1.0, 0.0);
 
 varying float v_id;
 varying float v_frac;
@@ -41,15 +44,19 @@ float gust(vec2 p) {
 }
 
 void vertex() {
-	v_id = UV2.x;
+	v_id = fract(UV2.x);
 	v_frac = UV2.y;
+	float sec = floor(UV2.x) * (TAU / 16.0);
+	// Blender (x, y) → the model's (x, -z); then into the world, where the vine may be turned
+	vec2 out_w = normalize((MODEL_MATRIX * vec4(cos(sec), 0.0, -sin(sec), 0.0)).xz + vec2(1e-5));
+	float morning = step(0.0, dot(out_w, east_dir));
 	// leaf fall: whole leaves collapse to a point (all vertices of a leaf share UV2.x), cheaper than discard
 	if (v_id < leaf_state.w) {
 		VERTEX = vec3(0.0, -10.0, 0.0);
 	}
 	// fruit-zone leaf removal: that share of the basal leaves (the first nodes of each shoot, around the bunches) is gone
-	// (display only; one side or both is shown as a share of the leaves, not by side)
-	if (v_frac < 0.26 && hash(vec2(v_id, 5.3)) < leaf_state2.z) {
+	// on the side the player chose (morning = facing east); display only
+	if (v_frac < 0.26 && hash(vec2(v_id, 5.3)) < mix(leaf_state2.w, leaf_state2.z, morning)) {
 		VERTEX = vec3(0.0, -10.0, 0.0);
 	}
 	vec3 w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;

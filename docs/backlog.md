@@ -49,12 +49,9 @@ Found while building or reviewing; not urgent, but not to be forgotten. Remove a
 
 ### Training systems and pruning in 3D (2026-10-10)
 - The training-system learn card's 3D model shows winter, spring and summer; flowering, véraison colour and autumn leaves are not offered, and the summer canopy always has its fruit-zone leaves pulled (to show the bunches). A "leaves on / pulled" switch would teach leaf removal too.
-- Fruit-zone leaf removal is drawn as a share of the basal leaves gone (both sides 0.9, one side 0.5), not by side: the leaf shader does not know which side of the row faces east.
 - The Einzelpfahl summer canopy in the vine models has every shoot reaching the top; growers tie three to five shoots up the stake as next year's canes and top the rest just above the bunches (§2.7). Model that in build_vineyard.py.
+- The pruning close-up hides vines in the camera's line of sight (on the square Einzelpfahl grid the next row stands in it); the scanned groundcover and near trees are not checked for inward faces (their open, cupped leaf cards fool the volume test).
 - Screens with fixed-width rows still run under an open Learn card (seen: the Tasting practice exercise cards and Glass of the day). Audit every screen at the width left beside the card (≈ 1,060 px at 1920) and add that width to the layout self-test.
-- Mosel véraison bunches read lavender-grey in `3d_mosel_veraison` (before and after 2026-10-10); check whether that Block is a red Variety or white berries are taking the red bloom.
-- A truer pruning close-up: show the unpruned vine first (last summer's canes standing up from the old cane), then the cut, instead of fanning three finished options.
-- Audit the other Blender generators (winery boxes and cylinders, props) for faces wound inward, as `berry_sphere` was: a normals check in `build_*.py` would catch it.
 - The Planting guide's 2D diagrams draw one vine; the Guyot summer canopy is one-sided (the cane goes one way), which is right for one vine but reads lopsided. Consider ghosting the neighbouring vines' shoots.
 
 ### Simulation and science (for the science review)
@@ -67,8 +64,7 @@ Found while building or reviewing; not urgent, but not to be forgotten. Remove a
 - Napa year-to-year yield variation is 4–7 %; check against the Napa County crush reports.
 - Multi-vintage carry-over coefficients (fruitfulness, reserves, inoculum, 20 % leaf-loss tolerance) are `UNVERIFIED`.
 - Reserves ignore frost at leaf fall (spec §4.2 lists it).
-- The Guyot cap is now 24 buds per vine (a double Guyot, 2026-10-10), so Carneros' Balanced crop rose to 68 hL/ha (≈ 9.4 t/ha Pinot Noir): check against the Napa County crush reports for Carneros Pinot Noir, and decide whether Côte d'Or Village/1er Cru Blocks should cap at 8 buds per vine as the rules say (law doc §3) instead of only being reminded in the January message.
-- The pruning option words for Guyot ("Short / Medium / Long cane") say nothing about one or two canes; at 5,000 vines/ha Low is a 12-bud single cane, which is long. The 3D close-up names the bud load instead; the Inbox and the task panel still use the cane words.
+- The Guyot cap is now 24 buds per vine (a double Guyot, 2026-10-10), so Carneros' Balanced crop rose to 68 hL/ha (≈ 9.4 t/ha Pinot Noir): check against the Napa County crush reports for Carneros Pinot Noir. (The 8-bud Village/1er Cru limit is warned at pruning and planting since 2026-10-11; the Wine is declassified at bottling, as the rules do. A Block planted at 9,000 vines/ha breaks it with a Standard pruning: the Planting screen says so.)
 - Napa Bench Cordon Blocks get 8–12 two-bud spurs per vine (16–24 buds), while the §3.1 bud table says 6–10 spurs × 2 buds; check whether the table means per arm (bilateral cordon) and align the table or the bud-load conversion.
 - A harvest still running on 31 December is wiped on 1 January (the December rule finishes picks on 2 December, so this is rare).
 

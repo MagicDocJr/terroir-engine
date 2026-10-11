@@ -106,6 +106,9 @@ public static class SetupCatalog
             ["id"] = p.Id, ["name"] = p.Name, ["tier"] = p.Tier, ["summary"] = p.Summary, ["classification"] = p.Classification, ["ha"] = p.AreaHa, ["slope"] = p.SlopePct,
             ["aspect"] = Snapshot.Aspect(p.AspectDeg), ["aspectDeg"] = p.AspectDeg, ["region"] = p.Region.Id, ["lat"] = p.Lat, ["elevation"] = p.ElevationM, ["price"] = Math.Round(p.Price), ["pricePerHa"] = p.PricePerHaEur, ["mechanisation"] = p.Mechanisation,
             ["training"] = new JsonArray(p.TrainingAllowed.Select(t => (JsonNode)t).ToArray()),
+            // the appellation's planting and pruning rules, so the Planting screen can warn before a Wine is declassified
+            ["minDensity"] = TerroirEngine.Tasting.Law.MinDensity(p.Id), ["maxBuds"] = TerroirEngine.Tasting.Law.MaxBudsPerVine(p.Id),
+            ["appellation"] = TerroirEngine.Tasting.Law.BudLimitAppellation(p.Id),
             ["winkler"] = Math.Round(wink), ["huglin"] = Math.Round(hug), ["springFrostNights"] = Math.Round(frostNights, 1),
             ["plantingCost"] = Math.Round(planting), ["runningCostYear"] = Math.Round(labour + EconomyTables.MaterialsPerHaYear(p.Region.Id) * p.AreaHa + EconomyTables.SprayCostPerHaYear(Tier.Medium, p.SlopePct >= 30) * p.AreaHa),
             ["labourHoursHa"] = EconomyTables.LabourHoursPerHa(p),
