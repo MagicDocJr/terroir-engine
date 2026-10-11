@@ -1,3 +1,4 @@
+using TerroirEngine.Data;
 using TerroirEngine.Game;
 using TerroirEngine.Vineyard;
 using TerroirEngine.Winery;
@@ -17,6 +18,18 @@ public class TaskTests
         Assert.Equal(g.Blocks.Count, prune.Count);
         Assert.All(prune, t => { Assert.Equal(TaskState.Open, t.Status); Assert.Equal(new DateOnly(g.FirstVintage, 3, 1), t.Due); });
         Assert.Contains(g.Inbox, m => m.Kind == "task-prune");
+    }
+
+    [Fact]
+    public void GuyotPruningOptions_DifferAtLowDensity_DoubleGuyotAboveTwelveBuds()
+    {
+        // Carneros plants Guyot at 3,800 vines/ha: 6/8/11 buds per m² are 16/21/29 buds per vine; a single-cane cap of
+        // 16 made all three the same, a double Guyot (two canes of up to 12) keeps them apart up to 24
+        var g = New("napa-carneros", 2014);
+        var b = g.Blocks.First(x => x.Planting.Training == TrainingSystem.Guyot);
+        var buds = new[] { BudLoad.Low, BudLoad.Balanced, BudLoad.High }.Select(l => VineyardModel.BudsPerVine(b, l)).ToList();
+        Assert.True(buds[0] < buds[1] && buds[1] < buds[2], string.Join(", ", buds));
+        Assert.True(buds[2] <= 24);
     }
 
     [Fact]
