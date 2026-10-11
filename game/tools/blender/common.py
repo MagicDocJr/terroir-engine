@@ -285,5 +285,5 @@ def berry_sphere(acc, center, r, col, uv2=(0.0, 0.0), seg=5, rings=3):
     for i in range(rings):
         for j in range(seg):
             a = i * seg + j; b = i * seg + (j + 1) % seg
-            faces.append((a, b, b + seg, a + seg))
+            faces.append((a, a + seg, b + seg, b))          # counter-clockwise seen from outside: normals point out
     acc.add(verts, faces, uvs, cols, [uv2] * len(verts))

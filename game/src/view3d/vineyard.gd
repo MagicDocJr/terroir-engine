@@ -145,6 +145,13 @@ func _num(d: Dictionary, k: String, def := 0.0) -> float:
 func _mat(name: String) -> Material:
 	if mats.has(name):
 		return mats[name]
+	var m := make_mat(name)
+	mats[name] = m
+	return m
+
+
+## A fresh vineyard material by its GLB name (also used by the training-system model in the learn cards).
+static func make_mat(name: String) -> Material:
 	var m: Material
 	match name:
 		"vine_wood":
@@ -198,7 +205,6 @@ func _mat(name: String) -> Material:
 			m = s
 		_:
 			m = StandardMaterial3D.new()
-	mats[name] = m
 	return m
 
 

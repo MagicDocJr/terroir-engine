@@ -14,6 +14,7 @@ const PICK_LAYER := 1 << 19
 const COLORS := {"Prune": Color(0.96, 0.62, 0.16), "LeafRemoval": Color(0.38, 0.82, 0.3), "GreenHarvest": Color(0.7, 0.4, 0.95), "CapManagement": Color(0.32, 0.62, 0.98)}
 const TANK_H := 3.54                 # winery.json hall.tankInfo.height
 const THIN_DROP := {"0": [], "1": [2, 7], "2": [1, 3, 6, 8]}   # which of the ten bunches a level drops (a fifth / two fifths)
+const INTERNODE := 0.075             # m of cane per count bud in the pruning close-up (Guyot canes, Einzelpfahl bows; look only)
 
 var vy: Node3D                       # vineyard.gd
 var wy: Node3D                       # winery.gd
@@ -275,6 +276,17 @@ func open_closeup(task: Dictionary) -> Array:
 		"GreenHarvest": _thin_parts(task, v, U, W)
 	var cam := v + W * 1.05 + U * 0.25 + Vector3(0, 1.25 * hs + 0.05, 0)
 	var target := v + U * 0.3 + Vector3(0, 0.76 * hs, 0)
+	if kind == "Prune":
+		var both := String(task.get("training", "Guyot")) != "Guyot"
+		for o in task.get("options", []):
+			both = both or int(o.get("buds", 0)) > 12
+		var reach := 0.0
+		for o in task.get("options", []):
+			reach = maxf(reach, 0.12 + float(o.get("buds", 8)) * INTERNODE / (2.0 if both else 1.0))
+		var c := U * (0.0 if both else 0.35)
+		# stay in the alley: on a square Einzelpfahl grid the next row's stake stands about a row width away
+		cam = v + c + W * minf(1.0 + 0.9 * reach, 0.75 * float(fr["row"])) + Vector3(0, 1.3 * hs + 0.1, 0)
+		target = v + c + Vector3(0, 0.95 * hs, 0)
 	return [to_global(cam), to_global(target)]
 
 
@@ -383,74 +395,113 @@ static func _along(dir: Vector3) -> Basis:
 
 
 func _prune_parts(task: Dictionary, v: Vector3, U: Vector3, W: Vector3) -> void:
-	# three alternatives fanned from the head of the real vine's trunk, drawn as the Block's training system prunes:
-	#   Guyot        a long cane with its buds, tied down onto the fruiting wire on confirm
-	#   Cordon       a permanent arm carrying two-bud spurs (buds ÷ 2 spurs), laid on the wire on confirm
-	#   Einzelpfahl  an arched bow round the stake (no wire: it stays bent on confirm)
+	# three alternatives fanned up from the head of the real vine's trunk, drawn as the Block's training system prunes, each
+	# with the option's buds per vine at a fixed bud spacing, so more buds really is more wood (canopy-and-yield.md §3.1):
+	#   Guyot        one cane of up to 12 buds, or two canes, one each way along the wire (double Guyot), with a renewal
+	#                spur of 2 buds at the head; the chosen cane(s) are tied down onto the fruiting wire on confirm
+	#   Cordon       the two permanent arms (as long as the vine's share of the row) carrying the option's two-bud spurs,
+	#                half on each arm, evenly spaced: more spurs sit closer together; laid on the wire on confirm
+	#   Einzelpfahl  two arched bows round the stake sharing the buds (no wire: they stay bent on confirm)
 	var wood := Color(0.36, 0.23, 0.13)
-	var head := v + Vector3(0, 0.66 * hs, 0) + W * 0.03
-	var opts: Array = task.get("options", [])
 	var training := str(task.get("training", "Guyot"))
-	var angles: Array = {"Cordon": [8.0, 20.0, 32.0], "Einzelpfahl": [8.0, 24.0, 40.0]}.get(training, [14.0, 30.0, 46.0])
-	var bud := SphereMesh.new(); bud.radius = 0.014; bud.height = 0.022; bud.radial_segments = 6; bud.rings = 3
+	var head_h: float = {"Cordon": 0.92, "Einzelpfahl": 0.62}.get(training, 0.72)
+	var head := v + Vector3(0, head_h * hs, 0) + W * 0.03
+	var opts: Array = task.get("options", [])
+	var angles: Array = {"Cordon": [10.0, 24.0, 38.0], "Einzelpfahl": [8.0, 24.0, 40.0]}.get(training, [14.0, 30.0, 46.0])
+	var bud := SphereMesh.new(); bud.radius = 0.012; bud.height = 0.026; bud.radial_segments = 8; bud.rings = 4
+	var up := Vector3.UP
+	if training == "Guyot":
+		# the renewal spur: two buds on a short stub at the head, kept whichever cane is chosen
+		var sm := _mat(wood)
+		var s0 := head - U * 0.03
+		var s1 := s0 - U * 0.035 + up * 0.08
+		_segment(s0, s1, 0.013, 0.011, sm, parts)
+		for b in 2:
+			_mesh(bud, sm, Transform3D(Basis(), s0.lerp(s1, 0.45 + 0.5 * b) - U * 0.01))
+		_label("renewal spur · 2 buds", s1 - U * 0.12 + up * 0.06, Color(0.86, 0.82, 0.74), 22)
 	for i in opts.size():
 		var o: Dictionary = opts[i]
 		var buds := int(o.get("buds", [6, 8, 11][mini(i, 2)]))
-		var pivot := Node3D.new()                        # rotates the cane down onto the wire on confirm
-		pivot.position = head + W * (0.035 * (i - 1))
-		var axis := U.cross(Vector3.UP).normalized()
-		pivot.basis = Basis(axis, deg_to_rad(angles[mini(i, 2)])) if U.cross(Vector3.UP).length() > 0.01 else Basis()
-		parts.add_child(pivot)
-		var up := Vector3.UP                             # square to the part in its fan plane: spurs stand upright once laid on the wire
 		var mat := _mat(wood)
-		var meshes := []
-		var pts := []                                    # the part's axis (pivot frame), for picking and the label
-		var count_label := "%d buds" % buds
+		var dirs := [U]
+		var per := [buds]                                # buds (Cordon: spurs) on each arm
+		var count_label := "1 cane · %d buds" % buds
 		match training:
 			"Cordon":
-				var spurs := maxi(1, int(round(buds / 2.0)))
-				var length := clampf(spurs * 0.075, 0.35, 0.85)
-				meshes.append(_segment(Vector3.ZERO, U * length, 0.02, 0.016, mat, pivot))
-				for k in spurs:
-					var base := U * (length * (float(k) + 0.5) / float(spurs))
-					meshes.append(_segment(base, base + up * 0.06, 0.009, 0.007, mat, pivot))
-					for b in 2:
-						meshes.append(_mesh(bud, mat, Transform3D(Basis(), base + up * (0.025 + 0.028 * b) + U * 0.008), pivot))
-				for k in 11:
-					pts.append(U * (length * float(k) / 10.0))
+				var spurs := maxi(2, int(round(buds / 2.0)))
+				dirs = [U, -U]; per = [ceili(spurs / 2.0), floori(spurs / 2.0)]
 				count_label = "%d spurs · %d buds" % [spurs, spurs * 2]
 			"Einzelpfahl":
-				var length := clampf(buds * 0.05, 0.3, 0.8)
-				var prev := Vector3.ZERO
-				for k in range(1, 13):
-					var s := float(k) / 12.0
-					var q := U * (length * 0.5 * (1.0 - cos(PI * s))) + up * (length * 0.42 * sin(PI * s))
-					meshes.append(_segment(prev, q, 0.012, 0.009, mat, pivot))
-					prev = q
-				for k in buds:
-					var s2 := (float(k) + 0.6) / float(buds)
-					meshes.append(_mesh(bud, mat, Transform3D(Basis(), U * (length * 0.5 * (1.0 - cos(PI * s2))) + up * (length * 0.42 * sin(PI * s2) + 0.011)), pivot))
-				for k in 13:
-					var s3 := float(k) / 12.0
-					pts.append(U * (length * 0.5 * (1.0 - cos(PI * s3))) + up * (length * 0.42 * sin(PI * s3)))
-				pivot.set_meta("tied", true)             # a bow is bent, not laid on a wire
+				dirs = [U, -U]; per = [ceili(buds / 2.0), floori(buds / 2.0)]
+				count_label = "2 bows · %d buds" % buds
 			_:
-				var length := clampf(buds * 0.052, 0.35, 0.95)
-				var cane := CylinderMesh.new(); cane.top_radius = 0.008; cane.bottom_radius = 0.013; cane.height = length; cane.radial_segments = 6
-				meshes.append(_mesh(cane, mat, Transform3D(_along(U), U * length / 2.0), pivot))
-				for k in buds:
-					meshes.append(_mesh(bud, mat, Transform3D(Basis(), U * (length * (float(k) + 0.6) / float(buds)) + Vector3(0, 0.011, 0)), pivot))
-				for k in 11:
-					pts.append(U * (length * float(k) / 10.0))
-		var mid: Vector3 = pivot.transform * pts[pts.size() / 2]
-		var pk := _pickable(String(o["value"]), meshes, Vector3(0.12, 0.12, 0.12), mid)
-		pk["pivot"] = pivot
-		pk["pts"] = pts
-		var far: Vector3 = pts[pts.size() - 1]
-		var tip: Vector3 = pivot.transform * (far + U * 0.1)
-		_label("%s · %s" % [String(o["label"]).split(" · ")[0], count_label], tip + Vector3(0, 0.05, 0))
-		for m in meshes:
-			extras.append({"mesh": m, "value": String(o["value"]), "role": "cane", "pivot": pivot})
+				if buds > 12:                            # more than one cane carries: double Guyot
+					dirs = [U, -U]; per = [ceili(buds / 2.0), floori(buds / 2.0)]
+					count_label = "2 canes · %d + %d buds" % [per[0], per[1]]
+		var arms := []                                   # [pivot, axis points in the pivot's frame]
+		var label_at := Vector3.ZERO
+		for a in dirs.size():
+			var dir: Vector3 = dirs[a]
+			var pivot := Node3D.new()                    # rotates the arm down onto the wire on confirm
+			pivot.position = head + W * (0.035 * (i - 1))
+			var axis := dir.cross(up)
+			pivot.basis = Basis(axis.normalized(), deg_to_rad(angles[mini(i, 2)])) if axis.length() > 0.01 else Basis()
+			parts.add_child(pivot)
+			var pts := []
+			var meshes := []
+			match training:
+				"Cordon":
+					var length := 0.6 * hs
+					var n: int = per[a]
+					var path := [Vector3.ZERO, dir * 0.08 + up * 0.03, dir * length + up * 0.03]
+					meshes.append(_segment(path[0], path[1], 0.021, 0.019, mat, pivot))
+					meshes.append(_segment(path[1], path[2], 0.019, 0.014, mat, pivot))
+					for k in n:
+						var base: Vector3 = path[1] + dir * ((length - 0.08) * (float(k) + 0.5) / float(n))
+						meshes.append(_segment(base, base + up * 0.055, 0.010, 0.008, mat, pivot))
+						for b in 2:
+							meshes.append(_mesh(bud, mat, Transform3D(Basis(), base + up * (0.022 + 0.027 * b) + dir * 0.009), pivot))
+					for k in 11:
+						pts.append(path[1] + dir * ((length - 0.08) * float(k) / 10.0))
+				"Einzelpfahl":
+					var length := 0.12 + float(per[a]) * INTERNODE
+					var prev := Vector3.ZERO
+					for k in range(1, 13):
+						var s := float(k) / 12.0
+						var q := dir * (length * 0.5 * (1.0 - cos(PI * s))) + up * (length * 0.42 * sin(PI * s))
+						meshes.append(_segment(prev, q, 0.012, 0.009, mat, pivot))
+						prev = q
+					for k in per[a]:
+						var s2 := (float(k) + 0.6) / float(per[a])
+						meshes.append(_mesh(bud, mat, Transform3D(Basis(), dir * (length * 0.5 * (1.0 - cos(PI * s2))) + up * (length * 0.42 * sin(PI * s2) + 0.011)), pivot))
+					for k in 13:
+						var s3 := float(k) / 12.0
+						pts.append(dir * (length * 0.5 * (1.0 - cos(PI * s3))) + up * (length * 0.42 * sin(PI * s3)))
+					pivot.set_meta("tied", true)         # a bow is bent, not laid on a wire
+				_:
+					# a short rise from the head to the wire, then the cane along it with its buds every INTERNODE
+					var length := 0.12 + float(per[a]) * INTERNODE
+					var rise := dir * 0.10 + up * 0.08
+					meshes.append(_segment(Vector3.ZERO, rise, 0.014, 0.012, mat, pivot))
+					meshes.append(_segment(rise, rise + dir * (length - 0.10), 0.012, 0.008, mat, pivot))
+					for k in per[a]:
+						meshes.append(_mesh(bud, mat, Transform3D(Basis(), rise + dir * (0.04 + INTERNODE * (float(k) + 0.5)) + up * 0.011), pivot))
+					for k in 11:
+						pts.append(rise + dir * ((length - 0.10) * float(k) / 10.0))
+			arms.append([pivot, pts])
+			for m in meshes:
+				extras.append({"mesh": m, "value": String(o["value"]), "role": "cane", "pivot": pivot})
+			if a == 0:
+				label_at = pivot.transform * ((pts[pts.size() - 1] as Vector3) + dir * 0.1)
+		var first: Array = arms[0]
+		var mid: Vector3 = (first[0] as Node3D).transform * (first[1] as Array)[(first[1] as Array).size() / 2]
+		var all_meshes := []
+		for e in extras:
+			if String(e["value"]) == String(o["value"]) and String(e["role"]) == "cane": all_meshes.append(e["mesh"])
+		var pk := _pickable(String(o["value"]), all_meshes, Vector3(0.12, 0.12, 0.12), mid)
+		pk["arms"] = arms
+		# the bud load's name and what it means on this vine (the sim's cane/spur/bow words depend on density)
+		_label("%s · %s" % [String(o["value"]), count_label], label_at + Vector3(0, 0.05, 0))
 
 
 ## A cylinder from a to b (in parent's frame).
@@ -567,14 +618,15 @@ func _nearest_cane(from: Vector3, dir: Vector3) -> String:
 	var best := ""
 	var bd := 0.06
 	for p in pickables:
-		var pv: Node3D = p["pivot"]
-		for q0 in p["pts"]:
-			var q: Vector3 = pv.global_transform * (q0 as Vector3)
-			var along := maxf((q - from).dot(d), 0.0)
-			var dist := (from + d * along).distance_to(q)
-			if dist < bd:
-				bd = dist
-				best = String(p["value"])
+		for arm in p["arms"]:
+			var pv: Node3D = arm[0]
+			for q0 in arm[1]:
+				var q: Vector3 = pv.global_transform * (q0 as Vector3)
+				var along := maxf((q - from).dot(d), 0.0)
+				var dist := (from + d * along).distance_to(q)
+				if dist < bd:
+					bd = dist
+					best = String(p["value"])
 	return best
 
 
