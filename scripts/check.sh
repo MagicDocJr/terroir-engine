@@ -24,6 +24,7 @@ step practice bash -c "$G --practice" &
 step learning bash -c "$G --learning" &
 step capture bash -c "$G --capture --plot mosel-blauschiefer --year 2015" &
 step fuzz bash -c "$G --fuzz" &
+step pregame bash -c "$G --pregame" &
 wait
 
 # 3. verdicts: each step's own success line, any script error, any layout issue
@@ -35,11 +36,12 @@ ok_line() { case "$1" in
   learning) grep -q "LEARNING DONE ok=true" "$LOGS/$1.log" ;;
   capture) grep -q "SAVE/LOAD ok" "$LOGS/$1.log" ;;
   fuzz) grep -q "FUZZ DONE" "$LOGS/$1.log" ;;
+  pregame) grep -q "PREGAME DONE ok=true" "$LOGS/$1.log" ;;
   *) true ;;
 esac; }
 FAIL=0
 printf "\n%-12s %-6s %6s  %s\n" STEP RESULT TIME NOTES
-for s in build compile tests layoutcheck scenarios practice learning capture fuzz; do
+for s in build compile tests layoutcheck scenarios practice learning capture fuzz pregame; do
   read code secs < "$LOGS/$s.status"
   notes=""; result=ok
   if ! ok_line "$s"; then result=FAIL; FAIL=1; fi

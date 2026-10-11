@@ -120,6 +120,13 @@ static func hbox(sep := 10) -> HBoxContainer:
 static func vbox(sep := 10) -> VBoxContainer:
 	var v := VBoxContainer.new(); v.add_theme_constant_override("separation", sep); return v
 
+## A row that wraps onto the next line when it runs out of width (children keep their minimum size; expanding
+## children share each line's spare width).
+static func flow(hsep := 12, vsep := 12) -> HFlowContainer:
+	var f := HFlowContainer.new(); f.add_theme_constant_override("h_separation", hsep); f.add_theme_constant_override("v_separation", vsep)
+	f.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return f
+
 static func spacer(expand_h := true, fixed := 0) -> Control:
 	var c := Control.new()
 	if fixed > 0:

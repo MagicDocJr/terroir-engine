@@ -313,48 +313,51 @@ static func _planting(shell) -> Control:
 	var var_notes := {}
 	for x in cat["varieties"]: var_notes[x["id"]] = x["note"]
 	var dens := [["3000", "3 000 vines/ha"], ["3800", "3 800 vines/ha"], ["5000", "5 000 vines/ha"], ["6500", "6 500 vines/ha"], ["8000", "8 000 vines/ha"], ["10000", "10 000 vines/ha"], ["12000", "12 000 vines/ha"]]
+	var learn = load("res://src/ui/learn_drawer.gd")
 	for b in P["blocks"]:
 		var bid: String = b["id"]
 		var pc: Dictionary = S["planting"][bid]
+		# the Block on the left, its choices in a row that wraps when the screen is narrow (a learn card is open)
 		var row := UI.hbox(12)
-		row.add_child(UI.block_tag(bid, 18))
-		var info := UI.vbox(0); info.custom_minimum_size = Vector2(380, 0)
+		var tag := UI.block_tag(bid, 18); tag.size_flags_vertical = Control.SIZE_SHRINK_BEGIN; row.add_child(tag)
+		var info := UI.vbox(0); info.custom_minimum_size = Vector2(300, 0)
 		info.add_child(UI.label(b["name"], 16, UI.INK, UI.f_body_b))
 		info.add_child(UI.label("%s, %d cm deep, %d mm water, lime %d %%, pH %.1f · %s-facing, %d %% slope%s" % [b["texture"], int(b["depth"]), int(b["taw"]), int(b["lime"]), float(b["ph"]), b["aspect"], int(b["slope"]),
 			" · frost pocket" if float(b["frostPocket"]) > 0.5 else ""], 13, UI.MUTED, null, true))
 		row.add_child(info)
+		var right := UI.vbox(6); right.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(right)
+		var fields := UI.flow(12, 8); right.add_child(fields)
 		var ov := UI.option(var_items, pc["variety"], func(x): pc["variety"] = x; shell.show_screen("planting"), 220)
-		ov.tooltip_text = var_notes.get(pc["variety"], ""); row.add_child(ov)
+		ov.tooltip_text = var_notes.get(pc["variety"], ""); fields.add_child(_field("Variety", ov))
 		var orr := UI.option(rs_items, pc["rootstock"], func(x): pc["rootstock"] = x; shell.show_screen("planting"), 170)
-		orr.tooltip_text = rs_notes.get(pc["rootstock"], ""); row.add_child(orr)
-		row.add_child(load("res://src/ui/learn_drawer.gd").link(shell, "rootstock", {"plot": P["id"], "block": bid}))
+		orr.tooltip_text = rs_notes.get(pc["rootstock"], "")
+		fields.add_child(_field("Rootstock", orr, learn.link(shell, "rootstock", {"plot": P["id"], "block": bid})))
 		var tr_items := []
 		for t in P["training"]: tr_items.append(t)
-		row.add_child(UI.option(tr_items, pc["training"], func(x): pc["training"] = x, 150))
-		row.add_child(load("res://src/ui/learn_drawer.gd").link(shell, "training-system", {"plot": P["id"], "block": bid}))
+		fields.add_child(_field("Training", UI.option(tr_items, pc["training"], func(x): pc["training"] = x, 150), learn.link(shell, "training-system", {"plot": P["id"], "block": bid})))
 		var steep_plot: bool = float(P["slope"]) >= 30
 		var rows_items := [["DownSlope", "Rows downhill"]] if steep_plot else [["NorthSouth", "Rows N–S"], ["EastWest", "Rows E–W"]]
 		if steep_plot: pc["rows"] = "DownSlope"
 		var ro := UI.option(rows_items, String(pc.get("rows", "NorthSouth")), func(x): pc["rows"] = x, 150)
 		ro.tooltip_text = "On steep slopes rows must run straight downhill (winch and safety). On flat land N–S rows light both sides of the canopy evenly; E–W rows shade the north side."
-		row.add_child(ro)
+		fields.add_child(_field("Rows", ro))
 		var d_items := dens.duplicate()
 		var has := false
 		for d in d_items:
 			if d[0] == str(int(pc["density"])): has = true
 		if not has: d_items.append([str(pc["density"]), "%d vines/ha" % int(pc["density"])])
-		row.add_child(UI.option(d_items, str(int(pc["density"])), func(x): pc["density"] = int(x), 170))
+		fields.add_child(_field("Density", UI.option(d_items, str(int(pc["density"])), func(x): pc["density"] = int(x), 170)))
 		var note := UI.label(rs_notes.get(pc["rootstock"], ""), 13, UI.MUTED, null, true); note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		if float(b["lime"]) >= 12 and pc["rootstock"] != "Fercal":
 			note.text = "⚠ %d %% active lime: this rootstock risks lime-induced chlorosis." % int(b["lime"]); note.add_theme_color_override("font_color", UI.SERIOUS)
-		row.add_child(note)
+		right.add_child(note)
 		tp[1].add_child(row)
 		tp[1].add_child(UI.divider())
 	v.add_child(tp[0])
 	v.add_child(load("res://src/ui/planting_guide.gd").build(shell, P, cat))
-	var bottom := UI.hbox(16); v.add_child(bottom)
+	var bottom := UI.flow(16, 16); v.add_child(bottom)
 	var a: Array = UI.panel("Timeline", "")
-	a[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	a[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL; a[0].custom_minimum_size = Vector2(420, 0)
 	var yrs := []
 	for y in range(int(cat["plantingYears"][0]), int(cat["plantingYears"][1]) + 1): yrs.append([str(y), str(y)])
 	var yh := UI.hbox(12); yh.add_child(UI.label("Planting year", 15, UI.INK2))
@@ -364,25 +367,37 @@ static func _planting(shell) -> Control:
 		[int(S["year"]), fv - 1, fv, "Historical" if fv <= 2025 else "synthetic", R["name"]], 15, UI.INK2, null, true))
 	bottom.add_child(a[0])
 	var s: Array = UI.panel("Staff", "part-time on an estate this size · cost per year")
-	s[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	s[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL; s[0].custom_minimum_size = Vector2(560, 0)
 	var desc := {"Junior": "never wrong, never insightful", "Experienced": "longer forecasts, better timing", "Senior": "reads the vintage, suggests clever moves"}
 	for role in [["vineyardManager", "Vineyard manager"], ["cellarMaster", "Cellar master"]]:
 		var h := UI.hbox(12)
 		var l := UI.label(role[1], 15, UI.INK2); l.custom_minimum_size = Vector2(150, 0); h.add_child(l)
 		var key: String = role[0]
-		h.add_child(UI.segmented(cat["staffLevels"], S[key], func(x): S[key] = x; shell.show_screen("planting"), 120))
+		var pick := UI.vbox(4); pick.size_flags_horizontal = Control.SIZE_EXPAND_FILL; h.add_child(pick)
+		pick.add_child(UI.segmented(cat["staffLevels"], S[key], func(x): S[key] = x; shell.show_screen("planting"), 120))
 		var role_key: String = "vineyard" if key == "vineyardManager" else "cellar"
-		h.add_child(UI.label("%s · %s" % [UI.euro(int(P["salaries"][S[key]][role_key])), desc[S[key]]], 13, UI.MUTED))
+		pick.add_child(UI.label("%s · %s" % [UI.euro(int(P["salaries"][S[key]][role_key])), desc[S[key]]], 13, UI.MUTED, null, true))
 		s[1].add_child(h)
 	bottom.add_child(s[0])
 	var e: Array = UI.panel("Estate", "")
-	e[0].custom_minimum_size = Vector2(460, 0)
+	e[0].custom_minimum_size = Vector2(440, 0); e[0].size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	e[1].add_child(UI.line_edit(S["estateName"], func(t): S["estateName"] = t, 400))
 	var go := UI.button("Plant and start ›", true, 18); go.custom_minimum_size = Vector2(0, 50)
 	go.pressed.connect(func(): shell.start_game(setup_json(shell)))
 	e[1].add_child(go)
 	bottom.add_child(e[0])
 	return UI.scroll(v)
+
+## A planting choice with its caption above it (and a Learn link beside the caption).
+static func _field(caption: String, control: Control, link: Control = null) -> Control:
+	var f := UI.vbox(2)
+	var cap := UI.hbox(6); cap.custom_minimum_size = Vector2(0, 31)      # the same height with or without a Learn link
+	var l := UI.label(caption, 12, UI.MUTED); l.size_flags_vertical = Control.SIZE_SHRINK_CENTER; cap.add_child(l)
+	if link != null:
+		link.size_flags_vertical = Control.SIZE_SHRINK_CENTER; cap.add_child(link)
+	f.add_child(cap)
+	f.add_child(control)
+	return f
 
 ## The NewGame payload from the choices on the Planting screen (also used by capture mode).
 static func setup_json(shell) -> Dictionary:

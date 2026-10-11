@@ -8,6 +8,7 @@ extends RefCounted
 const UI := preload("res://src/ui/ui.gd")
 const V := preload("res://src/ui/learn_visuals.gd")
 const T := preload("res://src/ui/tasting_ui.gd")
+const AT := 0.58     # the card's left edge as a share of the window (shell.gd narrows the screen behind it to here)
 
 ## A small "Learn" link for a choice row; a gold dot until the card has been opened once.
 static func link(shell, card_id: String, ctx := {}) -> Control:
@@ -26,12 +27,12 @@ static func build(shell, J: Dictionary) -> Control:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# no dim layer: the screen behind stays fully usable (the choice can be made with the card open); a soft edge marks the drawer
 	var edge := ColorRect.new(); edge.color = Color(0, 0, 0, 0.35); edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	edge.anchor_left = 0.58; edge.anchor_right = 0.58; edge.anchor_bottom = 1.0; edge.offset_left = -10; edge.offset_right = 0
+	edge.anchor_left = AT; edge.anchor_right = AT; edge.anchor_bottom = 1.0; edge.offset_left = -10; edge.offset_right = 0
 	root.add_child(edge)
 	var panel := PanelContainer.new()
 	var st := UI.sb(UI.SURFACE, 0, UI.GOLD.darkened(0.25), 0, 22); st.border_width_left = 3
 	panel.add_theme_stylebox_override("panel", st)
-	panel.anchor_left = 0.58; panel.anchor_right = 1.0; panel.anchor_top = 0.0; panel.anchor_bottom = 1.0
+	panel.anchor_left = AT; panel.anchor_right = 1.0; panel.anchor_top = 0.0; panel.anchor_bottom = 1.0
 	panel.offset_left = 0; panel.offset_right = 0
 	root.add_child(panel)
 	var v := UI.vbox(14)

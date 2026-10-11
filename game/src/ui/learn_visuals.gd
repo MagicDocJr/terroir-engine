@@ -18,44 +18,36 @@ static func build(shell, J: Dictionary) -> Control:
 		"oak-aromas": return _oak(J.get("visualData", null))
 	return null
 
-# ------------------------------------------------------------------ training systems: the game's own vine, turning
+# ------------------------------------------------------------------ training systems: the game's own vines, named
 static func _turntable(shell, J: Dictionary) -> Control:
-	var v := UI.vbox(8)
 	var kind: String = shell.state.get("learn_training", "Guyot")
 	var season: String = shell.state.get("learn_season", "Summer")
-	var bar := UI.hbox(12); v.add_child(bar)
-	bar.add_child(UI.segmented(["Einzelpfahl", "Guyot", "Cordon"], kind, func(x): shell.state["learn_training"] = x; shell.reopen_learn(), 110))
-	bar.add_child(UI.spacer())
-	bar.add_child(UI.segmented(["Winter", "Summer"], season, func(x): shell.state["learn_season"] = x; shell.reopen_learn(), 80))
-	var rel := "models/vine_%s_%s.glb" % [kind.to_lower(), "g0" if season == "Winter" else "g4"]
-	if not (A.available() and A.exists(rel)):
-		var d = load("res://src/ui/planting_guide.gd").TrainingDiagram.new(); d.kind = kind; d.custom_minimum_size = Vector2(0, 220)
-		v.add_child(d)
+	var TM = load("res://src/ui/training_model.gd")
+	if not TM.available():
+		# no 3D assets (a build without game/assets3d): the drawings, winter and summer side by side
+		var v := UI.vbox(8)
+		v.add_child(UI.segmented(["Einzelpfahl", "Guyot", "Cordon"], kind, func(x): shell.state["learn_training"] = x; shell.reopen_learn(), 110))
+		var row := UI.hbox(10); v.add_child(row)
+		for s in ["Winter", "Summer"]:
+			var d = load("res://src/ui/planting_guide.gd").TrainingDiagram.new(); d.kind = kind; d.season = s; d.custom_minimum_size = Vector2(0, 240)
+			d.size_flags_horizontal = Control.SIZE_EXPAND_FILL; row.add_child(d)
 		return v
-	var svc := SubViewportContainer.new(); svc.stretch = true; svc.custom_minimum_size = Vector2(0, 260)
-	var vp := SubViewport.new(); vp.own_world_3d = true; vp.transparent_bg = true; vp.msaa_3d = Viewport.MSAA_4X
-	svc.add_child(vp)
-	var env := WorldEnvironment.new(); var e := Environment.new()
-	e.background_mode = Environment.BG_CLEAR_COLOR; e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	e.ambient_light_color = Color(0.75, 0.78, 0.82); e.ambient_light_energy = 0.6; e.tonemap_mode = Environment.TONE_MAPPER_AGX
-	env.environment = e; vp.add_child(env)
-	var sun := DirectionalLight3D.new(); sun.rotation_degrees = Vector3(-40, 30, 0); sun.light_energy = 1.4; sun.shadow_enabled = true; vp.add_child(sun)
-	var pivot := Node3D.new(); vp.add_child(pivot)
-	var vine := A.scene(rel); pivot.add_child(vine)
-	if kind != "Einzelpfahl":
-		# the fruiting wire along the row, at the height the game's vine models use (build_vineyard.py: Guyot 0.80 m, Cordon 0.95 m)
-		var wire := MeshInstance3D.new(); var wm := CylinderMesh.new(); wm.top_radius = 0.004; wm.bottom_radius = 0.004; wm.height = 2.2
-		var wmat := StandardMaterial3D.new(); wmat.albedo_color = Color(0.75, 0.76, 0.78); wmat.metallic = 0.8; wmat.roughness = 0.35; wm.material = wmat
-		wire.mesh = wm; wire.rotation_degrees = Vector3(0, 0, 90); wire.position = Vector3(0, 0.80 if kind == "Guyot" else 0.95, 0); pivot.add_child(wire)
-	var cam := Camera3D.new(); cam.position = Vector3(0, 1.0, 2.6); cam.look_at_from_position(cam.position, Vector3(0, 0.85, 0)); cam.fov = 38
-	vp.add_child(cam)
-	var spin := func():
-		var tw := pivot.create_tween().set_loops(); tw.tween_property(pivot, "rotation:y", TAU, 16.0).as_relative()
-	pivot.tree_entered.connect(spin, CONNECT_ONE_SHOT)
-	v.add_child(svc)
-	var what := {"Einzelpfahl": "two arched canes tied to the vine's own stake, no wires", "Guyot": "one new cane laid along the fruiting wire each winter", "Cordon": "a permanent arm along the wire, pruned to short spurs"}
-	v.add_child(UI.label("The game's own vine, %s: %s; %s." % [kind, what[kind], "winter, pruned wood" if season == "Winter" else "summer, full canopy"], 13, UI.MUTED, null, true))
-	return v
+	var m = TM.new()
+	m.kind = kind; m.season = season; m.variety = _variety(shell)
+	m.on_change = func(k, s): shell.state["learn_training"] = k; shell.state["learn_season"] = s   # changes in place: the card keeps its scroll
+	return m
+
+## The Variety on the card's Block (the game's Block, or the Planting screen's choice), for the leaves.
+static func _variety(shell) -> String:
+	var ctx: Dictionary = shell._learn_open[1] if shell._learn_open[1] is Dictionary else {}
+	var bid := String(ctx.get("block", ""))
+	if Sim.HasGame():
+		for b in shell.D.get("blocks", []):
+			if String(b.get("id", "")) == bid: return String(b.get("variety", "Riesling"))
+	var pc: Dictionary = shell.setup.get("planting", {}).get(bid, {})
+	for x in shell.CAT.get("varieties", []):
+		if String(x.get("id", "")) == String(pc.get("variety", "")): return String(x.get("name", "Riesling"))
+	return "Riesling"
 
 # ------------------------------------------------------------------ rootstocks side by side
 static func _rootstocks(D) -> Control:
