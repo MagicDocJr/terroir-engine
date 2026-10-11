@@ -73,9 +73,11 @@ def main() -> None:
             print(f"{x['name']:<28} {x['voice_id']}  {x.get('gender','')}, {x.get('age','')}, {x.get('accent','')} — {(x.get('description') or '')[:70]}")
     elif a[0] == "samples":
         os.makedirs(SAMPLES, exist_ok=True)
+        names = {x["voice_id"]: x["name"].split(" - ")[0].split()[0] for x in json.loads(call("/v1/voices"))["voices"]}
         for vid in a[1:]:
-            path = os.path.join(SAMPLES, f"{vid}.mp3")
-            open(path, "wb").write(tts(SAMPLE_TEXT, vid, v))
+            audio = tts(SAMPLE_TEXT, vid, v)          # before opening the file: a failed call leaves no empty file
+            path = os.path.join(SAMPLES, f"{names.get(vid, vid)}_{vid}.mp3")
+            open(path, "wb").write(audio)
             print("sample", path)
     elif a[0] == "render":
         vid = a[a.index("--voice") + 1] if "--voice" in a else v.get("voice_id", "")
@@ -93,7 +95,8 @@ def main() -> None:
             path = os.path.join(OUT, f"{cid}.mp3")
             if man.get(cid) == h and os.path.exists(path) and "--force" not in a:
                 continue
-            open(path, "wb").write(tts(text, vid, v))
+            audio = tts(text, vid, v)
+            open(path, "wb").write(audio)
             man[cid] = h
             chars += len(text)
             json.dump(man, open(man_path, "w"), indent=1)

@@ -1,35 +1,77 @@
 {
-  "about": "The intro's narration (cinema.gd): one clip for the Region, one for the Plot, one for the winery and the welcome. Spoken by the narrator voice (tools/voice/narrate.py renders each clip to game/assets3d/audio/voice/<clip>.mp3) and shown as captions. Facts from docs/science/regions-and-plots.md (Region summaries, Plot table) and docs/science/law.md; numbers are written out for the voice. The estate name and the year are shown as titles, never spoken (the clips are recorded once).",
-  "sources": ["docs/science/regions-and-plots.md §1, §3", "docs/science/law.md §3", "docs/science/canopy-and-yield.md §2.7"],
-  "voice": {"model": "eleven_multilingual_v2", "voice_id": "", "stability": 0.55, "similarity_boost": 0.8, "style": 0.15},
+  "about": "The intro's narration (cinema.gd), spoken by the Mentor (CONTEXT.md: the retiring expert who guides the player through the first Vintage) as a warm welcome: one clip for the Region, one for the Plot, one for the winery and the welcome. Rendered by tools/voice/narrate.py to game/assets3d/audio/voice/<clip>.mp3 and shown as captions. Facts from docs/science/regions-and-plots.md (Region summaries, Plot table) and docs/science/law.md; numbers are written out for the voice. The estate name and the year are shown as titles, never spoken (the clips are recorded once).",
+  "sources": [
+    "docs/science/regions-and-plots.md §1, §3",
+    "docs/science/law.md §3",
+    "docs/science/canopy-and-yield.md §2.7"
+  ],
+  "voice": {
+    "model": "eleven_multilingual_v2",
+    "voice_id": "nPczCjzI2devNBz1zQrb",
+    "voice_name": "Brian (ElevenLabs premade: deep, resonant, comforting)",
+    "stability": 0.55,
+    "similarity_boost": 0.8,
+    "style": 0.15
+  },
   "regions": {
     "mosel": {
-      "title": "Mosel", "sub": "Germany · the world's largest steep-slope wine region",
-      "text": "This is the Mosel, the largest steep-slope wine region in the world. Here the river has cut deep into the slate hills, and the vines climb almost straight up from the water. It is a cool place to grow grapes. The dark Devonian slate warms quickly in the sun, and the long, slow autumn keeps the acidity bright. Riesling from these slopes is light on its feet, precise, and moderate in alcohol."
+      "title": "Mosel",
+      "sub": "Germany · the world's largest steep-slope wine region",
+      "text": "Welcome to the Mosel. I've spent my whole life on these slopes, and I still love this view. This is the largest steep-slope wine region in the world. The river has cut deep into the slate, and the vines climb almost straight up from the water. It's cool here, but that dark slate warms quickly in the sun, and the long, slow autumn keeps the acidity bright. That's what gives our Riesling its lightness and its precision."
     },
     "cote-dor": {
-      "title": "Côte d'Or", "sub": "Burgundy, France · limestone and marl, facing the morning sun",
-      "text": "This is the Côte d'Or, in Burgundy: a narrow escarpment facing east and south-east, where limestone and marl catch the morning sun. Here, more than anywhere, the exact patch of ground matters. The same Pinot Noir or Chardonnay can be a regional wine on the flat land below, a village wine, or a Premier Cru from the best part of the slope. Spring frost and summer heat test every grower."
+      "title": "Côte d'Or",
+      "sub": "Burgundy, France · limestone and marl, facing the morning sun",
+      "text": "Welcome to the Côte d'Or. I've worked this slope for forty years, and it still surprises me. It's a narrow escarpment facing east and south-east, where limestone and marl catch the morning sun. Here, the exact patch of ground matters more than anywhere. The same Pinot Noir can be a regional wine down on the flat land, a village wine, or a Premier Cru from the best part of the slope. Watch out for spring frost, and summer heat."
     },
     "napa": {
-      "title": "Napa Valley", "sub": "California, USA · a Mediterranean climate cooled by the bay",
-      "text": "This is the Napa Valley, in California. A Mediterranean climate: rain in winter, long dry summers. In the south, fog and wind from San Pablo Bay keep Carneros cool. Up the valley it grows warmer, and the mountain vineyards sit above the summer fog. On the gravelly benches at the foot of the western hills, Cabernet Sauvignon finds its benchmark sites."
+      "title": "Napa Valley",
+      "sub": "California, USA · a Mediterranean climate cooled by the bay",
+      "text": "Welcome to the Napa Valley. Rain in winter, long dry summers: a grower's dream, mostly. Down south, fog and wind roll in from San Pablo Bay and keep Carneros cool. Up the valley it gets warmer, and the mountain vineyards sit above the summer fog. And on the gravelly benches at the foot of the western hills, Cabernet Sauvignon finds its finest sites."
     }
   },
   "plots": {
-    "mosel-uferflur": {"text": "Your land is Uferflur: one point six hectares of flat riverbank, just above the flood line. The soil is deep and fertile, and the vines grow with vigour. On still spring nights the cold air settles here, and in autumn the fog lies longest, so frost and rot need watching."},
-    "mosel-seitental": {"text": "Your land is Seitental: a gentle side valley facing east, with loess over slate. The vines take the morning sun and stay cool in the afternoon, so they ripen late, and slowly."},
-    "mosel-blauschiefer": {"text": "Your land is Blauschiefer-Hang: one point two hectares of blue Devonian slate, tilted at fifty-five per cent and facing south-west. The classic Middle Mosel Riesling slope. No tractor can work ground this steep. Most of the work here is done by hand."},
-    "mosel-terrassen": {"text": "Your land is a set of slate terraces, held up by dry-stone walls and facing south. The steepest, warmest site on your stretch of the river, and the hardest to work: every task, from pruning to picking, is done by hand."},
-    "cotedor-plaine": {"text": "Your land is Plaine des Bas: one hectare of flat land below the slope. Deep clay, fertile and easy to work, but prone to frost, and its wines can only be sold as Bourgogne."},
-    "cotedor-hautes": {"text": "Your land is Plateau des Hautes, up on the Hautes-Côtes at around four hundred metres. Limestone, wind and cool nights: the grapes ripen late here, and in a hot year that slow ripening is a gift."},
-    "cotedor-village": {"text": "Your land is Mi-Côte Villages: half a hectare of marl and limestone in the middle of the slope, facing east-south-east. Village wine, with the rules to match: dense planting, a limit on the buds you leave at pruning, and no irrigation."},
-    "cotedor-premiercru": {"text": "Your land is Clos du Premier: half a hectare of thin limestone rubble facing the morning sun, in the sweet spot of the Côte. Premier Cru. The soil gives the vines little, and they give back concentration."},
-    "napa-floor": {"text": "Your land is Valley Floor Loam: one hectare of heavy, fertile loam in the heart of the valley. The vines grow strongly, irrigation is allowed, and on cold spring nights the low spots can frost."},
-    "napa-carneros": {"text": "Your land is Carneros Clay: one point two hectares of shallow clay over claypan, at the cool southern end of the valley, where fog and wind come in from the bay. Pinot Noir and Chardonnay are at home here. Cabernet Sauvignon struggles to ripen."},
-    "napa-mountain": {"text": "Your land is a mountain hillside, high above the fog line. Thin volcanic and sedimentary soils, small crops, and wines with firm tannin."},
-    "napa-bench": {"text": "Your land is Rutherford Bench: one hectare on the gravelly alluvial fan at the foot of the western hills. This is benchmark Cabernet Sauvignon country."}
+    "mosel-uferflur": {
+      "text": "And this is your land, Uferflur. One point six hectares of flat riverbank, just above the flood line. Deep, fertile soil: your vines will grow like mad. But on still spring nights the cold air settles here, and the autumn fog lingers longest. We'll keep an eye on frost and rot together."
+    },
+    "mosel-seitental": {
+      "text": "And this is your land, Seitental. A gentle side valley facing east, loess over slate. Your vines get the morning sun and stay cool in the afternoon, so they ripen late, and slowly. Patience pays off here."
+    },
+    "mosel-blauschiefer": {
+      "text": "And this is your land, Blauschiefer-Hang. One point two hectares of blue Devonian slate, at fifty-five per cent, facing south-west. The classic Middle Mosel Riesling slope. No tractor can work ground this steep, so most of the work is done by hand. You'll get to know every vine."
+    },
+    "mosel-terrassen": {
+      "text": "And this is your land: slate terraces, held up by dry-stone walls and facing south. The steepest, warmest ground around here, and the hardest work you'll ever love. Every task, from pruning to picking, is done by hand."
+    },
+    "cotedor-plaine": {
+      "text": "And this is your land, Plaine des Bas. One hectare of flat land below the slope. Deep clay, fertile and easy to work, but it catches the frost, and its wines can only be sold as Bourgogne. Good wine is still possible. I'll show you how."
+    },
+    "cotedor-hautes": {
+      "text": "And this is your land, Plateau des Hautes, up on the Hautes-Côtes at around four hundred metres. Limestone, wind and cool nights. The grapes ripen late up here, and in a hot year, that slow ripening is a real gift."
+    },
+    "cotedor-village": {
+      "text": "And this is your land, Mi-Côte Villages. Half a hectare of marl and limestone in the middle of the slope, facing east-south-east. Village wine, with the rules to match: dense planting, a limit on the buds you leave at pruning, and no irrigation. Don't worry, I'll help you keep to them."
+    },
+    "cotedor-premiercru": {
+      "text": "And this is your land, Clos du Premier. Half a hectare of thin limestone rubble facing the morning sun, in the sweet spot of the Côte. Premier Cru. The soil gives the vines very little, and they give it back as concentration. You've chosen well."
+    },
+    "napa-floor": {
+      "text": "And this is your land, Valley Floor Loam. One hectare of heavy, fertile loam in the heart of the valley. Your vines will grow strongly, you're allowed to irrigate, and on cold spring nights the low spots can frost. We'll watch for that."
+    },
+    "napa-carneros": {
+      "text": "And this is your land, Carneros Clay. One point two hectares of shallow clay over claypan, at the cool southern end of the valley, where the fog comes in from the bay. Pinot Noir and Chardonnay feel at home here. Cabernet, not so much."
+    },
+    "napa-mountain": {
+      "text": "And this is your land: a mountain hillside, high above the fog line. Thin volcanic soils, small crops, and wines with real grip. It's tough country, and it makes wines with character."
+    },
+    "napa-bench": {
+      "text": "And this is your land, Rutherford Bench. One hectare on the gravelly fan at the foot of the western hills. This is where some of the finest Cabernet Sauvignon in the valley is grown. No pressure."
+    }
   },
-  "winery": {"text": "And this is your winery. In the hall, the steel tanks wait for the harvest. Below, in the vaulted cellar, the wine will rest in wood."},
-  "welcome": {"text": "The vines were planted three years ago, and this year they give their first real crop. What happens next is up to you: how you prune, when you pick, how you make the wine. Welcome to your estate."}
+  "winery": {
+    "text": "And here's your winery. Upstairs, the steel tanks are waiting for the harvest. Downstairs, in the vaulted cellar, your wine will rest in wood. I've kept it ready for you."
+  },
+  "welcome": {
+    "text": "The vines went in three years ago, and this year they give their first real crop. I'll be with you through your first vintage, and then it's all yours: how you prune, when you pick, how you make the wine. Come on. Let's get started."
+  }
 }
