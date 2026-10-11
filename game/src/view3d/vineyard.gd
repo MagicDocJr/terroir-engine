@@ -2424,3 +2424,58 @@ func hud_text(pos: Vector3) -> String:
 
 static func _stage_label(st: String) -> String:
 	return {"FruitSet": "Fruit set", "BunchClosure": "Bunch closure", "Veraison": "Véraison", "LeafFall": "Leaf fall"}.get(st, st)
+
+
+# =============================================================================================== intro cinematic
+## The intro's camera moves over this Plot (cinema.gd): [{kind: "line"|"orbit", dur, …}]. Positions are this node's frame;
+## cinema.gd keeps every eye at least a few metres above the ground. Look only.
+##   region   across the valley, high, drifting in towards the slope
+##   plot     a low glide up over the Blocks
+##   winery   a slow half-orbit round the winery, the sign in view
+##   welcome  down into the alley at the walk-in spot, ending where the player starts walking
+func cinema_shots() -> Array:
+	var cx := (band_x0 + band_x1) * 0.5
+	var w := band_x1 - band_x0
+	var c := Vector3(cx, H(cx, 0.0), 0.0)
+	var far := clampf(w * 1.6, 150.0, 260.0)
+	var out := []
+	# looking back up at the Plot from the downhill side of the valley, low enough that the slope fills the frame
+	out.append({"kind": "line", "dur": 14.0,
+		"p0": c + Vector3(-w * 0.55, 62.0, hz + far), "p1": c + Vector3(w * 0.08, 34.0, hz + far * 0.6),
+		"t0": c + Vector3(0, 18.0, -hz * 0.5), "t1": c + Vector3(0, 4.0, -hz * 0.15)})
+	# over the Blocks, uphill
+	var gx0 := band_x0 + w * 0.2
+	var gx1 := band_x0 + w * 0.55
+	out.append({"kind": "line", "dur": 12.0,
+		"p0": Vector3(gx0, H(gx0, hz + 30.0) + 24.0, hz + 30.0), "p1": Vector3(gx1, H(gx1, -hz * 0.25) + 10.0, -hz * 0.25),
+		"t0": Vector3(gx0 + 8.0, H(gx0 + 8.0, hz * 0.2), hz * 0.2), "t1": Vector3(gx1 + 10.0, H(gx1 + 10.0, -hz), -hz)})
+	# round the winery
+	var o: Vector3 = estate.get("origin", c)
+	var door: Vector2 = estate.get("door", Vector2(o.x, o.z + 1.0))
+	var a0 := atan2(door.x - o.x, door.y - o.z) - 0.9               # start beside the door side, swing past it
+	out.append({"kind": "orbit", "dur": 11.0, "c": o + Vector3(0, 3.0, 0), "r0": 58.0, "r1": 44.0, "a0": a0, "a1": a0 + 1.1, "h0": 24.0, "h1": 11.0})
+	# into the row where the walk begins
+	var walk: Array = camera_preset("walk")
+	var wp: Vector3 = walk[0]
+	var wt: Vector3 = walk[1]
+	var back := Vector3(wp.x - wt.x, 0, wp.z - wt.z).normalized()
+	out.append({"kind": "line", "dur": 10.0, "p0": wp + back * 16.0 + Vector3(0, 9.0, 0), "p1": wp, "t0": wt + Vector3(0, -2.0, 0), "t1": wt})
+	return out
+
+
+## The intro's time of day for day-of-year doy: a low sun (7–20° up) as close as possible to side-on to the slope (its
+## azimuth 90° from the Plot's aspect), so the rows throw long shadows across the view instead of being lit flat from
+## behind the camera; evenings win a tie.
+func golden_hour(doy: int) -> float:
+	var best := 18.0
+	var bs := INF
+	var h := 4.0
+	while h <= 21.5:
+		var sp := _solar(doy, h)
+		if sp.x >= 7.0 and sp.x <= 20.0:
+			var off := minf(absf(wrapf(sp.y - (aspect + 90.0), -180.0, 180.0)), absf(wrapf(sp.y - (aspect - 90.0), -180.0, 180.0)))
+			var score := off - (5.0 if h > 12.0 else 0.0)
+			if score < bs:
+				bs = score; best = h
+		h += 0.1
+	return best

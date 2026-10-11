@@ -57,6 +57,7 @@ var playing := false            # continuous play: advances every tick until an 
 var play_speed := 1             # days per 0.25 s tick (4 days a second)
 var play_timer: Timer
 var sfx: Node
+var music: Node                 # background music by season and screen (music.gd)
 var _screen_cache := {}          # screen id → {node, ver, ret}: built screens reused while the game state is unchanged
 var _chrome_ver := 0             # bumps whenever a new snapshot is shown
 var learn_layer: Control = null   # the open learn drawer (one at a time)
@@ -90,14 +91,16 @@ func _ready() -> void:
 	statusbar = PanelContainer.new(); root_box.add_child(statusbar)
 	_make_toast()
 	sfx = load("res://src/ui/sfx.gd").new(); add_child(sfx)
+	music = load("res://src/ui/music.gd").new(); add_child(music)
 	# harness runs never touch the player's study record or saves, and each harness has its own, so they can run in parallel
-	for h in ["scenarios", "learning", "practice", "fuzz", "perf", "pregame", "layoutcheck", "capture"]:
+	for h in ["scenarios", "learning", "practice", "fuzz", "perf", "pregame", "layoutcheck", "capture", "intro"]:
 		if ("--" + h) in args:
 			harness = h
 			Sim.SetRecordPath("user://tasting_record_test_%s.json" % h); Sim.SetSaveDir("user://saves_test_%s" % h)
 			break
 	if capture:
 		sfx.enabled = false
+		music.set_process(false)
 	get_tree().node_added.connect(_on_node_added)
 	play_timer = Timer.new(); play_timer.wait_time = 0.25; play_timer.timeout.connect(_play_tick); add_child(play_timer)
 	if "--sfxcheck" in args:
@@ -107,6 +110,7 @@ func _ready() -> void:
 		print("SFX saved"); get_tree().quit(); return
 	if "--perf" in args: capture = true; _perf.call_deferred(); return
 	if "--pregame" in args: capture = true; _pregame_shots.call_deferred(); return
+	if "--intro" in args: capture = true; _intro_shots.call_deferred(); return
 	if "--avatars" in args: capture = true; _avatar_sheet.call_deferred(); return
 	if "--scenarios" in args:
 		capture = true; _scenario_test.call_deferred(); return
@@ -238,6 +242,7 @@ func start_game(setup_json: Dictionary) -> void:
 	state.clear()
 	_build_chrome()
 	show_screen("inbox")
+	if harness == "" and not capture: play_intro()
 
 # ------------------------------------------------------------------ navigation
 func show_screen(id: String) -> void:
@@ -245,6 +250,7 @@ func show_screen(id: String) -> void:
 	if not SCREENS.has(id): id = "inbox"
 	if not Sim.HasGame() and not (id in PREGAME) and not (id in TASTING): id = "title"
 	if id != current and sfx: sfx.play("page")
+	if music: music.set_mood(_music_mood(id))
 	if id in TASTING and not (current in TASTING): state.erase("tp_lobby")   # the Timeline, the date or the record may have moved on
 	# re-rendering the same screen (after a choice) keeps the scroll position instead of jumping to the top: the old
 	# screen stays on top until the new one has its layout and scroll position, so nothing flashes or jumps
@@ -373,6 +379,7 @@ func _unhandled_input(e: InputEvent) -> void:
 	elif k == KEY_SPACE: advance(1, false)
 	elif k == KEY_P: toggle_play()
 	elif k == KEY_M: notify("Sound " + ("on" if sfx.toggle() else "off") + ".")
+	elif k == KEY_N: notify("Music " + ("on" if music.toggle() else "off") + (". Add tracks to game/assets3d/music (docs/music.md)." if not music.has_music() else "."))
 	elif k == KEY_ENTER or k == KEY_KP_ENTER: advance(continue_days(), true)
 
 # ------------------------------------------------------------------ learn cards (learning-core design §7)
@@ -416,6 +423,39 @@ func _fit_beside_drawer() -> void:
 
 # ------------------------------------------------------------------ 3D
 ## kind "" (Tab or the 3D button) resumes where you left the 3D view; a named place ("vineyard", "hall", "cellar") goes there.
+## The music's mood for a screen: the theme before a game, the tasting set for practice, else the calendar's season.
+func _music_mood(id: String) -> String:
+	if id in TASTING: return "tasting"
+	if not Sim.HasGame() or id in PREGAME: return "theme"
+	var m := int(String(D.get("date", "2000-06-01")).substr(5, 2))
+	return "spring" if m in [3, 4, 5] else "summer" if m in [6, 7, 8] else "autumn" if m in [9, 10, 11] else "winter"
+
+## The intro after "Plant and start": the flight over the new Estate (view3d.gd play_intro), then the Inbox. Esc skips it.
+func play_intro() -> void:
+	if not ResourceLoader.exists("res://src/view3d/view3d.tscn"):
+		return
+	if playing: toggle_play()
+	_ensure_3d()
+	root_box.visible = false
+	view3d.visible = true
+	music.set_mood("theme")
+	var narrator = view3d.cinema.voice if view3d.get("cinema") != null else null
+	if narrator != null and not (narrator in music.duck_players): music.duck_players.append(narrator)
+	view3d.play_intro(D)
+	await view3d.intro_finished
+	_hide_3d()
+	show_screen("inbox")
+
+func _ensure_3d() -> void:
+	if view3d != null: return
+	view3d = load("res://src/view3d/view3d.tscn").instantiate()
+	add_child(view3d)
+	if view3d.has_signal("exit_requested"): view3d.exit_requested.connect(func(): _hide_3d())
+	if view3d.has_signal("task_chosen"): view3d.task_chosen.connect(_on_task_chosen)
+	if view3d.has_signal("advance_requested"): view3d.advance_requested.connect(_on_advance_requested)
+	if view3d.has_signal("timelapse_toggled"): view3d.timelapse_toggled.connect(_on_timelapse_toggled)
+	view3d.visible = false
+
 func toggle_3d(kind := "") -> void:
 	if playing: toggle_play()          # 2D continuous play and the 3D time-lapse must not run together
 	var first := view3d == null
@@ -1298,6 +1338,31 @@ func _avatar_sheet() -> void:
 	var small := UI.hbox(10); small.position = Vector2(40, 700); add_child(small)
 	for p in people.slice(0, 7): small.add_child(load("res://src/ui/avatar.gd").make(p[0], p[1], 36))
 	await _shot("avatars")
+	get_tree().quit()
+
+## The intro on a new game (default Blauschiefer-Hang; --plot <id>): a screenshot every 2.5 s (intro_NN.png) while it plays.
+## scripts/record.sh intro films it.
+func _intro_shots() -> void:
+	var args := OS.get_cmdline_user_args()
+	var plot := "mosel-blauschiefer"
+	var k := args.find("--plot"); if k >= 0: plot = args[k + 1]
+	var reg := plot.split("-")[0].replace("cotedor", "cote-dor")
+	Sim.NewGame(JSON.stringify({"plotId": plot, "plantingYear": 2015, "seed": 7, "estateName": {"mosel": "Weingut Schieferhang", "cote-dor": "Domaine des Pierres", "napa": "Stonefield Cellars"}.get(reg, "My Estate")}))
+	D = JSON.parse_string(Sim.Snapshot())
+	_build_chrome()
+	show_screen("inbox")
+	var done := [false]
+	_ensure_3d()
+	view3d.intro_finished.connect(func(): done[0] = true, CONNECT_ONE_SHOT)
+	play_intro()
+	var n := 0
+	var t0 := Time.get_ticks_msec()
+	while not done[0] and Time.get_ticks_msec() - t0 < 120000:
+		await get_tree().create_timer(2.5).timeout
+		if done[0]: break
+		await _shot("intro_%s_%02d" % [plot.split("-")[0], n]); n += 1
+	for f in 30: await get_tree().process_frame
+	print("INTRO DONE ok=%s shots=%d" % [done[0], n])
 	get_tree().quit()
 
 ## The scroll position of the screen the player sees (the top one; a replacement waits invisibly under it).
