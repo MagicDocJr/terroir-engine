@@ -51,6 +51,10 @@ Found while building or reviewing; not urgent, but not to be forgotten. Remove a
 - The training-system learn card's 3D model shows winter, spring and summer; flowering, véraison colour and autumn leaves are not offered, and the summer canopy always has its fruit-zone leaves pulled (to show the bunches). A "leaves on / pulled" switch would teach leaf removal too.
 - Fruit-zone leaf removal is drawn as a share of the basal leaves gone (both sides 0.9, one side 0.5), not by side: the leaf shader does not know which side of the row faces east.
 - The Einzelpfahl summer canopy in the vine models has every shoot reaching the top; growers tie three to five shoots up the stake as next year's canes and top the rest just above the bunches (§2.7). Model that in build_vineyard.py.
+- Screens with fixed-width rows still run under an open Learn card (seen: the Tasting practice exercise cards and Glass of the day). Audit every screen at the width left beside the card (≈ 1,060 px at 1920) and add that width to the layout self-test.
+- Mosel véraison bunches read lavender-grey in `3d_mosel_veraison` (before and after 2026-10-10); check whether that Block is a red Variety or white berries are taking the red bloom.
+- A truer pruning close-up: show the unpruned vine first (last summer's canes standing up from the old cane), then the cut, instead of fanning three finished options.
+- Audit the other Blender generators (winery boxes and cylinders, props) for faces wound inward, as `berry_sphere` was: a normals check in `build_*.py` would catch it.
 - The Planting guide's 2D diagrams draw one vine; the Guyot summer canopy is one-sided (the cane goes one way), which is right for one vine but reads lopsided. Consider ghosting the neighbouring vines' shoots.
 
 ### Simulation and science (for the science review)
