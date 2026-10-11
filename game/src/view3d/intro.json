@@ -1,0 +1,114 @@
+{
+  "about": "The intro's narration (cinema.gd), spoken by the Mentor (CONTEXT.md: the retiring expert who guides the player through the first Vintage) as a warm welcome: one clip for the Region, one for the Plot, one for the winery and the welcome, then a short tour of the dashboard (\"tour\", mentor_tour.gd). Rendered by tools/voice/narrate.py to game/assets3d/audio/voice/<clip>.mp3 and shown as captions. Facts from docs/science/regions-and-plots.md (Region summaries, Plot table) and docs/science/law.md; numbers are written out for the voice. The estate name and the year are shown as titles, never spoken (the clips are recorded once).",
+  "sources": [
+    "docs/science/regions-and-plots.md §1, §3",
+    "docs/science/law.md §3",
+    "docs/science/canopy-and-yield.md §2.7"
+  ],
+  "voice": {
+    "model": "eleven_multilingual_v2",
+    "voice_id": "nPczCjzI2devNBz1zQrb",
+    "voice_name": "Brian (ElevenLabs premade: deep, resonant, comforting)",
+    "stability": 0.55,
+    "similarity_boost": 0.8,
+    "style": 0.15
+  },
+  "regions": {
+    "mosel": {
+      "title": "Mosel",
+      "sub": "Germany · the world's largest steep-slope wine region",
+      "text": "Welcome to the Mosel. I've spent my whole life on these slopes, and I still love this view. This is the largest steep-slope wine region in the world. The river has cut deep into the slate, and the vines climb almost straight up from the water. It's cool here, but that dark slate warms quickly in the sun, and the long, slow autumn keeps the acidity bright. That's what gives our Riesling its lightness and its precision."
+    },
+    "cote-dor": {
+      "title": "Côte d'Or",
+      "sub": "Burgundy, France · limestone and marl, facing the morning sun",
+      "text": "Welcome to the Côte d'Or. I've worked this slope for forty years, and it still surprises me. It's a narrow escarpment facing east and south-east, where limestone and marl catch the morning sun. Here, the exact patch of ground matters more than anywhere. The same Pinot Noir can be a regional wine down on the flat land, a village wine, or a Premier Cru from the best part of the slope. Watch out for spring frost, and summer heat."
+    },
+    "napa": {
+      "title": "Napa Valley",
+      "sub": "California, USA · a Mediterranean climate cooled by the bay",
+      "text": "Welcome to the Napa Valley. Rain in winter, long dry summers: a grower's dream, mostly. Down south, fog and wind roll in from San Pablo Bay and keep Carneros cool. Up the valley it gets warmer, and the mountain vineyards sit above the summer fog. And on the gravelly benches at the foot of the western hills, Cabernet Sauvignon finds its finest sites."
+    }
+  },
+  "plots": {
+    "mosel-uferflur": {
+      "text": "And this is your land, Uferflur. One point six hectares of flat riverbank, just above the flood line. Deep, fertile soil: your vines will grow like mad. But on still spring nights the cold air settles here, and the autumn fog lingers longest. We'll keep an eye on frost and rot together."
+    },
+    "mosel-seitental": {
+      "text": "And this is your land, Seitental. A gentle side valley facing east, loess over slate. Your vines get the morning sun and stay cool in the afternoon, so they ripen late, and slowly. Patience pays off here."
+    },
+    "mosel-blauschiefer": {
+      "text": "And this is your land, Blauschiefer-Hang. One point two hectares of blue Devonian slate, at fifty-five per cent, facing south-west. The classic Middle Mosel Riesling slope. No tractor can work ground this steep, so most of the work is done by hand. You'll get to know every vine."
+    },
+    "mosel-terrassen": {
+      "text": "And this is your land: slate terraces, held up by dry-stone walls and facing south. The steepest, warmest ground around here, and the hardest work you'll ever love. Every task, from pruning to picking, is done by hand."
+    },
+    "cotedor-plaine": {
+      "text": "And this is your land, Plaine des Bas. One hectare of flat land below the slope. Deep clay, fertile and easy to work, but it catches the frost, and its wines can only be sold as Bourgogne. Good wine is still possible. I'll show you how."
+    },
+    "cotedor-hautes": {
+      "text": "And this is your land, Plateau des Hautes, up on the Hautes-Côtes at around four hundred metres. Limestone, wind and cool nights. The grapes ripen late up here, and in a hot year, that slow ripening is a real gift."
+    },
+    "cotedor-village": {
+      "text": "And this is your land, Mi-Côte Villages. Half a hectare of marl and limestone in the middle of the slope, facing east-south-east. Village wine, with the rules to match: dense planting, a limit on the buds you leave at pruning, and no irrigation. Don't worry, I'll help you keep to them."
+    },
+    "cotedor-premiercru": {
+      "text": "And this is your land, Clos du Premier. Half a hectare of thin limestone rubble facing the morning sun, in the sweet spot of the Côte. Premier Cru. The soil gives the vines very little, and they give it back as concentration. You've chosen well."
+    },
+    "napa-floor": {
+      "text": "And this is your land, Valley Floor Loam. One hectare of heavy, fertile loam in the heart of the valley. Your vines will grow strongly, you're allowed to irrigate, and on cold spring nights the low spots can frost. We'll watch for that."
+    },
+    "napa-carneros": {
+      "text": "And this is your land, Carneros Clay. One point two hectares of shallow clay over claypan, at the cool southern end of the valley, where the fog comes in from the bay. Pinot Noir and Chardonnay feel at home here. Cabernet, not so much."
+    },
+    "napa-mountain": {
+      "text": "And this is your land: a mountain hillside, high above the fog line. Thin volcanic soils, small crops, and wines with real grip. It's tough country, and it makes wines with character."
+    },
+    "napa-bench": {
+      "text": "And this is your land, Rutherford Bench. One hectare on the gravelly fan at the foot of the western hills. This is where some of the finest Cabernet Sauvignon in the valley is grown. No pressure."
+    }
+  },
+  "winery": {
+    "text": "And here's your winery. Upstairs, the steel tanks are waiting for the harvest. Downstairs, in the vaulted cellar, your wine will rest in wood. I've kept it ready for you."
+  },
+  "welcome": {
+    "text": "The vines went in three years ago, and this year they give their first real crop. I'll be with you through your first vintage, and then it's all yours: how you prune, when you pick, how you make the wine. Come on. Let's get started."
+  },
+  "tour": [
+    {
+      "id": "vista",
+      "target": "",
+      "text": "This is how your estate looks at the end of a summer's day. Right now, though, it's the middle of January, and the vines are asleep. Let me show you how you'll run things from the office."
+    },
+    {
+      "id": "inbox",
+      "target": "screen",
+      "text": "This is your Inbox. Your staff and I write to you here. When something needs a decision, time stops until you've read it, and most letters have a button that takes you straight to the right place."
+    },
+    {
+      "id": "menu",
+      "target": "nav",
+      "text": "On the left is everything else: your Blocks and their vines, the weather, the standing orders for the vineyard, and later the winery and your wines."
+    },
+    {
+      "id": "plan",
+      "target": "plan",
+      "text": "Below it is my plan for your first vintage. It ticks itself off as you go, so you always know the next step."
+    },
+    {
+      "id": "time",
+      "target": "time",
+      "text": "Time only moves when you say so. Press Continue, and the days run until something needs you. Or go a day, or a week, at a time."
+    },
+    {
+      "id": "walk",
+      "target": "3d",
+      "text": "And whenever you want to see it for yourself, step into the vineyard in 3D. Walk the rows, prune a vine yourself, and watch the season go by."
+    },
+    {
+      "id": "end",
+      "target": "",
+      "text": "One more thing: wherever you see a gold Learn link, there's a card that explains the choice, and what it does to the wine. Start with my letter at the top of your Inbox. Let's get started."
+    }
+  ]
+}

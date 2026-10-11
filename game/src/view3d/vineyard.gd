@@ -276,6 +276,45 @@ func _swap_step() -> void:
 			(w[0] as MultiMeshInstance3D).multimesh.mesh = w[1]
 
 
+## The intro flies over the Blocks: each detail level of the Plot's vines reaches further and the hand-overs dissolve (a
+## per-pixel dither over a few metres) instead of switching, so rows never pop while the camera moves. Off in play.
+# (LOD 2 starts 9 m early: its 18 m cells are measured from their centres, the near levels from 3 m cells, so without the
+# overlap a vine could fall between the two and vanish for a moment)
+const CINE_LOD := {0: [0.0, 8.0], 1: [8.0, 42.0], 2: [33.0, 130.0], 3: [0.0, 42.0], 4: [130.0, 0.0]}   # [begin, end], 0 = none
+func set_cinematic_lod(on: bool) -> void:
+	for blk in blocks:
+		for e in blk["mm"]:
+			var mmi: MultiMeshInstance3D = e["mmi"]
+			var lod := int(e["lod"])
+			if on:
+				if not e.has("vr"):
+					e["vr"] = [mmi.visibility_range_begin, mmi.visibility_range_end]
+				var r: Array = CINE_LOD[lod]
+				mmi.visibility_range_begin = r[0]
+				mmi.visibility_range_end = r[1]
+				var m := maxf(2.0, float(r[1]) * 0.18) if float(r[1]) > 0.0 else 0.0
+				mmi.visibility_range_end_margin = m
+				mmi.visibility_range_begin_margin = maxf(2.0, float(r[0]) * 0.18) if float(r[0]) > 0.0 else 0.0
+				mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF if lod != 3 else GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
+			elif e.has("vr"):
+				mmi.visibility_range_begin = e["vr"][0]
+				mmi.visibility_range_end = e["vr"][1]
+				mmi.visibility_range_begin_margin = 0.0
+				mmi.visibility_range_end_margin = 0.0
+				mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
+
+
+## Prepares every pending vine mesh and stage swap now (the intro does this behind its black card, so nothing is built
+## during the flight).
+func finish_warm() -> void:
+	while not swap_queue.is_empty():
+		var w: Array = swap_queue.pop_front()
+		if is_instance_valid(w[0]): (w[0] as MultiMeshInstance3D).multimesh.mesh = w[1]
+	while not warm_queue.is_empty():
+		var w2: Array = warm_queue.pop_back()
+		_block_mesh(w2[0], w2[1], w2[2], w2[3], w2[4])
+
+
 func _warm_step() -> void:
 	var t0 := Time.get_ticks_usec()
 	while not warm_queue.is_empty() and Time.get_ticks_usec() - t0 < 3000:
@@ -518,6 +557,9 @@ func _build_world() -> void:
 	grass_job = {}
 	grass_centre = Vector2i(99999, 99999)
 	_build_neighbours()
+	var th := Time.get_ticks_msec()
+	_build_hedges()
+	print("view3d vineyard: %d hedge rows in %d ms" % [hedge_count, Time.get_ticks_msec() - th])
 	_queue_warm()
 	_build_near_trees()
 	_build_trees()
@@ -608,7 +650,8 @@ func _grass_mask_outside(x: float, z: float) -> float:
 	var base := 0.55 + 0.45 * noise.get_noise_2d(x * 3.0, z * 3.0)
 	if _neighbour_planted(x, z):
 		base = 0.2 + 0.3 * base if region != "napa" else 0.1
-	return clampf(lerpf(0.9, base, smoothstep(2.0, 8.0, d)), 0.0, 1.0)
+	# the headland round the Plot: a grass strip HEADLAND m wide that the neighbours' rows keep clear of
+	return clampf(lerpf(0.9, base, smoothstep(HEADLAND - 2.0, HEADLAND + 3.0, d)), 0.0, 1.0)
 
 
 func _terrain_material() -> ShaderMaterial:
@@ -1204,7 +1247,11 @@ func _neighbour_planted(x: float, z: float) -> bool:
 	var p := _parcel(x, z)
 	match region:
 		"mosel":
-			return (z > -hz - 190.0 and z < hz + clampf(sv * 70.0, 6.0, 55.0)) and p > 0.22
+			# steep slopes: nearly all vineyard, except straight below the Plot, which stays open down to the river (the view
+			# from the water shows your land, not a neighbour's patch)
+			if z > hz and x > band_x0 - 170.0 and x < band_x1 + 170.0:
+				return false
+			return (z > -hz - 190.0 and z < hz + clampf(sv * 70.0, 6.0, 55.0)) and p > (0.1 if sv >= 0.3 else 0.22)
 		"cote-dor":
 			return z > -hz - 300.0 and z < hz + 90.0 and p > 0.1
 		_:
@@ -1242,10 +1289,16 @@ func _far_color(x: float, z: float, y: float, slope: float) -> Color:
 		_:
 			if y < 45.0 and n > -0.3:
 				return Color(0.0, 0.0, 0.0, 1.0)
-			var oak := noise.get_noise_2d(x * 2.5, z * 2.5)
-			if y > 320.0:
+			# summer hills: golden dry grass broken by dark oak woodland, which thickens in the folds, on the steeper
+			# (shadier) slopes and up the Mayacamas (look only)
+			var oak := noise.get_noise_2d(x * 2.5, z * 2.5) + 0.35 * noise.get_noise_2d(x * 0.7 + 90.0, z * 0.7)
+			var wood := 0.32 - 0.35 * clampf(slope, 0.0, 1.0) - clampf((y - 120.0) / 600.0, 0.0, 0.3)
+			if y > 320.0 and oak > -0.1:
 				return Color(forest.r, forest.g * 1.1, forest.b, 0.0)
-			return Color(0.05, 0.07, 0.03, 0.0) if oak > 0.25 else Color(0.36, 0.30, 0.14, 0.0)    # oak clumps in golden grass
+			if oak > wood:
+				return Color(0.045, 0.06, 0.028, 0.0)
+			var straw := noise.get_noise_2d(x * 0.9 + 30.0, z * 0.9)
+			return Color(0.30 + 0.05 * straw, 0.25 + 0.035 * straw, 0.12, 0.0)
 	return Color(scrub.r, scrub.g, scrub.b, 0.0)
 
 
@@ -1334,6 +1387,7 @@ func _build_river() -> void:
 	var fn := FastNoiseLite.new(); fn.frequency = 0.02
 	nt.noise = fn
 	sm.set_shader_parameter("wave_nrm", nt)
+	sm.set_shader_parameter("banks", Vector2(river.x, river.y))
 	mi.material_override = sm
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	world.add_child(mi)
@@ -1829,7 +1883,7 @@ func _build_neighbours() -> void:
 		while x <= band_x1 + ring:
 			var dx := maxf(maxf(band_x0 - x, x - band_x1), 0.0)
 			var dz := maxf(absf(z) - hz, 0.0)
-			var outside := dx > 5.0 or dz > 5.0
+			var outside := dx > HEADLAND or dz > HEADLAND
 			if outside and _neighbour_planted(x, z) and absf(fmod(x + 7000.0, 40.0) - 20.0) > 1.6 and absf(fmod(z + 7000.0, 34.0) - 17.0) > 1.4:
 				var y := H(x, z)
 				var yaw := rng.randf() * TAU if neighbour_training == "einzelpfahl" else PI / 2.0
@@ -1859,15 +1913,137 @@ func _build_neighbours() -> void:
 			mmi.multimesh = mm
 			mmi.position = center
 			mmi.visibility_range_end = 220.0
+			mmi.visibility_range_end_margin = 30.0          # dissolves while the hedge rows (from 200 m) take over
+			mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			world.add_child(mmi)
 			neighbour_mm.append({"mmi": mmi, "seed": seed, "g": -1})
+
+
+# ------------------------------------------------------------------ the neighbours' vineyards at a distance
+const NEIGHBOUR_RING := 42.0           # m round the Plot where the neighbours' vines are real vine meshes
+const HEADLAND := 10.0                 # m of grass round the Plot before the neighbours' rows: your land reads as yours
+var hedge_mat: ShaderMaterial
+var hedge_count := 0
+
+## The neighbours' vineyards beyond the real vines, out to several hundred metres: every row a hedge-like prism of
+## canopy (hedge_row.gdshader), laid down the parcels of _neighbour_planted with headlands at the parcel ends and a
+## track between parcels. They cast shadows (long golden-hour shadows in the intro). Look only.
+func _build_hedges() -> void:
+	hedge_count = 0
+	if OS.get_environment("TERROIR_NO_HEDGES") == "1":       # perf comparison (shot3d.sh --perf)
+		return
+	var steep_stakes := neighbour_training == "einzelpfahl"
+	var rs: float = {"mosel": 1.2 if steep_stakes else 1.7, "cote-dor": 1.05, "napa": 2.2}.get(region, 1.8)
+	var reach: float = {"mosel": 560.0, "cote-dor": 640.0, "napa": 620.0}.get(region, 560.0)
+	var width := 0.62 if steep_stakes else 0.5
+	var height: float = {"mosel": 1.35, "cote-dor": 0.95, "napa": 1.35}.get(region, 1.2)
+	var trunk: float = {"mosel": 0.42, "cote-dor": 0.32, "napa": 0.55}.get(region, 0.4)
+	hedge_mat = ShaderMaterial.new()
+	hedge_mat.shader = load(SH + "hedge_row.gdshader")
+	hedge_mat.set_shader_parameter("bush", 1.0 if steep_stakes else 0.0)
+	hedge_mat.set_shader_parameter("spacing", 1.2)
+	hedge_mat.set_shader_parameter("red", 0.0 if region == "mosel" else 1.0)
+	var mesh := _hedge_mesh()
+	mesh.surface_set_material(0, hedge_mat)
+	var cx := (band_x0 + band_x1) * 0.5
+	var chunks := {}
+	var x := floorf((band_x0 - reach) / rs) * rs
+	while x <= band_x1 + reach:
+		x += rs
+		var in_px := fposmod(x + 5000.0, 26.0)
+		if in_px < 1.6 or in_px > 25.4:
+			continue                                   # the track between two parcels
+		var pz := floorf((-hz - reach + 5000.0) / 70.0) * 70.0 - 5000.0
+		while pz <= hz + reach:
+			var z0 := pz + 3.0                         # headlands at both ends of the parcel
+			var z1 := pz + 67.0
+			pz += 70.0
+			var zm := (z0 + z1) * 0.5
+			if Vector2(x - cx, zm).length() > reach or not _neighbour_planted(x, zm):
+				continue
+			var nseg := 5
+			for k in nseg:
+				var a := z0 + (z1 - z0) * float(k) / nseg
+				var b := z0 + (z1 - z0) * float(k + 1) / nseg
+				var m := (a + b) * 0.5
+				var dx := maxf(maxf(band_x0 - x, x - band_x1), 0.0)
+				var dz := maxf(absf(m) - hz, 0.0)
+				if dx < HEADLAND + 0.5 and dz < HEADLAND + 0.5:
+					continue                               # the Plot and its headland
+				# where the real neighbour vines stand, the rows take over only beyond their 220 m view range
+				var near := dx < NEIGHBOUR_RING + 1.5 and dz < NEIGHBOUR_RING + 1.5
+				if pad_on and (_rect_dist(keepout, x, m) < 4.0 or track_dist(x, m) < 4.0):
+					continue
+				if river.x < INF and m > river.x - 16.0:
+					continue
+				var pa := Vector3(x, H(x, a) + trunk, a)
+				var pb := Vector3(x, H(x, b) + trunk, b)
+				var key := Vector3i(floori(x / 64.0), floori(m / 64.0), 1 if near else 0)
+				if not chunks.has(key):
+					chunks[key] = []
+				(chunks[key] as Array).append(Transform3D(Basis(Vector3(width, 0, 0), Vector3(0, height, 0), pb - pa), pa))
+	for key in chunks:
+		var list: Array = chunks[key]
+		var center := Vector3((key.x + 0.5) * 64.0, 0.0, (key.y + 0.5) * 64.0)
+		center.y = H(center.x, center.z)
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = mesh
+		mm.instance_count = list.size()
+		for i in list.size():
+			var xf: Transform3D = list[i]
+			xf.origin -= center
+			mm.set_instance_transform(i, xf)
+		var mmi := MultiMeshInstance3D.new()
+		mmi.multimesh = mm
+		mmi.position = center
+		mmi.visibility_range_begin = 200.0 if key.z == 1 else 30.0       # ring rows: as the real vines (220 m) dissolve
+		mmi.visibility_range_begin_margin = 30.0
+		mmi.visibility_range_end = 1300.0
+		mmi.visibility_range_end_margin = 200.0
+		mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF   # dissolve, never pop
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		world.add_child(mmi)
+		hedge_count += list.size()
+
+
+## A unit hedge: a prism with a rounded top, x -0.5..0.5, y 0..1, z 0..1, 4 lengthwise segments.
+static func _hedge_mesh() -> ArrayMesh:
+	var prof := [Vector2(-0.38, 0.0), Vector2(-0.5, 0.35), Vector2(-0.46, 0.8), Vector2(-0.22, 1.0), Vector2(0.22, 1.0), Vector2(0.46, 0.8), Vector2(0.5, 0.35), Vector2(0.38, 0.0)]
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var nz := 4
+	for i in prof.size() - 1:
+		var p0: Vector2 = prof[i]
+		var p1: Vector2 = prof[i + 1]
+		var n := Vector3(p1.y - p0.y, -(p1.x - p0.x), 0.0).normalized() * -1.0
+		for k in nz:
+			var z0 := float(k) / nz
+			var z1 := float(k + 1) / nz
+			var q := [Vector3(p0.x, p0.y, z0), Vector3(p1.x, p1.y, z0), Vector3(p1.x, p1.y, z1), Vector3(p0.x, p0.y, z1)]
+			for t in [0, 2, 1, 0, 3, 2]:
+				st.set_normal(n)
+				st.add_vertex(q[t])
+	# end caps
+	for zc in [0.0, 1.0]:
+		for i in range(1, prof.size() - 1):
+			var tri := [prof[0], prof[i], prof[i + 1]]
+			if zc > 0.5: tri.reverse()
+			for v in tri:
+				st.set_normal(Vector3(0, 0, -1.0 if zc < 0.5 else 1.0))
+				st.add_vertex(Vector3(v.x, v.y, zc))
+	return st.commit()
 
 
 func _dress_neighbours() -> void:
 	if blocks.is_empty():
 		return
 	var g: int = blocks[0]["g"]
+	if hedge_mat:
+		hedge_mat.set_shader_parameter("canopy", [0.0, 0.15, 0.45, 0.8, 1.0][clampi(g, 0, 4)])
+		var lsx: Vector4 = (blocks[0]["leaf_mat"] as ShaderMaterial).get_shader_parameter("leaf_state")
+		hedge_mat.set_shader_parameter("autumn", lsx.z)
 	for e in neighbour_mm:
 		var mmi: MultiMeshInstance3D = e["mmi"]
 		if e["g"] != g:
@@ -1936,7 +2112,7 @@ func _build_trees() -> void:
 			var is_forest := c.a < 0.5 and c.g < 0.075 and c.r < 0.06
 			if not is_forest or noise.get_noise_2d(px * 0.9, pz * 0.9) < -0.35:
 				continue
-			if region == "napa" and rng.randf() < 0.55:
+			if region == "napa" and rng.randf() < 0.25:
 				continue
 			var v := 3 if rng.randf() < (0.35 if region == "napa" and y > 320.0 else 0.18) else rng.randi() % 3
 			var hgt := rng.randf_range(15, 25) if v != 3 else rng.randf_range(18, 28)
@@ -2069,6 +2245,8 @@ func _apply_light() -> void:
 	if sp.x > -4.0:
 		var dl := _sun_world(maxf(sp.x, 1.0), sp.y)     # the light itself never comes from under the horizon
 		sun.look_at_from_position(Vector3.ZERO, -dl, Vector3.UP)
+		if mats.has("terrain_far"):                      # the far rows' shadows fall across their alleys
+			(mats["terrain_far"] as ShaderMaterial).set_shader_parameter("sun_dir", dl)
 		sun.light_color = Color(1.0, 0.92, 0.82).lerp(Color(1.0, 0.55, 0.28), low * 0.85)
 		sun.light_energy = 2.4 * (1.0 - 0.86 * cloud) * day * (1.0 - 0.25 * low)
 	else:
@@ -2424,3 +2602,67 @@ func hud_text(pos: Vector3) -> String:
 
 static func _stage_label(st: String) -> String:
 	return {"FruitSet": "Fruit set", "BunchClosure": "Bunch closure", "Veraison": "Véraison", "LeafFall": "Leaf fall"}.get(st, st)
+
+
+# =============================================================================================== intro cinematic
+## The intro's camera moves over this Plot (cinema.gd): [{kind: "line"|"orbit", dur, …}]. Positions are this node's frame;
+## cinema.gd keeps every eye at least a few metres above the ground. Look only.
+##   region   across the valley, high, drifting in towards the slope
+##   plot     a low glide up over the Blocks
+##   winery   a slow half-orbit round the winery, the sign in view
+##   welcome  down into the alley at the walk-in spot, ending where the player starts walking
+func cinema_shots() -> Array:
+	var cx := (band_x0 + band_x1) * 0.5
+	var w := band_x1 - band_x0
+	var c := Vector3(cx, H(cx, 0.0), 0.0)
+	var far := clampf(w * 1.6, 150.0, 260.0)
+	var out := []
+	# looking back up at the Plot from the downhill side of the valley, low enough that the slope fills the frame
+	out.append({"kind": "line", "dur": 14.0,
+		"p0": c + Vector3(-w * 0.55, 62.0, hz + far), "p1": c + Vector3(w * 0.08, 34.0, hz + far * 0.6),
+		"t0": c + Vector3(0, 18.0, -hz * 0.5), "t1": c + Vector3(0, 4.0, -hz * 0.15)})
+	# over the Blocks, uphill
+	var gx0 := band_x0 + w * 0.2
+	var gx1 := band_x0 + w * 0.55
+	out.append({"kind": "line", "dur": 12.0,
+		"p0": Vector3(gx0, H(gx0, hz + 30.0) + 24.0, hz + 30.0), "p1": Vector3(gx1, H(gx1, -hz * 0.25) + 10.0, -hz * 0.25),
+		"t0": Vector3(gx0 + 8.0, H(gx0 + 8.0, hz * 0.2), hz * 0.2), "t1": Vector3(gx1 + 10.0, H(gx1 + 10.0, -hz), -hz)})
+	# round the winery
+	var o: Vector3 = estate.get("origin", c)
+	var door: Vector2 = estate.get("door", Vector2(o.x, o.z + 1.0))
+	var a0 := atan2(door.x - o.x, door.y - o.z) - 0.9               # start beside the door side, swing past it
+	out.append({"kind": "orbit", "dur": 11.0, "c": o + Vector3(0, 3.0, 0), "r0": 58.0, "r1": 44.0, "a0": a0, "a1": a0 + 1.1, "h0": 24.0, "h1": 11.0})
+	# the vista: from high above the top of the Plot, over the Blocks to the winery (and the river), drifting slowly round;
+	# it keeps drifting after the shot ends while the Mentor's tour starts (cinema.gd hold)
+	var vc := (c + Vector3(o.x, o.y, o.z)) * 0.5 + Vector3(0, 6.0, 0)
+	if river.x < INF:
+		vc.z = (vc.z + river.x) * 0.5
+	var vr := clampf(w * 1.3, 110.0, 190.0)
+	out.append({"kind": "orbit", "dur": 12.0, "c": vc, "r0": vr * 1.12, "r1": vr, "a0": PI - 0.42, "a1": PI - 0.16, "h0": 60.0, "h1": 45.0, "drift": 0.012, "above_ground": true})
+	return out
+
+
+## The hour after after_h when the sun has sunk to elev_deg (or the last hour it is above it).
+func sun_hour_at(doy: int, elev_deg: float, after_h: float) -> float:
+	var h := after_h
+	while h < 22.5 and _solar(doy, h + 0.05).x > elev_deg:
+		h += 0.05
+	return h
+
+
+## The intro's time of day for day-of-year doy: a low sun (7–20° up) as close as possible to side-on to the slope (its
+## azimuth 90° from the Plot's aspect), so the rows throw long shadows across the view instead of being lit flat from
+## behind the camera; evenings win a tie.
+func golden_hour(doy: int) -> float:
+	var best := 18.0
+	var bs := INF
+	var h := 4.0
+	while h <= 21.5:
+		var sp := _solar(doy, h)
+		if sp.x >= 7.0 and sp.x <= 20.0:
+			var off := minf(absf(wrapf(sp.y - (aspect + 90.0), -180.0, 180.0)), absf(wrapf(sp.y - (aspect - 90.0), -180.0, 180.0)))
+			var score := off - (5.0 if h > 12.0 else 0.0)
+			if score < bs:
+				bs = score; best = h
+		h += 0.1
+	return best

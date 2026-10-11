@@ -89,6 +89,16 @@ var tl_note := ""                  # e.g. the Alert that paused it
 var tl_label: Label
 
 
+# the intro cinematic (cinema.gd): a flight over the Region and the new Estate
+signal intro_held                   # the flight is over and holds on the sunset vista (the tour's first line plays here)
+signal intro_finished
+var cinema: Control
+var cinematic := false
+var sunset_from := -1.0              # the vista: the sun sinks from golden hour towards the horizon
+var sunset_to := -1.0
+var sunset_t := 0.0
+
+
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -134,6 +144,8 @@ func _ready() -> void:
 	ambience.set("muted", not sound_on)
 	_build_hud()
 	_build_task_panel()
+	cinema = load("res://src/view3d/cinema.gd").new()
+	add_child(cinema)
 	visibility_changed.connect(_on_visibility_changed)
 	_on_visibility_changed()
 
@@ -398,13 +410,115 @@ func camera_preset(name: String, bi := 0) -> void:
 	set_camera(pt[0], pt[1])
 
 
+# ------------------------------------------------------------------ intro
+## The intro: the Estate seen in its first summer at golden hour (a look-only copy of the snapshot; the game itself starts
+## in January), flown over in four shots with the Region's and the Plot's titles and narration (intro.json). Ends with
+## the walker where the player starts, on the real snapshot, and emits intro_finished.
+func play_intro(real: Dictionary) -> void:
+	if missing or real.is_empty():
+		intro_finished.emit.call_deferred()
+		return
+	cinema.call("cover")
+	ambience.set("master_db", sound_volume_db - 13.0)
+	for f in 2: await get_tree().process_frame             # the black card is up before the world builds
+	var info: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://src/view3d/intro.json"))
+	var show := _summer_copy(real)
+	apply_snapshot(show)
+	vineyard.call("finish_warm")
+	vineyard.call("set_cinematic_lod", true)
+	for f in 3: await get_tree().process_frame             # shaders and the first shadow maps compile behind the black
+	var doy := 203
+	vineyard.call("set_daytime", float(vineyard.call("golden_hour", doy)))
+	cinematic = true
+	player.set("enabled", false)
+	drone_cam.current = true
+	for l in [hud_label, hint_label, tl_label]: (l as Control).visible = false
+	var shots: Array = vineyard.call("cinema_shots")
+	var region := String(real.get("region", {}).get("id", "mosel"))
+	var plot: Dictionary = real.get("plot", {})
+	var R: Dictionary = info["regions"].get(region, {})
+	shots[0].merge({"title": R.get("title", ""), "sub": R.get("sub", ""), "text": R.get("text", ""), "voice": "audio/voice/region_" + region})
+	shots[1].merge({"title": String(plot.get("name", "")),
+		"sub": "%s ha · %d %% slope, %s-facing · %s" % [str(plot.get("ha", "")), int(plot.get("slope", 0)), plot.get("aspect", ""), plot.get("varieties", "")],
+		"text": info["plots"].get(String(plot.get("id", "")), {}).get("text", ""), "voice": "audio/voice/plot_" + String(plot.get("id", ""))})
+	shots[2].merge({"title": String(real.get("estate", "")), "sub": "your winery", "text": info["winery"]["text"], "voice": "audio/voice/winery"})
+	shots[3].merge({"title": "First Vintage %d" % int(real.get("vintage", 0)), "sub": "Welcome", "text": info["welcome"]["text"], "voice": "audio/voice/welcome"})
+	drone_cam.fov = 42.0                                    # a longer lens for the flight: compressed, calmer
+	cinema.set("cam", drone_cam)
+	cinema.set("ground_fn", Callable(vineyard, "ground_height"))
+	_update_zone(true)
+	# the flight sees hundreds of metres of rows: shadows reach that far (four splits, most detail near the camera)
+	var sunl: DirectionalLight3D = vineyard.get("sun")
+	sunl.directional_shadow_max_distance = 650.0
+	sunl.directional_shadow_split_1 = 0.04
+	sunl.directional_shadow_split_2 = 0.14
+	sunl.directional_shadow_split_3 = 0.4
+	cinema.set("hold_last", true)
+	sunset_from = float(vineyard.call("golden_hour", doy))
+	sunset_to = float(vineyard.call("sun_hour_at", doy, 1.5, sunset_from))
+	cinema.call("play", shots)
+	# the flight ends on the vista and holds there (cinema.gd hold); the shell runs the first tour line over it and then
+	# calls end_intro(). A skip (Esc) during the flight ends it at once.
+	var ended := [false]
+	var on_end := func(): ended[0] = true
+	cinema.finished.connect(on_end, CONNECT_ONE_SHOT)
+	while not ended[0] and not bool(cinema.get("holding")):
+		await get_tree().process_frame
+	intro_held.emit()
+	if not ended[0]:
+		await cinema.finished
+	_restore_after_intro(real)
+
+
+## Ends the held vista (fade to black); the intro then hands over to the game.
+func end_intro() -> void:
+	if cinematic:
+		cinema.call("release")
+
+
+func _restore_after_intro(real: Dictionary) -> void:
+	var sunl: DirectionalLight3D = vineyard.get("sun")
+	cinematic = false
+	vineyard.call("set_cinematic_lod", false)
+	ambience.set("master_db", sound_volume_db)
+	drone_cam.fov = 60.0
+	sunl.directional_shadow_split_1 = 0.05             # vineyard.gd _setup_sun's splits; the distance comes back with _update_zone
+	sunl.directional_shadow_split_2 = 0.15
+	sunl.directional_shadow_split_3 = 0.4
+	for l in [hud_label, hint_label, tl_label]: (l as Control).visible = true
+	sunset_from = -1.0; sunset_t = 0.0
+	vineyard.call("set_daytime", -1.0)
+	apply_snapshot(real)
+	set_view("vineyard")
+	player.set("enabled", is_visible_in_tree())
+	intro_finished.emit()
+
+
+## The snapshot as the Estate looks on a fine late-July evening: every Block in full leaf with green bunches, no work
+## going on (look only).
+func _summer_copy(real: Dictionary) -> Dictionary:
+	var s: Dictionary = real.duplicate(true)
+	var year := String(s.get("date", "2018-01-15")).substr(0, 4)
+	s["date"] = "%s-07-22" % year
+	for b in s.get("blocks", []):
+		b["stage"] = "BunchClosure"
+		b["lai"] = 3.0
+		b["picking"] = false
+		b["harvested"] = false
+	s["tasks"] = []
+	var w: Dictionary = s.get("weather", {})
+	w["today"] = {"icon": "sun", "clear": 1.0, "rain": 0.0, "wind": 6.0, "tmax": 27, "tmin": 15, "rh": 55}
+	s["weather"] = w
+	return s
+
+
 func capture() -> Image:
 	return viewport.get_texture().get_image()
 
 
 # ------------------------------------------------------------------ zones
 func _cam() -> Camera3D:
-	return drone_cam if drone else player.cam
+	return drone_cam if drone or cinematic else player.cam
 
 
 func _zone_now() -> String:
@@ -497,6 +611,13 @@ func _on_visibility_changed() -> void:
 func _input(e: InputEvent) -> void:
 	if not is_visible_in_tree() or missing:
 		return
+	if cinematic:
+		var go: bool = (e is InputEventKey and e.pressed and not e.echo and e.physical_keycode in [KEY_ESCAPE, KEY_ENTER, KEY_SPACE, KEY_TAB]) \
+			or (e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT)
+		if go:
+			cinema.call("skip")
+		get_viewport().set_input_as_handled()
+		return
 	var captured := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
 	if closeup_id >= 0:
 		_closeup_input(e)
@@ -551,6 +672,15 @@ func _input(e: InputEvent) -> void:
 func _process(delta: float) -> void:
 	if missing or placed_key == "":
 		return
+	if cinematic and sunset_from >= 0.0 and int(cinema.get("i")) == 3:   # the vista: the sun goes down over 40 s
+		sunset_t = minf(sunset_t + delta / 40.0, 1.0)
+		var e := sunset_t * sunset_t * (3.0 - 2.0 * sunset_t)
+		vineyard.call("set_daytime", lerpf(sunset_from, sunset_to, e))
+	if cinematic:                      # the intro: the river, birds and wind stay in the background, lower still under the voice
+		var talk: bool = (cinema.get("voice") as AudioStreamPlayer).playing
+		var want := sound_volume_db - 13.0 - (6.0 if talk else 0.0)
+		ambience.set("master_db", lerpf(float(ambience.get("master_db")), want, clampf(delta * 2.0, 0.0, 1.0)))
+
 	_timelapse_step(delta)
 	if drone:
 		_drone_step(delta)
@@ -562,10 +692,10 @@ func _process(delta: float) -> void:
 		var at_work := String(workers.get("summary"))
 		if at_work != "":
 			hud_label.text += "\nAt work: " + at_work
-	hud_label.visible = show_hud
-	hint_label.visible = show_hud
+	hud_label.visible = show_hud and not cinematic
+	hint_label.visible = show_hud and not cinematic
 	near_task = {} if drone or closeup_id >= 0 else tasks3d.call("nearest", player.global_position, TASK_REACH)
-	prompt_label.visible = not near_task.is_empty()
+	prompt_label.visible = not near_task.is_empty() and not cinematic
 	if not near_task.is_empty():
 		var place := ("Lot %s" % near_task["lot"]) if String(near_task["kind"]) == "CapManagement" else ("Block %s" % near_task["block"])
 		var verb := String(near_task["verb"])
