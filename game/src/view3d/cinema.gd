@@ -92,6 +92,7 @@ func play(list: Array) -> void:
 		s["stream"] = st
 		if st != null:
 			s["dur"] = maxf(float(s["dur"]), (st as AudioStream).get_length() + 1.6)
+	print("cinema: %d of %d shots narrated" % [shots.filter(func(x): return x["stream"] != null).size(), shots.size()])
 	visible = true
 	playing = true
 	skipping = false

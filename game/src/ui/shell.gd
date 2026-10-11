@@ -250,7 +250,7 @@ func show_screen(id: String) -> void:
 	if not SCREENS.has(id): id = "inbox"
 	if not Sim.HasGame() and not (id in PREGAME) and not (id in TASTING): id = "title"
 	if id != current and sfx: sfx.play("page")
-	if music: music.set_mood(_music_mood(id))
+	if music: music.set_mood(_music_mood(id), "theme_title")
 	if id in TASTING and not (current in TASTING): state.erase("tp_lobby")   # the Timeline, the date or the record may have moved on
 	# re-rendering the same screen (after a choice) keeps the scroll position instead of jumping to the top: the old
 	# screen stays on top until the new one has its layout and scroll position, so nothing flashes or jumps
@@ -438,7 +438,7 @@ func play_intro() -> void:
 	_ensure_3d()
 	root_box.visible = false
 	view3d.visible = true
-	music.set_mood("theme")
+	music.set_mood("theme", "theme_main")
 	var narrator = view3d.cinema.voice if view3d.get("cinema") != null else null
 	if narrator != null and not (narrator in music.duck_players): music.duck_players.append(narrator)
 	view3d.play_intro(D)
@@ -1351,6 +1351,7 @@ func _intro_shots() -> void:
 	D = JSON.parse_string(Sim.Snapshot())
 	_build_chrome()
 	show_screen("inbox")
+	music.set_process(true)                 # the intro harness keeps its music (scripts/record.sh intro films it with sound)
 	var done := [false]
 	_ensure_3d()
 	view3d.intro_finished.connect(func(): done[0] = true, CONNECT_ONE_SHOT)

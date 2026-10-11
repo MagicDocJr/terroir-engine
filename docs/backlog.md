@@ -47,6 +47,12 @@ Things deliberately left out of the MVP, to deep-dive once the core loop is lock
 ## Known issues and small follow-ups
 Found while building or reviewing; not urgent, but not to be forgotten. Remove a line when it is fixed.
 
+### Intro cinematic, narration and music (2026-10-11)
+- Three Napa Plot clips are not recorded in the Mentor's voice yet (Carneros, Valley Floor, Mountain: the free ElevenLabs quota ran out); they show captions only. When the quota resets, run `python3 tools/voice/narrate.py render` (it renders only what is missing).
+- From the air the land round the Plot reads bare: the neighbours' vineyards barely show at the distances the opening shot uses (and the far terrain is a flat beige). Make the neighbouring parcels read as vineyards from above (rows painted into the far terrain, or far vine cards) so the opening frame looks like a wine valley.
+- Music: only theme and spring tracks exist so far (`docs/music.md` lists the rest). A music volume slider in a settings screen; today N turns it on or off.
+- The intro could also be replayed from the Estate screen ("Watch the intro again").
+
 ### Training systems and pruning in 3D (2026-10-10)
 - The training-system learn card's 3D model shows winter, spring and summer; flowering, véraison colour and autumn leaves are not offered, and the summer canopy always has its fruit-zone leaves pulled (to show the bunches). A "leaves on / pulled" switch would teach leaf removal too.
 - The Einzelpfahl summer canopy in the vine models has every shoot reaching the top; growers tie three to five shoots up the stake as next year's canes and top the rest just above the bunches (§2.7). Model that in build_vineyard.py.

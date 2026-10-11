@@ -1,5 +1,6 @@
 # Background music (game/assets3d/music, gitignored; made with Suno, prompts in docs/music.md). Tracks are grouped by
-# mood from the start of their file name: theme_* (title, pre-game and the intro), spring_*, summer_*, autumn_*,
+# mood from the start of their file name: theme_* (theme_title_* on the title and pre-game screens, theme_main_* for the
+# intro), spring_*, summer_*, autumn_*,
 # winter_* (the season on the game's calendar), tasting_* (Tasting practice, the Wine Fair, the Cellar book).
 # A track plays once, then a quiet gap of 25–70 s, then another track of the current mood (never the same one twice
 # in a row), the way open-world games pace their music, so a handful of 3–4 minute tracks never wears thin. A change of
@@ -15,6 +16,7 @@ const FADE := 3.0
 var enabled := true
 var volume_db := -14.0
 var mood := ""
+var prefer := ""                          # a file-name start to prefer within the mood (set_mood)
 var tracks := {}                          # mood -> [path]
 var player: AudioStreamPlayer
 var last := ""
@@ -54,9 +56,12 @@ func has_music() -> bool:
 	return not tracks.is_empty()
 
 
-## Sets the mood; the music follows (fading out what plays if the mood changed).
-func set_mood(m: String) -> void:
-	if m == mood:
+## Sets the mood; the music follows (fading out what plays if the mood changed). prefer narrows the choice to tracks
+## whose file name starts with it when there are any (theme_title on the title screens, theme_main for the intro).
+func set_mood(m: String, pref := "") -> void:
+	var switch := m != mood or (pref != "" and pref != prefer and not last.get_file().begins_with(pref))
+	prefer = pref
+	if not switch:
 		return
 	mood = m
 	if player.playing:
@@ -96,6 +101,9 @@ func _process(delta: float) -> void:
 
 func _play_next() -> void:
 	var list: Array = tracks[mood]
+	if prefer != "":
+		var pl := list.filter(func(p): return String(p).get_file().begins_with(prefer))
+		if not pl.is_empty(): list = pl
 	var choices := list.filter(func(p): return p != last) if list.size() > 1 else list
 	var path: String = choices[randi() % choices.size()]
 	var st = _stream(path)
