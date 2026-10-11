@@ -276,6 +276,17 @@ func _swap_step() -> void:
 			(w[0] as MultiMeshInstance3D).multimesh.mesh = w[1]
 
 
+## Prepares every pending vine mesh and stage swap now (the intro does this behind its black card, so nothing is built
+## during the flight).
+func finish_warm() -> void:
+	while not swap_queue.is_empty():
+		var w: Array = swap_queue.pop_front()
+		if is_instance_valid(w[0]): (w[0] as MultiMeshInstance3D).multimesh.mesh = w[1]
+	while not warm_queue.is_empty():
+		var w2: Array = warm_queue.pop_back()
+		_block_mesh(w2[0], w2[1], w2[2], w2[3], w2[4])
+
+
 func _warm_step() -> void:
 	var t0 := Time.get_ticks_usec()
 	while not warm_queue.is_empty() and Time.get_ticks_usec() - t0 < 3000:
@@ -518,6 +529,10 @@ func _build_world() -> void:
 	grass_job = {}
 	grass_centre = Vector2i(99999, 99999)
 	_build_neighbours()
+	_build_outline()
+	var th := Time.get_ticks_msec()
+	_build_hedges()
+	print("view3d vineyard: %d hedge rows in %d ms" % [hedge_count, Time.get_ticks_msec() - th])
 	_queue_warm()
 	_build_near_trees()
 	_build_trees()
@@ -608,7 +623,8 @@ func _grass_mask_outside(x: float, z: float) -> float:
 	var base := 0.55 + 0.45 * noise.get_noise_2d(x * 3.0, z * 3.0)
 	if _neighbour_planted(x, z):
 		base = 0.2 + 0.3 * base if region != "napa" else 0.1
-	return clampf(lerpf(0.9, base, smoothstep(2.0, 8.0, d)), 0.0, 1.0)
+	# the headland round the Plot: a grass strip HEADLAND m wide that the neighbours' rows keep clear of
+	return clampf(lerpf(0.9, base, smoothstep(HEADLAND - 2.0, HEADLAND + 3.0, d)), 0.0, 1.0)
 
 
 func _terrain_material() -> ShaderMaterial:
@@ -1204,7 +1220,7 @@ func _neighbour_planted(x: float, z: float) -> bool:
 	var p := _parcel(x, z)
 	match region:
 		"mosel":
-			return (z > -hz - 190.0 and z < hz + clampf(sv * 70.0, 6.0, 55.0)) and p > 0.22
+			return (z > -hz - 190.0 and z < hz + clampf(sv * 70.0, 6.0, 55.0)) and p > (0.1 if sv >= 0.3 else 0.22)   # steep slopes: nearly all vineyard
 		"cote-dor":
 			return z > -hz - 300.0 and z < hz + 90.0 and p > 0.1
 		_:
@@ -1334,6 +1350,7 @@ func _build_river() -> void:
 	var fn := FastNoiseLite.new(); fn.frequency = 0.02
 	nt.noise = fn
 	sm.set_shader_parameter("wave_nrm", nt)
+	sm.set_shader_parameter("banks", Vector2(river.x, river.y))
 	mi.material_override = sm
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	world.add_child(mi)
@@ -1829,7 +1846,7 @@ func _build_neighbours() -> void:
 		while x <= band_x1 + ring:
 			var dx := maxf(maxf(band_x0 - x, x - band_x1), 0.0)
 			var dz := maxf(absf(z) - hz, 0.0)
-			var outside := dx > 5.0 or dz > 5.0
+			var outside := dx > HEADLAND or dz > HEADLAND
 			if outside and _neighbour_planted(x, z) and absf(fmod(x + 7000.0, 40.0) - 20.0) > 1.6 and absf(fmod(z + 7000.0, 34.0) - 17.0) > 1.4:
 				var y := H(x, z)
 				var yaw := rng.randf() * TAU if neighbour_training == "einzelpfahl" else PI / 2.0
@@ -1859,15 +1876,190 @@ func _build_neighbours() -> void:
 			mmi.multimesh = mm
 			mmi.position = center
 			mmi.visibility_range_end = 220.0
+			mmi.visibility_range_end_margin = 30.0          # dissolves while the hedge rows (from 200 m) take over
+			mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			world.add_child(mmi)
 			neighbour_mm.append({"mmi": mmi, "seed": seed, "g": -1})
+
+
+# ------------------------------------------------------------------ the neighbours' vineyards at a distance
+const NEIGHBOUR_RING := 42.0           # m round the Plot where the neighbours' vines are real vine meshes
+const HEADLAND := 10.0                 # m of grass round the Plot before the neighbours' rows: your land reads as yours
+var hedge_mat: ShaderMaterial
+var hedge_count := 0
+
+## The neighbours' vineyards beyond the real vines, out to several hundred metres: every row a hedge-like prism of
+## canopy (hedge_row.gdshader), laid down the parcels of _neighbour_planted with headlands at the parcel ends and a
+## track between parcels. They cast shadows (long golden-hour shadows in the intro). Look only.
+func _build_hedges() -> void:
+	hedge_count = 0
+	if OS.get_environment("TERROIR_NO_HEDGES") == "1":       # perf comparison (shot3d.sh --perf)
+		return
+	var steep_stakes := neighbour_training == "einzelpfahl"
+	var rs: float = {"mosel": 1.2 if steep_stakes else 1.7, "cote-dor": 1.05, "napa": 2.2}.get(region, 1.8)
+	var reach: float = {"mosel": 560.0, "cote-dor": 640.0, "napa": 620.0}.get(region, 560.0)
+	var width := 0.62 if steep_stakes else 0.5
+	var height: float = {"mosel": 1.35, "cote-dor": 0.95, "napa": 1.35}.get(region, 1.2)
+	var trunk: float = {"mosel": 0.42, "cote-dor": 0.32, "napa": 0.55}.get(region, 0.4)
+	hedge_mat = ShaderMaterial.new()
+	hedge_mat.shader = load(SH + "hedge_row.gdshader")
+	hedge_mat.set_shader_parameter("bush", 1.0 if steep_stakes else 0.0)
+	hedge_mat.set_shader_parameter("spacing", 1.2)
+	hedge_mat.set_shader_parameter("red", 0.0 if region == "mosel" else 1.0)
+	var mesh := _hedge_mesh()
+	mesh.surface_set_material(0, hedge_mat)
+	var cx := (band_x0 + band_x1) * 0.5
+	var chunks := {}
+	var x := floorf((band_x0 - reach) / rs) * rs
+	while x <= band_x1 + reach:
+		x += rs
+		var in_px := fposmod(x + 5000.0, 26.0)
+		if in_px < 1.6 or in_px > 25.4:
+			continue                                   # the track between two parcels
+		var pz := floorf((-hz - reach + 5000.0) / 70.0) * 70.0 - 5000.0
+		while pz <= hz + reach:
+			var z0 := pz + 3.0                         # headlands at both ends of the parcel
+			var z1 := pz + 67.0
+			pz += 70.0
+			var zm := (z0 + z1) * 0.5
+			if Vector2(x - cx, zm).length() > reach or not _neighbour_planted(x, zm):
+				continue
+			var nseg := 5
+			for k in nseg:
+				var a := z0 + (z1 - z0) * float(k) / nseg
+				var b := z0 + (z1 - z0) * float(k + 1) / nseg
+				var m := (a + b) * 0.5
+				var dx := maxf(maxf(band_x0 - x, x - band_x1), 0.0)
+				var dz := maxf(absf(m) - hz, 0.0)
+				if dx < HEADLAND + 0.5 and dz < HEADLAND + 0.5:
+					continue                               # the Plot and its headland
+				# where the real neighbour vines stand, the rows take over only beyond their 220 m view range
+				var near := dx < NEIGHBOUR_RING + 1.5 and dz < NEIGHBOUR_RING + 1.5
+				if pad_on and (_rect_dist(keepout, x, m) < 4.0 or track_dist(x, m) < 4.0):
+					continue
+				if river.x < INF and m > river.x - 16.0:
+					continue
+				var pa := Vector3(x, H(x, a) + trunk, a)
+				var pb := Vector3(x, H(x, b) + trunk, b)
+				var key := Vector3i(floori(x / 64.0), floori(m / 64.0), 1 if near else 0)
+				if not chunks.has(key):
+					chunks[key] = []
+				(chunks[key] as Array).append(Transform3D(Basis(Vector3(width, 0, 0), Vector3(0, height, 0), pb - pa), pa))
+	for key in chunks:
+		var list: Array = chunks[key]
+		var center := Vector3((key.x + 0.5) * 64.0, 0.0, (key.y + 0.5) * 64.0)
+		center.y = H(center.x, center.z)
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = mesh
+		mm.instance_count = list.size()
+		for i in list.size():
+			var xf: Transform3D = list[i]
+			xf.origin -= center
+			mm.set_instance_transform(i, xf)
+		var mmi := MultiMeshInstance3D.new()
+		mmi.multimesh = mm
+		mmi.position = center
+		mmi.visibility_range_begin = 200.0 if key.z == 1 else 30.0       # ring rows: as the real vines (220 m) dissolve
+		mmi.visibility_range_begin_margin = 30.0
+		mmi.visibility_range_end = 1300.0
+		mmi.visibility_range_end_margin = 200.0
+		mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF   # dissolve, never pop
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		world.add_child(mmi)
+		hedge_count += list.size()
+
+
+var outline: MeshInstance3D                # the intro's golden line round the Plot (hidden in play)
+
+## A ribbon round the Plot in the middle of its headland, following the ground (plot_outline.gdshader). The intro draws it.
+func _build_outline() -> void:
+	var off := HEADLAND * 0.45
+	var x0 := band_x0 - off; var x1 := band_x1 + off
+	var z0 := -hz - off; var z1 := hz + off
+	var corners := [Vector2(x0, z1), Vector2(x1, z1), Vector2(x1, z0), Vector2(x0, z0), Vector2(x0, z1)]
+	var pts := []
+	for i in 4:
+		var a: Vector2 = corners[i]
+		var b: Vector2 = corners[i + 1]
+		var n := maxi(2, int(a.distance_to(b) / 0.6))
+		for k in n:
+			pts.append(a.lerp(b, float(k) / n))
+	pts.append(corners[4])
+	var total := 0.0
+	var dist := [0.0]
+	for i in range(1, pts.size()):
+		total += (pts[i] as Vector2).distance_to(pts[i - 1]); dist.append(total)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
+	var w := 0.7
+	for i in pts.size():
+		var p: Vector2 = pts[i]
+		var prev: Vector2 = pts[maxi(i - 1, 0)]
+		var nxt: Vector2 = pts[mini(i + 1, pts.size() - 1)]
+		var d := (nxt - prev).normalized()
+		var side := Vector2(-d.y, d.x)
+		for sgn in [-1.0, 1.0]:
+			var q: Vector2 = p + side * sgn * w * 0.5
+			st.set_uv(Vector2(float(dist[i]) / total, 0.5 + 0.5 * sgn))
+			st.set_normal(Vector3.UP)
+			st.add_vertex(Vector3(q.x, H(q.x, q.y) + 0.25, q.y))
+	outline = MeshInstance3D.new()
+	outline.mesh = st.commit()
+	var sm := ShaderMaterial.new()
+	sm.shader = load(SH + "plot_outline.gdshader")
+	outline.material_override = sm
+	outline.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	outline.visible = false
+	world.add_child(outline)
+
+
+## Shows the line round the Plot drawn to reveal (0..1) at opacity fade; hidden at fade 0.
+func set_outline(reveal: float, fade: float) -> void:
+	if outline == null:
+		return
+	outline.visible = fade > 0.001
+	(outline.material_override as ShaderMaterial).set_shader_parameter("reveal", reveal)
+	(outline.material_override as ShaderMaterial).set_shader_parameter("fade", fade)
+
+
+## A unit hedge: a prism with a rounded top, x -0.5..0.5, y 0..1, z 0..1, 4 lengthwise segments.
+static func _hedge_mesh() -> ArrayMesh:
+	var prof := [Vector2(-0.38, 0.0), Vector2(-0.5, 0.35), Vector2(-0.46, 0.8), Vector2(-0.22, 1.0), Vector2(0.22, 1.0), Vector2(0.46, 0.8), Vector2(0.5, 0.35), Vector2(0.38, 0.0)]
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var nz := 4
+	for i in prof.size() - 1:
+		var p0: Vector2 = prof[i]
+		var p1: Vector2 = prof[i + 1]
+		var n := Vector3(p1.y - p0.y, -(p1.x - p0.x), 0.0).normalized() * -1.0
+		for k in nz:
+			var z0 := float(k) / nz
+			var z1 := float(k + 1) / nz
+			var q := [Vector3(p0.x, p0.y, z0), Vector3(p1.x, p1.y, z0), Vector3(p1.x, p1.y, z1), Vector3(p0.x, p0.y, z1)]
+			for t in [0, 2, 1, 0, 3, 2]:
+				st.set_normal(n)
+				st.add_vertex(q[t])
+	# end caps
+	for zc in [0.0, 1.0]:
+		for i in range(1, prof.size() - 1):
+			var tri := [prof[0], prof[i], prof[i + 1]]
+			if zc > 0.5: tri.reverse()
+			for v in tri:
+				st.set_normal(Vector3(0, 0, -1.0 if zc < 0.5 else 1.0))
+				st.add_vertex(Vector3(v.x, v.y, zc))
+	return st.commit()
 
 
 func _dress_neighbours() -> void:
 	if blocks.is_empty():
 		return
 	var g: int = blocks[0]["g"]
+	if hedge_mat:
+		hedge_mat.set_shader_parameter("canopy", [0.0, 0.15, 0.45, 0.8, 1.0][clampi(g, 0, 4)])
+		var lsx: Vector4 = (blocks[0]["leaf_mat"] as ShaderMaterial).get_shader_parameter("leaf_state")
+		hedge_mat.set_shader_parameter("autumn", lsx.z)
 	for e in neighbour_mm:
 		var mmi: MultiMeshInstance3D = e["mmi"]
 		if e["g"] != g:
@@ -2069,6 +2261,8 @@ func _apply_light() -> void:
 	if sp.x > -4.0:
 		var dl := _sun_world(maxf(sp.x, 1.0), sp.y)     # the light itself never comes from under the horizon
 		sun.look_at_from_position(Vector3.ZERO, -dl, Vector3.UP)
+		if mats.has("terrain_far"):                      # the far rows' shadows fall across their alleys
+			(mats["terrain_far"] as ShaderMaterial).set_shader_parameter("sun_dir", dl)
 		sun.light_color = Color(1.0, 0.92, 0.82).lerp(Color(1.0, 0.55, 0.28), low * 0.85)
 		sun.light_energy = 2.4 * (1.0 - 0.86 * cloud) * day * (1.0 - 0.25 * low)
 	else:
@@ -2459,7 +2653,8 @@ func cinema_shots() -> Array:
 	var wp: Vector3 = walk[0]
 	var wt: Vector3 = walk[1]
 	var back := Vector3(wp.x - wt.x, 0, wp.z - wt.z).normalized()
-	out.append({"kind": "line", "dur": 10.0, "p0": wp + back * 16.0 + Vector3(0, 9.0, 0), "p1": wp, "t0": wt + Vector3(0, -2.0, 0), "t1": wt})
+	# (it ends a few steps back and above the walker's spot, so no plant fills the lens)
+	out.append({"kind": "line", "dur": 10.0, "p0": wp + back * 18.0 + Vector3(0, 10.0, 0), "p1": wp + back * 4.0 + Vector3(0, 1.6, 0), "t0": wt + Vector3(0, -2.0, 0), "t1": wt})
 	return out
 
 

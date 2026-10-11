@@ -49,7 +49,7 @@ Found while building or reviewing; not urgent, but not to be forgotten. Remove a
 
 ### Intro cinematic, narration and music (2026-10-11)
 - Three Napa Plot clips are not recorded in the Mentor's voice yet (Carneros, Valley Floor, Mountain: the free ElevenLabs quota ran out); they show captions only. When the quota resets, run `python3 tools/voice/narrate.py render` (it renders only what is missing).
-- From the air the land round the Plot reads bare: the neighbours' vineyards barely show at the distances the opening shot uses (and the far terrain is a flat beige). Make the neighbouring parcels read as vineyards from above (rows painted into the far terrain, or far vine cards) so the opening frame looks like a wine valley.
+- Done 2026-10-11: the neighbours' vineyards out to ~600 m as hedge rows (`hedge_row.gdshader`, shadows on), a 10 m grass headland round the Plot and a golden boundary line in the intro, softened river banks, dissolving LOD hand-overs, quieter ambience under the voice. Open: the far hills beyond ~600 m are still the vertex-colour terrain; Napa's dry hills read sandy.
 - Music: only theme and spring tracks exist so far (`docs/music.md` lists the rest). A music volume slider in a settings screen; today N turns it on or off.
 - The intro could also be replayed from the Estate screen ("Watch the intro again").
 

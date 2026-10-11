@@ -1358,10 +1358,26 @@ func _intro_shots() -> void:
 	play_intro()
 	var n := 0
 	var t0 := Time.get_ticks_msec()
-	while not done[0] and Time.get_ticks_msec() - t0 < 120000:
-		await get_tree().create_timer(2.5).timeout
-		if done[0]: break
-		await _shot("intro_%s_%02d" % [plot.split("-")[0], n]); n += 1
+	var last_shot := 0
+	var frames := []                        # frame times (ms) while the flight plays, without the screenshot frames
+	var playing_seen := false
+	var guard := 0
+	while not done[0] and guard < 20000:                 # frames, not seconds: Movie Maker runs slower than real time
+		guard += 1
+		var f0 := Time.get_ticks_usec()
+		await get_tree().process_frame
+		var ms := (Time.get_ticks_usec() - f0) / 1000.0
+		var flying: bool = view3d.get("cinema").get("playing")
+		playing_seen = playing_seen or flying
+		if flying and Time.get_ticks_msec() - last_shot > 300:
+			frames.append(ms)
+		if flying and Time.get_ticks_msec() - last_shot > 2500:
+			last_shot = Time.get_ticks_msec()
+			await _shot("intro_%s_%02d" % [plot.split("-")[0], n]); n += 1
+			last_shot = Time.get_ticks_msec()
+	frames.sort()
+	if not frames.is_empty():
+		print("INTRO frames %d · median %.1f ms · p99 %.1f ms · worst %.1f ms · over 33 ms: %d" % [frames.size(), frames[frames.size() / 2], frames[int(frames.size() * 0.99)], frames[-1], frames.filter(func(x): return x > 33.3).size()])
 	for f in 30: await get_tree().process_frame
 	print("INTRO DONE ok=%s shots=%d" % [done[0], n])
 	get_tree().quit()

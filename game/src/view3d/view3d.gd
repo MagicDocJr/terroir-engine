@@ -415,10 +415,13 @@ func play_intro(real: Dictionary) -> void:
 		intro_finished.emit.call_deferred()
 		return
 	cinema.call("cover")
+	ambience.set("master_db", sound_volume_db - 13.0)
 	for f in 2: await get_tree().process_frame             # the black card is up before the world builds
 	var info: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://src/view3d/intro.json"))
 	var show := _summer_copy(real)
 	apply_snapshot(show)
+	vineyard.call("finish_warm")
+	for f in 3: await get_tree().process_frame             # shaders and the first shadow maps compile behind the black
 	var doy := 203
 	vineyard.call("set_daytime", float(vineyard.call("golden_hour", doy)))
 	cinematic = true
@@ -439,10 +442,21 @@ func play_intro(real: Dictionary) -> void:
 	cinema.set("cam", drone_cam)
 	cinema.set("ground_fn", Callable(vineyard, "ground_height"))
 	_update_zone(true)
+	# the flight sees hundreds of metres of rows: shadows reach that far (four splits, most detail near the camera)
+	var sunl: DirectionalLight3D = vineyard.get("sun")
+	sunl.directional_shadow_max_distance = 650.0
+	sunl.directional_shadow_split_1 = 0.04
+	sunl.directional_shadow_split_2 = 0.14
+	sunl.directional_shadow_split_3 = 0.4
 	cinema.call("play", shots)
 	await cinema.finished
 	cinematic = false
+	vineyard.call("set_outline", 0.0, 0.0)
+	ambience.set("master_db", sound_volume_db)
 	drone_cam.fov = 60.0
+	sunl.directional_shadow_split_1 = 0.05             # vineyard.gd _setup_sun's splits; the distance comes back with _update_zone
+	sunl.directional_shadow_split_2 = 0.15
+	sunl.directional_shadow_split_3 = 0.4
 	for l in [hud_label, hint_label, tl_label]: (l as Control).visible = true
 	vineyard.call("set_daytime", -1.0)
 	apply_snapshot(real)
@@ -629,6 +643,17 @@ func _input(e: InputEvent) -> void:
 func _process(delta: float) -> void:
 	if missing or placed_key == "":
 		return
+	if cinematic:                      # the intro: the river, birds and wind stay in the background, lower still under the voice
+		var talk: bool = (cinema.get("voice") as AudioStreamPlayer).playing
+		var want := sound_volume_db - 13.0 - (6.0 if talk else 0.0)
+		ambience.set("master_db", lerpf(float(ambience.get("master_db")), want, clampf(delta * 2.0, 0.0, 1.0)))
+		# your land: a golden line traces the Plot's boundary in the opening shot, stays over the Blocks, fades at the winery
+		var si: int = cinema.get("i")
+		var st: float = cinema.get("t")
+		match si:
+			0: vineyard.call("set_outline", clampf((st - 2.5) / 7.0, 0.0, 1.0), 1.0)
+			1: vineyard.call("set_outline", 1.0, 1.0 - clampf((st - 6.0) / 3.0, 0.0, 1.0))
+			_: vineyard.call("set_outline", 0.0, 0.0)
 	_timelapse_step(delta)
 	if drone:
 		_drone_step(delta)
