@@ -47,6 +47,13 @@ Things deliberately left out of the MVP, to deep-dive once the core loop is lock
 ## Known issues and small follow-ups
 Found while building or reviewing; not urgent, but not to be forgotten. Remove a line when it is fixed.
 
+### Training systems and pruning in 3D (2026-10-10)
+- The training-system learn card's 3D model shows winter, spring and summer; flowering, véraison colour and autumn leaves are not offered, and the summer canopy always has its fruit-zone leaves pulled (to show the bunches). A "leaves on / pulled" switch would teach leaf removal too.
+- The Einzelpfahl summer canopy in the vine models has every shoot reaching the top; growers tie three to five shoots up the stake as next year's canes and top the rest just above the bunches (§2.7). Model that in build_vineyard.py.
+- The pruning close-up hides vines in the camera's line of sight (on the square Einzelpfahl grid the next row stands in it); the scanned groundcover and near trees are not checked for inward faces (their open, cupped leaf cards fool the volume test).
+- Screens with fixed-width rows still run under an open Learn card (seen: the Tasting practice exercise cards and Glass of the day). Audit every screen at the width left beside the card (≈ 1,060 px at 1920) and add that width to the layout self-test.
+- The Planting guide's 2D diagrams draw one vine; the Guyot summer canopy is one-sided (the cane goes one way), which is right for one vine but reads lopsided. Consider ghosting the neighbouring vines' shoots.
+
 ### Simulation and science (for the science review)
 - Côte d'Or spring frost is too frequent for early-budding vines (seen in Tasting-practice pours 2026-09-29, cotedor-village): Chardonnay loses 82 % in 2019, 29 % in 2020 and 95 % in 2022, Pinot Noir 54 % in 2022, while real 2019/2020/2022 losses were local and small; 2016 and 2021 are right. Check budburst timing against the frost threshold and the grid-to-block night cooling (KPocket) before the next calibration pass. Wine Fair stands avoid those years until then.
 - Mosel 2010 is not reproduced: the sim gives a normal crop (≈ 69 hL/ha) and ordinary acidity, while the real vintage had a tiny crop from poor flowering and very high acidity (docs/science/vintage-notes.md). Fruit set in a cold, wet June needs a look; the Wine Fair's 2010 stand was dropped until then.
@@ -57,7 +64,7 @@ Found while building or reviewing; not urgent, but not to be forgotten. Remove a
 - Napa year-to-year yield variation is 4–7 %; check against the Napa County crush reports.
 - Multi-vintage carry-over coefficients (fruitfulness, reserves, inoculum, 20 % leaf-loss tolerance) are `UNVERIFIED`.
 - Reserves ignore frost at leaf fall (spec §4.2 lists it).
-- At 5,000 vines/ha a Guyot Block's High bud load (11 buds/m² = 22 buds per vine) hits the Guyot cap of 16 buds per vine, so High gives the same crop as Balanced; decide whether the cap should allow a double Guyot (≈ 2 × 10 buds) or the options should say so.
+- The Guyot cap is now 24 buds per vine (a double Guyot, 2026-10-10), so Carneros' Balanced crop rose to 68 hL/ha (≈ 9.4 t/ha Pinot Noir): check against the Napa County crush reports for Carneros Pinot Noir. (The 8-bud Village/1er Cru limit is warned at pruning and planting since 2026-10-11; the Wine is declassified at bottling, as the rules do. A Block planted at 9,000 vines/ha breaks it with a Standard pruning: the Planting screen says so.)
 - Napa Bench Cordon Blocks get 8–12 two-bud spurs per vine (16–24 buds), while the §3.1 bud table says 6–10 spurs × 2 buds; check whether the table means per arm (bilateral cordon) and align the table or the bud-load conversion.
 - A harvest still running on 31 December is wiped on 1 January (the December rule finishes picks on 2 December, so this is rare).
 

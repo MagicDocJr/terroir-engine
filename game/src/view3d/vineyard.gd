@@ -145,6 +145,13 @@ func _num(d: Dictionary, k: String, def := 0.0) -> float:
 func _mat(name: String) -> Material:
 	if mats.has(name):
 		return mats[name]
+	var m := make_mat(name)
+	mats[name] = m
+	return m
+
+
+## A fresh vineyard material by its GLB name (also used by the training-system model in the learn cards).
+static func make_mat(name: String) -> Material:
 	var m: Material
 	match name:
 		"vine_wood":
@@ -198,7 +205,6 @@ func _mat(name: String) -> Material:
 			m = s
 		_:
 			m = StandardMaterial3D.new()
-	mats[name] = m
 	return m
 
 
@@ -886,6 +892,34 @@ func _build_vines() -> void:
 			_build_trellis(blk)
 
 
+## Hides (scales away) every vine instance of a Block, in all its detail levels, whose foot lies within r of one of the
+## points (xz, global): the pruning close-up draws the demonstration vine itself, unpruned, and clears the line of sight.
+## Returns what restore_vines() needs.
+func hide_vines_near(blk_id: String, points: Array, r: float) -> Array:
+	var hidden := []
+	for blk in blocks:
+		if String(blk["id"]) != blk_id:
+			continue
+		for e in blk["mm"]:
+			var mmi: MultiMeshInstance3D = e["mmi"]
+			var mm := mmi.multimesh
+			for i in mm.instance_count:
+				var xf := mm.get_instance_transform(i)
+				var g := mmi.global_transform * xf.origin
+				for q in points:
+					if Vector2(g.x - (q as Vector3).x, g.z - (q as Vector3).z).length() < r:
+						hidden.append([mm, i, xf])
+						mm.set_instance_transform(i, Transform3D(Basis.from_scale(Vector3.ONE * 0.0001), xf.origin))
+						break
+	return hidden
+
+
+func restore_vines(hidden: Array) -> void:
+	for h in hidden:
+		if is_instance_valid(h[0]):
+			(h[0] as MultiMesh).set_instance_transform(int(h[1]), h[2])
+
+
 func _vine_mmi(blk: Dictionary, xfs: Array, center: Vector3, lod: int, seed: int) -> void:
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -1075,12 +1109,14 @@ func _dress_blocks() -> void:
 			autumn = clampf((doy - 268) / 50.0, 0.0, 0.6)
 		var wc := String(b.get("waterClass", "none"))
 		var stress: float = {"severe": 1.0, "moderate–severe": 0.55, "weak–moderate": 0.2}.get(wc, 0.0)
-		var removal := 0.0
+		var rm := 0.0                       # share of the basal leaves pulled on the morning (east) side
+		var ra := 0.0                       # … and on the afternoon (west) side
 		if st in ["FruitSet", "BunchClosure", "Veraison", "Ripening", "Picking"]:
 			var side := String(b.get("leafSide", "None"))
-			removal = {"Both": 0.9, "Morning": 0.5, "Afternoon": 0.5}.get(side, 0.0)
+			rm = 0.9 if side in ["Both", "Morning"] else 0.0
+			ra = 0.9 if side in ["Both", "Afternoon"] else 0.0
 		var leaf_state := Vector4(clampf(_num(b, "downyLeaf") / 30.0, 0.0, 1.0), clampf(_num(b, "chlorosis") / 100.0, 0.0, 1.0), autumn, drop)
-		var leaf_state2 := Vector4(stress, 1.0 if red else 0.0, removal, 0.0)
+		var leaf_state2 := Vector4(stress, 1.0 if red else 0.0, rm, ra)
 		var berry_col := Vector4(ripe.r, ripe.g, ripe.b, t)
 		var berry_state := Vector4(show, _num(b, "greyRot") / 100.0, _num(b, "powderyBunch") / 100.0, _num(b, "sunburn") / 100.0)
 		var berry_state2 := Vector4(flowering, _num(b, "nobleRot") / 100.0, 1.0 if red else 0.0, 0.0)
@@ -1088,6 +1124,8 @@ func _dress_blocks() -> void:
 		var bm: ShaderMaterial = blk["berry_mat"]
 		lm.set_shader_parameter("leaf_state", leaf_state)
 		lm.set_shader_parameter("leaf_state2", leaf_state2)
+		var east := _sun_world(0.0, 90.0)
+		lm.set_shader_parameter("east_dir", Vector2(east.x, east.z).normalized())
 		bm.set_shader_parameter("berry_col", berry_col)
 		bm.set_shader_parameter("berry_state", berry_state)
 		bm.set_shader_parameter("berry_state2", berry_state2)
@@ -1840,6 +1878,8 @@ func _dress_neighbours() -> void:
 		(neighbour_owner["leaf_mat"] as ShaderMaterial).set_shader_parameter(p, (blocks[0]["leaf_mat"] as ShaderMaterial).get_shader_parameter(p))
 	for p in ["berry_col", "berry_state", "berry_state2"]:
 		(neighbour_owner["berry_mat"] as ShaderMaterial).set_shader_parameter(p, (blocks[0]["berry_mat"] as ShaderMaterial).get_shader_parameter(p))
+	var ls2: Vector4 = (blocks[0]["leaf_mat"] as ShaderMaterial).get_shader_parameter("leaf_state2")
+	(neighbour_owner["leaf_mat"] as ShaderMaterial).set_shader_parameter("leaf_state2", Vector4(ls2.x, ls2.y, 0.0, 0.0))   # not your leaf removal
 	var ls: Vector4 = (blocks[0]["leaf_mat"] as ShaderMaterial).get_shader_parameter("leaf_state")
 	(neighbour_owner["leaf_mat"] as ShaderMaterial).set_shader_parameter("leaf_state", Vector4(0.0, 0.0, ls.z, ls.w))
 
@@ -2289,12 +2329,16 @@ func camera_preset(name: String, bi := 0) -> Array:
 			tgt = Vector3(t.x, 0, t.y)
 			pos.y = H(pos.x, pos.z) + EYE
 			tgt.y = H(tgt.x, tgt.z) + 0.6
-		"close":
+		"close", "close_east", "close_west":
 			var f: Vector2 = blk.get("focus", Vector2(cx, 0.0))
 			if blk.get("vsp", false):
 				var u := _row_dir(blk)
 				var wv := Vector2(-u.y, u.x)
 				var sp := _spacing(blk)
+				if name != "close":                           # the alley on the row's east (morning) or west side
+					var e := _sun_world(0.0, 90.0)
+					var east_side := 1.0 if wv.dot(Vector2(e.x, e.z)) >= 0.0 else -1.0
+					wv *= east_side * (1.0 if name == "close_east" else -1.0)
 				var c := f + wv * (sp.x * 0.5) + u * 0.9          # stand in the alley, a step along the row
 				pos = Vector3(c.x, 0, c.y)
 				tgt = Vector3(f.x, 0, f.y)
@@ -2303,6 +2347,9 @@ func camera_preset(name: String, bi := 0) -> Array:
 				tgt = Vector3(f.x - 0.05, 0, f.y)
 			pos.y = H(pos.x, pos.z) + (1.3 if blk.get("vsp", false) else 1.0)
 			tgt.y = H(tgt.x, tgt.z) + (0.85 if blk.get("vsp", false) else 0.75)
+			if name != "close":                               # crouched, level with the fruit zone
+				pos.y = H(pos.x, pos.z) + 0.75
+				tgt.y = H(tgt.x, tgt.z) + 0.7
 		"overview":
 			pos = Vector3(band_x0 - 18.0, 0, hz + 40.0)
 			pos.y = H(pos.x, pos.z) + 26.0 + hz * sv * 0.3

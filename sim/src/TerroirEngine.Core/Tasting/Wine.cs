@@ -81,6 +81,17 @@ public static class Blending
 /// <summary>Legal category per Region (docs/science/law.md; simplified, extensible rulebooks, spec §4.4).</summary>
 public static class Law
 {
+    /// <summary>The most buds per vine a Plot's own appellation allows at pruning, or null where there is no limit: Côte d'Or
+    /// Village and Premier Cru, 8 (law.md §3, "Pruning"). A Wine over it is declassified (Evaluate).</summary>
+    public static int? MaxBudsPerVine(string plotId) => plotId is "cotedor-village" or "cotedor-premiercru" ? 8 : null;
+
+    /// <summary>The least vines per hectare a Plot's own appellation allows, or null: Côte d'Or Village and Premier Cru, 9,000
+    /// (law.md §3, "Min planting density"). A Wine from a sparser Block is declassified (Evaluate).</summary>
+    public static int? MinDensity(string plotId) => plotId is "cotedor-village" or "cotedor-premiercru" ? 9000 : null;
+
+    /// <summary>The appellation that a bud count over the limit would lose, for the warning at pruning time.</summary>
+    public static string? BudLimitAppellation(string plotId) => plotId switch { "cotedor-premiercru" => "Premier Cru", "cotedor-village" => "Village AOC", _ => null };
+
     public static string SweetnessTermEu(double rs, double ta, bool german)
     {
         // EU 2019/33 Annex III (as summarised in law.md)
@@ -160,8 +171,8 @@ public static class Law
                 if (naturalAlc < minNat) fails.Add($"natural potential alcohol {naturalAlc:0.0} % is below the {minNat} % minimum");
                 if (alc > maxTotal + 0.2 && chaptalised) fails.Add($"after chaptalisation the wine is {alc:0.0} %, above the {maxTotal} % maximum");
                 if (yieldHl > maxYield) fails.Add($"yield {yieldHl:0} hL/ha is above the {maxYield} hL/ha limit");
-                if (lv >= 2 && parts.Any(p => p.prov.DensityVinesHa < 9000)) fails.Add("planting density is below 9,000 vines/ha");
-                if (lv >= 2 && parts.Any(p => p.prov.BudsPerVine > 8.5)) fails.Add("more than 8 buds per vine were left at pruning");
+                if (lv >= 2 && parts.Any(p => p.prov.DensityVinesHa < 9000)) fails.Add("planting density is below 9,000 vines/ha");   // 9,000 = MinDensity
+                if (lv >= 2 && parts.Any(p => p.prov.BudsPerVine > 8 + 0.5)) fails.Add("more than 8 buds per vine were left at pruning");   // 8 = MaxBudsPerVine; half a bud for rounding
                 if (red && b.Malic > 0.4) fails.Add($"malic acid {b.Malic:0.0} g/L at bottling (max 0.4 g/L: reds must complete MLF)");
                 if (red && rs > 2) fails.Add($"residual sugar {rs:0.0} g/L (reds max 2 g/L)");
                 if (lv >= 2 && bottling < new DateOnly(b.Harvested.Year + 1, 6, 15)) fails.Add("bottled before 15 June after the harvest");

@@ -59,5 +59,5 @@ for plant in PLANTS:
         ob.name = ob.name.replace("_LOD0", "")
         print("layout", plant, ob.name, n, "->", tris(ob), "tris")
         out.append(ob)
-    C.export(out, "gc_%s.glb" % plant.replace("_01", "").replace("_02", "").replace("_medium", ""))
+    C.export(out, "gc_%s.glb" % plant.replace("_01", "").replace("_02", "").replace("_medium", ""), check=False)   # scans: open, cupped cards
 print("DONE")

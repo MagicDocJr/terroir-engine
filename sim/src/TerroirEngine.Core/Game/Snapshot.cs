@@ -155,7 +155,13 @@ public static class Snapshot
                 {
                     var jo = new JsonObject { ["value"] = o.Value, ["label"] = o.Label, ["why"] = o.Why };
                     var blk = g.Blocks.FirstOrDefault(b => b.Data.Id == t.BlockId);
-                    if (t.Kind == TaskKind.Prune && blk != null) jo["buds"] = R(VineyardModel.BudsPerVine(blk, Enum.Parse<BudLoad>(o.Value)), 0);   // buds per vine: the 3D canes carry this many
+                    if (t.Kind == TaskKind.Prune && blk != null)
+                    {
+                        var (buds, detail, warn) = g.PruneOption(blk.Data.Id, o.Value);
+                        jo["buds"] = R(buds, 0);          // buds per vine: the 3D canes carry this many
+                        jo["detail"] = detail;            // "16 buds: two canes of 8 + 8"
+                        jo["warning"] = warn;             // over the appellation's bud limit, else null
+                    }
                     return (JsonNode)jo;
                 })),
                 ["crewActive"] = t.CrewActive(g.Date), ["crewUntil"] = t.CrewUntil == null ? null : D(t.CrewUntil.Value), ["where"] = TaskCatalog.Where(t.Kind),

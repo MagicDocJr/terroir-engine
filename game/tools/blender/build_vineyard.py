@@ -88,6 +88,13 @@ def cluster(P, R, E, p, cdir, g, scale=1.0):
             berry_sphere(P["vine_berry"], c + axis * lc * 0.35, br * 4.2, col, (bid, 1.0), seg=4, rings=2)
 
 
+def sector(out):
+    """The way a leaf faces out from its vine as one of 16 compass sectors (0 = +X, counting towards +Y), added to the
+    whole-number part of its UV2.x (the fraction stays the per-leaf random): leaf.gdshader turns it into the world and
+    pulls the leaves on the side that leaf removal chose (the morning side faces east)."""
+    return float(round(math.atan2(out.y, out.x) / (2 * math.pi / 16)) % 16)
+
+
 def leaves_on_shoot(P, R, E, spts, L, g, out_fn, cluster_nodes, lateral_p, cluster_dir_fn):
     """Leaves (+laterals, clusters) at the nodes of a shoot polyline spts."""
     node = 0
@@ -103,6 +110,7 @@ def leaves_on_shoot(P, R, E, spts, L, g, out_fn, cluster_nodes, lateral_p, clust
         t_dir = (spts[min(i + 1, len(spts) - 1)] - spts[i - 1]).normalized()
         alt = 1 if node % 2 else -1
         out, pdir, normal, tip = out_fn(R, p, t_dir, alt)
+        side = sector(out)
         pet = R.uniform(0.05, 0.08) * LEAF_SCALE[g]
         attach = p + pdir * pet
         if C.LOD == 0:
@@ -112,7 +120,7 @@ def leaves_on_shoot(P, R, E, spts, L, g, out_fn, cluster_nodes, lateral_p, clust
         col = leaf_col(R, frac, g, node)
         lr = R.random()
         if E.keep_leaf():
-            leaf_card(P["vine_leaf"], attach, tip, normal, E.leaf_size(size), col, (lr, frac))
+            leaf_card(P["vine_leaf"], attach, tip, normal, E.leaf_size(size), col, (side + lr, frac))
         if g >= 4 and node >= 3 and R.random() < lateral_p:                  # lateral shoot, 2-3 leaves
             ldir = (out * 0.6 + V((0, 0, 0.55))).normalized()
             for q in range(R.randint(2, 3)):
@@ -124,9 +132,35 @@ def leaves_on_shoot(P, R, E, spts, L, g, out_fn, cluster_nodes, lateral_p, clust
                 s2 = size * R.uniform(0.55, 0.8)
                 lr2 = R.random()
                 if E.keep_leaf():
-                    leaf_card(P["vine_leaf"], la, lt, ln, E.leaf_size(s2), (0.10 + 0.02 * k, 0.26 + 0.04 * k, 0.04), (lr2, 0.9))
+                    leaf_card(P["vine_leaf"], la, lt, ln, E.leaf_size(s2), (0.10 + 0.02 * k, 0.26 + 0.04 * k, 0.04), (side + lr2, 0.9))
         if g >= 3 and node in cluster_nodes[0] and R.random() < cluster_nodes[1][cluster_nodes[0].index(node)]:
             cluster(P, R, E, p, cluster_dir_fn(p, alt, out), g)
+
+
+def dormant_bud(P, p, d):
+    """Growth level 0: a winter bud (a small pointed ovoid) sitting on the one-year wood at p, pointing along d.
+    Near detail only (LOD 0-1): it is what the pruner counts."""
+    if C.LOD > 1:
+        return
+    d = d.normalized()
+    a1 = d.orthogonal().normalized()
+    a2 = d.cross(a1)
+    r = 0.0058
+    seg, rings = (7, 4) if C.LOD == 0 else (4, 2)
+    c = p + d * r * 0.7
+    verts, faces, uvs, cols = [], [], [], []
+    for i in range(rings + 1):
+        phi = math.pi * i / rings
+        k = 1.0 - 0.35 * (i / rings)                        # narrower towards the tip
+        for j in range(seg):
+            th = 2 * math.pi * j / seg
+            verts.append(c + (a1 * math.cos(th) + a2 * math.sin(th)) * (r * k * math.sin(phi)) + d * (r * 1.7 * math.cos(phi)))
+            uvs.append((j / seg, i / rings)); cols.append((0.8, 0.7, 0.62))
+    for i in range(rings):
+        for j in range(seg):
+            a = i * seg + j; b = i * seg + (j + 1) % seg
+            faces.append((a, a + seg, b + seg, b))
+    P["vine_bark"].add(verts, faces, uvs, cols, [(0.0, 0.0)] * len(verts))
 
 
 def budburst_rosette(P, R, E, p, up):
@@ -187,6 +221,7 @@ def build_einzelpfahl(seed, g):
             L = R.uniform(0.75, 1.25) * GROWTH[g]
             rc = R.uniform(0.18, 0.32)
             if g == 0:
+                dormant_bud(P, pb + (radial * 0.5 + V((0, 0, 1))).normalized() * 0.009, (radial * 0.6 + V((0, 0, 1))).normalized())
                 continue
             if g == 1:
                 budburst_rosette(P, R, E, pb, (radial * 0.5 + V((0, 0, 1))).normalized())
@@ -270,8 +305,11 @@ def build_vsp(kind, seed, g):
     for bi, (b, ys) in enumerate(buds):
         L = (top - b.z + 0.12) * R.uniform(0.88, 1.08) * GROWTH[g]
         lean = ys * R.uniform(0.02, 0.10)
-        drift = R.uniform(-0.06, 0.06)
+        # shoots splay a little along the row (the two shoots of a spur apart), so the summer hedge closes between them
+        drift = R.uniform(-0.14, 0.14) + (0.06 if bi % 2 else -0.06) * (1.0 if kind == "cordon" else 0.5)
+        wig = R.uniform(0.015, 0.04)
         if g == 0:
+            dormant_bud(P, b + V((0, ys * 0.004, 0.008)), V((0, ys * 0.45, 1)))
             continue
         if g == 1:
             budburst_rosette(P, R, E, b, V((0, 0, 1)))
@@ -280,14 +318,14 @@ def build_vsp(kind, seed, g):
         for i in range(9):
             t = i / 8
             z = min(b.z + L * t, top + 0.03 * t)                           # hedged at the top
-            pts.append(V((b.x + drift * t, b.y + lean * math.sin(t * math.pi / 2) + 0.015 * math.sin(t * 6 + bi), z)))
+            pts.append(V((b.x + drift * t + wig * math.sin(t * 4.5 + bi * 1.7), b.y + lean * math.sin(t * math.pi / 2) + 0.015 * math.sin(t * 6 + bi), z)))
         spts = catmull(pts, 3)
         if C.LOD < 3:
             tube(P["vine_bark"], spts, [0.0065 - 0.003 * i / len(spts) for i in range(len(spts))], 4, WHITE, v_scale=0.3)
 
         def out_fn(R, p, t_dir, alt):
             out = V((0, alt, 0))
-            pdir = (V((R.uniform(-0.35, 0.35), alt * 0.85, 0.30))).normalized()
+            pdir = (V((R.uniform(-0.6, 0.6), alt * 0.85, 0.30))).normalized()
             normal = (V((R.uniform(-0.3, 0.3), alt * 0.75, 0.62))).normalized()
             tip = (pdir * 0.4 + V((0, 0, -0.8))).normalized()
             tip = (tip - normal * tip.dot(normal)).normalized()

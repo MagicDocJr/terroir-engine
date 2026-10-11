@@ -184,7 +184,7 @@ public static class VineyardModel
     {
         double perM2 = load switch { BudLoad.Low => 6.0, BudLoad.High => 11.0, _ => 8.0 };   // buds per m² (UNVERIFIED design)
         double buds = perM2 * 10000.0 / b.Planting.DensityVinesHa;
-        double cap = b.Planting.Training switch { TrainingSystem.Einzelpfahl => 26, TrainingSystem.Guyot => 16, _ => 24 };
+        double cap = b.Planting.Training switch { TrainingSystem.Einzelpfahl => 26, TrainingSystem.Guyot => 24, _ => 24 };   // Guyot: up to two canes of 12 (double Guyot)
         return M.Clamp(buds, 4, cap);
     }
 

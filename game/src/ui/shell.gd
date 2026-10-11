@@ -64,6 +64,10 @@ var _learn_open := ["", {}]
 var harness := ""         # the harness this run plays (scripts/*.sh), or "" in normal play
 var shot_hold := 10       # frames a harness waits before each screenshot; scripts/record.sh raises it so a video lingers
 var _learn_seen_cache = null
+const LEARN_DRAWER_AT := 0.58     # the learn card's left edge, as a share of the window width (learn_drawer.gd)
+var _cur_node: Control = null     # the screen on show (pre-game screens are not cached, so it is kept here)
+var _pending_scroll := -1         # a scroll position still being restored on _cur_node
+var _cur_sig := ""                # the page on show (_page_sig)
 
 func _ready() -> void:
 	theme = UI.make_theme()
@@ -242,10 +246,14 @@ func show_screen(id: String) -> void:
 	if not Sim.HasGame() and not (id in PREGAME) and not (id in TASTING): id = "title"
 	if id != current and sfx: sfx.play("page")
 	if id in TASTING and not (current in TASTING): state.erase("tp_lobby")   # the Timeline, the date or the record may have moved on
-	# re-rendering the same screen (after a choice) keeps the scroll position instead of jumping to the top
-	var cur_e: Dictionary = _screen_cache.get(current, {})
+	# re-rendering the same screen (after a choice) keeps the scroll position instead of jumping to the top: the old
+	# screen stays on top until the new one has its layout and scroll position, so nothing flashes or jumps
 	var keep_scroll := -1
-	if id == current and not cur_e.is_empty() and is_instance_valid(cur_e["node"]): keep_scroll = _scroll_pos(cur_e["node"])
+	var old_node: Control = null
+	var sig := _page_sig(id)
+	if id == current and sig == _cur_sig and is_instance_valid(_cur_node):
+		keep_scroll = _pending_scroll if _pending_scroll >= 0 else _scroll_pos(_cur_node)
+		if keep_scroll > 0: old_node = _cur_node
 	var pre: bool = id in PREGAME or (id in TASTING and not Sim.HasGame())
 	# switching tabs reuses a screen built for the same game state (fast); a same-screen call always rebuilds it
 	var cached: Dictionary = _screen_cache.get(id, {})
@@ -256,15 +264,17 @@ func show_screen(id: String) -> void:
 		var e: Dictionary = _screen_cache[k]
 		var stale: bool = not is_instance_valid(e["node"]) or int(e["ver"]) != _chrome_ver or (k == id and not reuse)
 		if stale:
-			if is_instance_valid(e["node"]): e["node"].queue_free()
+			if is_instance_valid(e["node"]) and e["node"] != old_node: e["node"].queue_free()
 			_screen_cache.erase(k)
 	for c in host.get_children():
 		if _is_cached_node(c): c.visible = reuse and c == cached["node"]
-		else: c.queue_free()
+		elif c != old_node: c.queue_free()
 	topbar.visible = not pre
 	nav_panel.visible = not pre
 	statusbar.visible = not pre
 	if reuse:
+		_cur_node = cached["node"]
+		_cur_sig = sig
 		_refresh_nav()
 		return
 	var def: Array = SCREENS[id]
@@ -297,9 +307,16 @@ func show_screen(id: String) -> void:
 		wrap.add_child(node)
 		node = wrap
 	host.add_child(node)
+	_cur_node = node
+	_cur_sig = sig
 	if not pre: _screen_cache[id] = {"node": node, "ver": _chrome_ver, "ret": String(state.get("return_to", ""))}
-	if keep_scroll > 0: _restore_scroll(node, keep_scroll)
+	if keep_scroll > 0: _restore_scroll(node, keep_scroll, old_node)
 	if not pre: _refresh_nav()
+
+## Which page of a screen is on show: a choice on the same page keeps the place; moving on (a pour starting, the answers
+## marked, another glass, back to the list) is a new page and starts at the top.
+func _page_sig(id: String) -> String:
+	return "%s|%s|%s" % [id, state.get("tp_view", ""), state.get("tp_glass", "")]
 
 func _is_cached_node(c: Node) -> bool:
 	for e in _screen_cache.values():
@@ -317,11 +334,20 @@ func _scroll_pos(n: Node) -> int:
 	var s := _find_scroll(n)
 	return s.scroll_vertical if s != null else -1
 
-func _restore_scroll(n: Node, pos: int) -> void:
+## The new screen is laid out invisibly under the old one; once its scroll position is set it replaces the old one.
+func _restore_scroll(n: Control, pos: int, old: Control = null) -> void:
+	_pending_scroll = pos
+	if old != null:
+		n.modulate.a = 0.0
+		old.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		host.move_child(old, -1)
 	for f in 2: await get_tree().process_frame
+	if is_instance_valid(old): old.queue_free()
 	if not is_instance_valid(n): return
+	if n == _cur_node: _pending_scroll = -1
 	var s := _find_scroll(n)
 	if s != null: s.scroll_vertical = pos
+	n.modulate.a = 1.0
 
 func _unhandled_input(e: InputEvent) -> void:
 	if not (e is InputEventKey and e.pressed and not e.echo): return
@@ -369,6 +395,7 @@ func open_learn(card_id: String, ctx := {}) -> void:
 	_learn_seen_cache = null
 	learn_layer = load("res://src/ui/learn_drawer.gd").build(self, J)
 	add_child(learn_layer)
+	_fit_beside_drawer()
 	if sfx: sfx.play("page")
 
 func reopen_learn() -> void:
@@ -377,6 +404,15 @@ func reopen_learn() -> void:
 func close_learn() -> void:
 	if learn_layer != null and is_instance_valid(learn_layer): learn_layer.queue_free()
 	learn_layer = null
+	_fit_beside_drawer()
+
+## While a learn card is open the screen narrows to the space left of it, so the choice behind the card stays fully
+## visible and usable (the rows reflow) instead of running under the card.
+func _fit_beside_drawer() -> void:
+	var open := learn_layer != null and is_instance_valid(learn_layer)
+	var w := get_viewport_rect().size.x
+	host.add_theme_constant_override("margin_right", 24 + (int(w * (1.0 - LEARN_DRAWER_AT)) if open else 0))
+	if open and not get_viewport().size_changed.is_connected(_fit_beside_drawer): get_viewport().size_changed.connect(_fit_beside_drawer)
 
 # ------------------------------------------------------------------ 3D
 ## kind "" (Tab or the 3D button) resumes where you left the 3D view; a named place ("vineyard", "hall", "cellar") goes there.
@@ -1264,20 +1300,78 @@ func _avatar_sheet() -> void:
 	await _shot("avatars")
 	get_tree().quit()
 
+## The scroll position of the screen the player sees (the top one; a replacement waits invisibly under it).
+func _shown_scroll() -> int:
+	var kids := host.get_children()
+	kids.reverse()
+	for c in kids:
+		if c is Control and (c as Control).visible and (c as Control).modulate.a > 0.5 and not c.is_queued_for_deletion():
+			return _scroll_pos(c)
+	return -1
+
 func _pregame_shots() -> void:
 	show_screen("region"); await _shot("pre_region")
 	setup = {"region": "mosel", "plot": "mosel-blauschiefer"}
 	for tab in ["Varieties", "Rootstocks", "Training", "Density & rows"]:
 		setup["guide_tab"] = tab
-		show_screen("planting"); await get_tree().process_frame
+		show_screen("planting")
+		for f in 3: await get_tree().process_frame       # past the kept scroll position of the screen it replaces
 		var sc := _find_scroll(host)
 		if sc: sc.scroll_vertical = 420
 		await _shot("pre_planting_" + tab.get_slice(" ", 0).to_lower())
+		if tab == "Training":
+			if sc: sc.scroll_vertical = 900
+			await _shot("pre_planting_training_vsp")
+	# choosing an option (a staff level, a dropdown) keeps the scroll position: no jump to the top
+	var ok := true
+	setup = {"region": "napa", "plot": "napa-carneros"}
+	show_screen("planting")
+	for f in 3: await get_tree().process_frame
+	for pick in ["Senior", "variety"]:
+		var sc2 := _find_scroll(host)
+		sc2.scroll_vertical = 700
+		await get_tree().process_frame
+		var before := sc2.scroll_vertical
+		var btns := []
+		_collect_buttons(host, btns)
+		for b in btns:
+			if pick == "Senior" and b is Button and (b as Button).text == "Senior":
+				b.emit_signal("pressed"); break
+			if pick == "variety" and b is OptionButton and (b as OptionButton).item_count > 3:
+				(b as OptionButton).select(1); b.emit_signal("item_selected", 1); break
+		var seen := []
+		for f in 4:
+			await get_tree().process_frame
+			seen.append(_shown_scroll())
+		var kept := before > 0 and seen.all(func(y): return absi(int(y) - before) <= 1)
+		ok = ok and kept
+		print("PREGAME scroll_kept_%s %s (%d → %s)" % [pick, "ok" if kept else "FAIL", before, str(seen)])
+	# Carneros: the Learn drawers opened from a Block's row (rootstock, and the training systems winter and summer)
+	setup = {"region": "napa", "plot": "napa-carneros"}
+	show_screen("planting"); await get_tree().process_frame
+	open_learn("rootstock", {"plot": "napa-carneros", "block": "A"}); await _shot("pre_learn_rootstock")
+	for kind in ["Guyot", "Cordon", "Einzelpfahl"]:
+		for season in ["Winter", "Spring", "Summer"]:
+			state["learn_training"] = kind; state["learn_season"] = season
+			open_learn("training-system", {"plot": "napa-carneros", "block": "A"})
+			for f in 30: await get_tree().process_frame
+			await _shot("pre_learn_training_%s_%s" % [kind.to_lower(), season.to_lower()])
+	# a close look at the Guyot fruit zone in summer (the model's camera moved by hand)
+	state["learn_training"] = "Guyot"; state["learn_season"] = "Summer"
+	open_learn("training-system", {"plot": "napa-carneros", "block": "A"})
+	await get_tree().process_frame
+	for m in learn_layer.find_children("*", "VBoxContainer", true, false):
+		if m.get_script() == load("res://src/ui/training_model.gd"):
+			m.auto = false; m.yaw = 0.35; m.pitch = -0.05; m.dist = 1.5; m.target = Vector3(0.35, 0.95, 0)
+	for f in 20: await get_tree().process_frame
+	await _shot("pre_learn_training_guyot_fruitzone")
+	close_learn()
 	for spec in [["mosel", "mosel-blauschiefer", "mosel-uferflur"], ["cote-dor", "cotedor-village", ""], ["napa", "napa-mountain", "napa-floor"]]:
 		setup = {"region": spec[0], "plot": spec[1], "compare": spec[2]}
 		show_screen("plots")
 		await get_tree().create_timer(2.0).timeout
 		await _shot("pre_plots_" + spec[1])
+	print("PREGAME DONE ok=%s" % ok)
 	get_tree().quit()
 
 # ------------------------------------------------------------------ perf probe: snapshot, parse and screen build times

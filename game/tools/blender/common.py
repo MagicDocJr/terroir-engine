@@ -108,10 +108,58 @@ def make_object(name, parts, smooth=True):
     return ob
 
 
-def export(obs, filename):
-    """Export one object or a list of objects (each becomes a named glTF node) into OUT/filename."""
+INTERIOR = {"cellar_wall", "hall_floor"}   # rooms seen from inside (the vault, the floor round the stairwell): inward on purpose
+
+
+def inward_parts(ob):
+    """Loose parts of a mesh whose faces point inward (signed volume < 0). Open parts (tubes without caps) are judged
+    the same way; flat ones (leaf cards, planes) enclose no volume and are skipped. Returns [(material, faces)]."""
+    import bmesh
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    bm.faces.ensure_lookup_table()
+    seen, out = set(), []
+    for f0 in bm.faces:
+        if f0.index in seen:
+            continue
+        part, stack = [], [f0]
+        seen.add(f0.index)
+        while stack:
+            f = stack.pop()
+            part.append(f)
+            for e in f.edges:
+                for g in e.link_faces:
+                    if g.index not in seen:
+                        seen.add(g.index); stack.append(g)
+        if len(part) < 4:
+            continue
+        c = sum((f.calc_center_median() for f in part), Vector()) / len(part)
+        vol = sum((f.calc_center_median() - c).dot(f.normal) * f.calc_area() for f in part) / 3.0
+        lo = Vector([min(v.co[i] for f in part for v in f.verts) for i in range(3)])
+        hi = Vector([max(v.co[i] for f in part for v in f.verts) for i in range(3)])
+        d = hi - lo
+        box = d.x * d.y * d.z
+        mi = part[0].material_index
+        if mi < len(ob.data.materials) and ob.data.materials[mi] and ob.data.materials[mi].name.split(".")[0] in INTERIOR:
+            continue
+        if box > 1e-12 and vol < -0.05 * box:
+            out.append((ob.data.materials[mi].name if mi < len(ob.data.materials) and ob.data.materials[mi] else "?", len(part)))
+    bm.free()
+    return out
+
+
+def export(obs, filename, check=True):
+    """Export one object or a list of objects (each becomes a named glTF node) into OUT/filename. Warns about parts
+    wound inside out (they render lit from the wrong side, and back-face culling hides their near side)."""
     if not isinstance(obs, (list, tuple)):
         obs = [obs]
+    for ob in obs:
+        if check and ob.type == "MESH":
+            bad = inward_parts(ob)
+            if bad:
+                mats = {}
+                for m, n in bad: mats[m] = mats.get(m, 0) + 1
+                print("INWARD faces in %s/%s: %s" % (filename, ob.name, ", ".join("%s ×%d" % kv for kv in mats.items())))
     bpy.ops.object.select_all(action="DESELECT")
     for ob in obs:
         ob.select_set(True)
@@ -285,5 +333,5 @@ def berry_sphere(acc, center, r, col, uv2=(0.0, 0.0), seg=5, rings=3):
     for i in range(rings):
         for j in range(seg):
             a = i * seg + j; b = i * seg + (j + 1) % seg
-            faces.append((a, b, b + seg, a + seg))
+            faces.append((a, a + seg, b + seg, b))          # counter-clockwise seen from outside: normals point out
     acc.add(verts, faces, uvs, cols, [uv2] * len(verts))

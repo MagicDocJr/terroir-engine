@@ -774,10 +774,13 @@ func _interact() -> bool:
 		c.queue_free()
 	for o in task.get("options", []):
 		var b := Button.new()
-		b.text = String(o["label"])
+		b.text = String(o["label"]) + ("\n" + String(o["detail"]) if o.get("detail") != null else "")
+		if o.get("warning") != null:
+			b.text = "⚠ " + b.text
+			b.add_theme_color_override("font_color", Color(1.0, 0.62, 0.3))
 		b.toggle_mode = true
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.custom_minimum_size = Vector2(0, 38)
+		b.custom_minimum_size = Vector2(0, 38 if o.get("detail") == null else 56)
 		b.set_meta("value", String(o["value"]))
 		var val := String(o["value"])
 		b.pressed.connect(func(): _choose(val))
@@ -801,6 +804,7 @@ func _explain(value: String) -> void:
 	var o := _option(value)
 	if not o.is_empty():
 		tp_why.text = "%s\n\n%s" % [o["label"], o["why"]]
+		if o.get("warning") != null: tp_why.text += "\n\n⚠ " + String(o["warning"])
 
 
 ## Selects an option (from a click on a part or a button). Leaf removal toggles sides.

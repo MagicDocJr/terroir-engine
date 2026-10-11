@@ -45,8 +45,9 @@ void fragment() {
 	// bloom: the waxy coat of ripening berries scatters light, strongest at grazing angles (blue-grey on red grapes,
 	// a paler dust on white ones); a film of rain water makes wet berries look glossy and hides it (look only)
 	float fres = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 2.0);
-	float bloom = t * (berry_state2.z > 0.5 ? 0.55 : 0.3) * (1.0 - 0.6 * wetness) * (0.35 + 0.65 * fres);
-	vec3 bloom_col = berry_state2.z > 0.5 ? vec3(0.34, 0.36, 0.44) : vec3(0.62, 0.62, 0.5);
+	// (red: a dusky blue haze over blue-black skins, not a pale lavender; the old 0.34–0.44 albedo read lilac in the sun)
+	float bloom = t * (berry_state2.z > 0.5 ? 0.45 : 0.3) * (1.0 - 0.6 * wetness) * (0.3 + 0.7 * fres);
+	vec3 bloom_col = berry_state2.z > 0.5 ? vec3(0.13, 0.14, 0.21) : vec3(0.62, 0.62, 0.5);
 	col = mix(col, bloom_col, bloom);
 	rgh = mix(rgh, 0.8, bloom);
 	ALBEDO = col * mix(1.0, 0.85, wetness);

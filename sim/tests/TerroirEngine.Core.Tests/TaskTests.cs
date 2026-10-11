@@ -1,3 +1,4 @@
+using TerroirEngine.Data;
 using TerroirEngine.Game;
 using TerroirEngine.Vineyard;
 using TerroirEngine.Winery;
@@ -17,6 +18,18 @@ public class TaskTests
         Assert.Equal(g.Blocks.Count, prune.Count);
         Assert.All(prune, t => { Assert.Equal(TaskState.Open, t.Status); Assert.Equal(new DateOnly(g.FirstVintage, 3, 1), t.Due); });
         Assert.Contains(g.Inbox, m => m.Kind == "task-prune");
+    }
+
+    [Fact]
+    public void GuyotPruningOptions_DifferAtLowDensity_DoubleGuyotAboveTwelveBuds()
+    {
+        // Carneros plants Guyot at 3,800 vines/ha: 6/8/11 buds per m² are 16/21/29 buds per vine; a single-cane cap of
+        // 16 made all three the same, a double Guyot (two canes of up to 12) keeps them apart up to 24
+        var g = New("napa-carneros", 2014);
+        var b = g.Blocks.First(x => x.Planting.Training == TrainingSystem.Guyot);
+        var buds = new[] { BudLoad.Low, BudLoad.Balanced, BudLoad.High }.Select(l => VineyardModel.BudsPerVine(b, l)).ToList();
+        Assert.True(buds[0] < buds[1] && buds[1] < buds[2], string.Join(", ", buds));
+        Assert.True(buds[2] <= 24);
     }
 
     [Fact]
@@ -166,8 +179,34 @@ public class TaskTests
     {
         var g = New("cotedor-village", 2013);
         var m = g.Inbox.Single(x => x.Kind == "task-prune");
-        Assert.Contains("Short cane", m.Body);
-        Assert.DoesNotContain("Medium cane", m.Body);
+        Assert.Contains("Fewer buds", m.Body);
+        Assert.DoesNotContain("Standard buds", m.Body);
+    }
+
+    [Fact]
+    public void CoteDor_PruningOverTheBudLimit_IsWarned_AndDeclassifies()
+    {
+        // Village AOC allows 8 buds per vine (law.md §3): at 10,000 vines/ha High (11 buds per m²) is 11 buds per vine
+        var g = New("cotedor-village", 2013);
+        var t = g.Tasks.First(x => x.Kind == TaskKind.Prune);
+        Assert.Null(g.PruneOption(t.BlockId, "Balanced").Warning);
+        Assert.Contains("Bourgogne", g.PruneOption(t.BlockId, "High").Warning);
+        Assert.Contains("at most 8 buds", g.Inbox.Single(x => x.Kind == "task-prune").Body);
+        var opt = Snapshot.Build(g)["tasks"]!.AsArray().First(x => x!["id"]!.GetValue<int>() == t.Id)!["options"]!.AsArray().First(o => o!["value"]!.GetValue<string>() == "High")!;
+        Assert.NotNull(opt["warning"]);
+        Assert.Contains("one cane", opt["detail"]!.GetValue<string>());
+        // no limit outside Village and Premier Cru
+        var n = New("napa-carneros", 2014);
+        Assert.Null(n.PruneOption(n.Tasks.First(x => x.Kind == TaskKind.Prune).BlockId, "High").Warning);
+    }
+
+    [Fact]
+    public void PruneDetail_SplitsBudsTheWayTheVineCarriesThem()
+    {
+        Assert.Equal("10 buds on one cane", TaskCatalog.PruneDetail(TrainingSystem.Guyot, 10));
+        Assert.Equal("21 buds: two canes of 11 + 10 (double Guyot)", TaskCatalog.PruneDetail(TrainingSystem.Guyot, 21));
+        Assert.Equal("8 spurs of 2 buds", TaskCatalog.PruneDetail(TrainingSystem.Cordon, 16));
+        Assert.Equal("14 buds: two bows of 7 + 7", TaskCatalog.PruneDetail(TrainingSystem.Einzelpfahl, 14));
     }
 
     [Fact]
@@ -202,12 +241,12 @@ public class TaskTests
     [Theory]
     [InlineData("napa-bench", "spur")]          // Cordon: spur pruning
     [InlineData("mosel-terrassen", "bow")]      // Einzelpfahl: arched bows
-    [InlineData("mosel-seitental", "cane")]     // Guyot: cane pruning
+    [InlineData("mosel-seitental", "cane")]     // Guyot: cane pruning (one or two canes, in the per-Block detail)
     public void PruningOptions_UseTheTrainingSystemsWords(string plot, string word)
     {
         var g = New(plot, 2014);
         var opts = Snapshot.Build(g)["tasks"]!.AsArray()[0]!["options"]!.AsArray();
-        Assert.All(opts, o => Assert.Contains(word, o!["label"]!.GetValue<string>(), StringComparison.OrdinalIgnoreCase));
+        Assert.All(opts, o => Assert.Contains(word, o!["label"]!.GetValue<string>() + " " + o["detail"]!.GetValue<string>(), StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

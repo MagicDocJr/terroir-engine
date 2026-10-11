@@ -136,5 +136,5 @@ for ti, tree in enumerate(TREES):
                 p.name = "%s_%s" % (tree, "branches" if mat.endswith("_branches") else "trunk")
                 print("layout", tree, "lod%d" % li, p.name, before, "->", tris(p), "tris")
             out.append(p)
-        C.export(out, "tree3d_%d_lod%d.glb" % (ti + 1, li))
+        C.export(out, "tree3d_%d_lod%d.glb" % (ti + 1, li), check=False)   # scans: open trunks, cupped leaf cards
 print("DONE")
