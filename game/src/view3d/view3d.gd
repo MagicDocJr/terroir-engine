@@ -90,9 +90,13 @@ var tl_label: Label
 
 
 # the intro cinematic (cinema.gd): a flight over the Region and the new Estate
+signal intro_held                   # the flight is over and holds on the sunset vista (the tour's first line plays here)
 signal intro_finished
 var cinema: Control
 var cinematic := false
+var sunset_from := -1.0              # the vista: the sun sinks from golden hour towards the horizon
+var sunset_to := -1.0
+var sunset_t := 0.0
 
 
 func _ready() -> void:
@@ -449,8 +453,31 @@ func play_intro(real: Dictionary) -> void:
 	sunl.directional_shadow_split_1 = 0.04
 	sunl.directional_shadow_split_2 = 0.14
 	sunl.directional_shadow_split_3 = 0.4
+	cinema.set("hold_last", true)
+	sunset_from = float(vineyard.call("golden_hour", doy))
+	sunset_to = float(vineyard.call("sun_hour_at", doy, 1.5, sunset_from))
 	cinema.call("play", shots)
-	await cinema.finished
+	# the flight ends on the vista and holds there (cinema.gd hold); the shell runs the first tour line over it and then
+	# calls end_intro(). A skip (Esc) during the flight ends it at once.
+	var ended := [false]
+	var on_end := func(): ended[0] = true
+	cinema.finished.connect(on_end, CONNECT_ONE_SHOT)
+	while not ended[0] and not bool(cinema.get("holding")):
+		await get_tree().process_frame
+	intro_held.emit()
+	if not ended[0]:
+		await cinema.finished
+	_restore_after_intro(real)
+
+
+## Ends the held vista (fade to black); the intro then hands over to the game.
+func end_intro() -> void:
+	if cinematic:
+		cinema.call("release")
+
+
+func _restore_after_intro(real: Dictionary) -> void:
+	var sunl: DirectionalLight3D = vineyard.get("sun")
 	cinematic = false
 	vineyard.call("set_cinematic_lod", false)
 	ambience.set("master_db", sound_volume_db)
@@ -459,6 +486,7 @@ func play_intro(real: Dictionary) -> void:
 	sunl.directional_shadow_split_2 = 0.15
 	sunl.directional_shadow_split_3 = 0.4
 	for l in [hud_label, hint_label, tl_label]: (l as Control).visible = true
+	sunset_from = -1.0; sunset_t = 0.0
 	vineyard.call("set_daytime", -1.0)
 	apply_snapshot(real)
 	set_view("vineyard")
@@ -644,6 +672,10 @@ func _input(e: InputEvent) -> void:
 func _process(delta: float) -> void:
 	if missing or placed_key == "":
 		return
+	if cinematic and sunset_from >= 0.0 and int(cinema.get("i")) == 3:   # the vista: the sun goes down over 40 s
+		sunset_t = minf(sunset_t + delta / 40.0, 1.0)
+		var e := sunset_t * sunset_t * (3.0 - 2.0 * sunset_t)
+		vineyard.call("set_daytime", lerpf(sunset_from, sunset_to, e))
 	if cinematic:                      # the intro: the river, birds and wind stay in the background, lower still under the voice
 		var talk: bool = (cinema.get("voice") as AudioStreamPlayer).playing
 		var want := sound_volume_db - 13.0 - (6.0 if talk else 0.0)

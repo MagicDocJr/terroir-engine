@@ -2632,14 +2632,22 @@ func cinema_shots() -> Array:
 	var door: Vector2 = estate.get("door", Vector2(o.x, o.z + 1.0))
 	var a0 := atan2(door.x - o.x, door.y - o.z) - 0.9               # start beside the door side, swing past it
 	out.append({"kind": "orbit", "dur": 11.0, "c": o + Vector3(0, 3.0, 0), "r0": 58.0, "r1": 44.0, "a0": a0, "a1": a0 + 1.1, "h0": 24.0, "h1": 11.0})
-	# into the row where the walk begins
-	var walk: Array = camera_preset("walk")
-	var wp: Vector3 = walk[0]
-	var wt: Vector3 = walk[1]
-	var back := Vector3(wp.x - wt.x, 0, wp.z - wt.z).normalized()
-	# (it ends a few steps back and above the walker's spot, so no plant fills the lens)
-	out.append({"kind": "line", "dur": 10.0, "p0": wp + back * 18.0 + Vector3(0, 10.0, 0), "p1": wp + back * 4.0 + Vector3(0, 1.6, 0), "t0": wt + Vector3(0, -2.0, 0), "t1": wt})
+	# the vista: from high above the top of the Plot, over the Blocks to the winery (and the river), drifting slowly round;
+	# it keeps drifting after the shot ends while the Mentor's tour starts (cinema.gd hold)
+	var vc := (c + Vector3(o.x, o.y, o.z)) * 0.5 + Vector3(0, 6.0, 0)
+	if river.x < INF:
+		vc.z = (vc.z + river.x) * 0.5
+	var vr := clampf(w * 1.3, 110.0, 190.0)
+	out.append({"kind": "orbit", "dur": 12.0, "c": vc, "r0": vr * 1.12, "r1": vr, "a0": PI - 0.42, "a1": PI - 0.16, "h0": 60.0, "h1": 45.0, "drift": 0.012, "above_ground": true})
 	return out
+
+
+## The hour after after_h when the sun has sunk to elev_deg (or the last hour it is above it).
+func sun_hour_at(doy: int, elev_deg: float, after_h: float) -> float:
+	var h := after_h
+	while h < 22.5 and _solar(doy, h + 0.05).x > elev_deg:
+		h += 0.05
+	return h
 
 
 ## The intro's time of day for day-of-year doy: a low sun (7–20° up) as close as possible to side-on to the slope (its

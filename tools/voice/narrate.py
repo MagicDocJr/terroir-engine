@@ -10,7 +10,7 @@ repo, never printed). The game only plays the rendered files; it never calls the
   python3 tools/voice/narrate.py compare CLIP MODEL [MODEL …]   # one clip in each model (e.g. eleven_v4)
   python3 tools/voice/narrate.py render [--voice ID] [--only CLIP] [--force]
                                                          # every clip; unchanged text/voice/settings are skipped
-Clips: region_<mosel|cote-dor|napa>, plot_<plot id>, winery, welcome (view3d.gd play_intro).
+Clips: region_<mosel|cote-dor|napa>, plot_<plot id>, winery, welcome (view3d.gd play_intro), tour_<step> (mentor_tour.gd).
 """
 import hashlib, json, os, sys, urllib.error, urllib.parse, urllib.request
 
@@ -50,6 +50,7 @@ def clips(data: dict) -> dict:
     out.update({f"plot_{k}": v["text"] for k, v in data["plots"].items()})
     out["winery"] = data["winery"]["text"]
     out["welcome"] = data["welcome"]["text"]
+    out.update({f"tour_{t['id']}": t["text"] for t in data.get("tour", [])})
     return out
 
 

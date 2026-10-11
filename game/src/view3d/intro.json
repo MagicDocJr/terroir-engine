@@ -1,5 +1,5 @@
 {
-  "about": "The intro's narration (cinema.gd), spoken by the Mentor (CONTEXT.md: the retiring expert who guides the player through the first Vintage) as a warm welcome: one clip for the Region, one for the Plot, one for the winery and the welcome. Rendered by tools/voice/narrate.py to game/assets3d/audio/voice/<clip>.mp3 and shown as captions. Facts from docs/science/regions-and-plots.md (Region summaries, Plot table) and docs/science/law.md; numbers are written out for the voice. The estate name and the year are shown as titles, never spoken (the clips are recorded once).",
+  "about": "The intro's narration (cinema.gd), spoken by the Mentor (CONTEXT.md: the retiring expert who guides the player through the first Vintage) as a warm welcome: one clip for the Region, one for the Plot, one for the winery and the welcome, then a short tour of the dashboard (\"tour\", mentor_tour.gd). Rendered by tools/voice/narrate.py to game/assets3d/audio/voice/<clip>.mp3 and shown as captions. Facts from docs/science/regions-and-plots.md (Region summaries, Plot table) and docs/science/law.md; numbers are written out for the voice. The estate name and the year are shown as titles, never spoken (the clips are recorded once).",
   "sources": [
     "docs/science/regions-and-plots.md §1, §3",
     "docs/science/law.md §3",
@@ -73,5 +73,42 @@
   },
   "welcome": {
     "text": "The vines went in three years ago, and this year they give their first real crop. I'll be with you through your first vintage, and then it's all yours: how you prune, when you pick, how you make the wine. Come on. Let's get started."
-  }
+  },
+  "tour": [
+    {
+      "id": "vista",
+      "target": "",
+      "text": "This is how your estate looks at the end of a summer's day. Right now, though, it's the middle of January, and the vines are asleep. Let me show you how you'll run things from the office."
+    },
+    {
+      "id": "inbox",
+      "target": "screen",
+      "text": "This is your Inbox. Your staff and I write to you here. When something needs a decision, time stops until you've read it, and most letters have a button that takes you straight to the right place."
+    },
+    {
+      "id": "menu",
+      "target": "nav",
+      "text": "On the left is everything else: your Blocks and their vines, the weather, the standing orders for the vineyard, and later the winery and your wines."
+    },
+    {
+      "id": "plan",
+      "target": "plan",
+      "text": "Below it is my plan for your first vintage. It ticks itself off as you go, so you always know the next step."
+    },
+    {
+      "id": "time",
+      "target": "time",
+      "text": "Time only moves when you say so. Press Continue, and the days run until something needs you. Or go a day, or a week, at a time."
+    },
+    {
+      "id": "walk",
+      "target": "3d",
+      "text": "And whenever you want to see it for yourself, step into the vineyard in 3D. Walk the rows, prune a vine yourself, and watch the season go by."
+    },
+    {
+      "id": "end",
+      "target": "",
+      "text": "One more thing: wherever you see a gold Learn link, there's a card that explains the choice, and what it does to the wine. Start with my letter at the top of your Inbox. Let's get started."
+    }
+  ]
 }

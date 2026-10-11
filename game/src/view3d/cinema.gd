@@ -5,6 +5,7 @@
 extends Control
 
 signal finished
+signal held                       # hold_last: the last shot has ended and the camera keeps drifting (release() ends it)
 
 const UI := preload("res://src/ui/ui.gd")
 const A := preload("res://src/view3d/assets3d.gd")
@@ -26,6 +27,8 @@ var caption: Label
 var hint: Label
 var voice: AudioStreamPlayer
 var cap_lines: Array = []          # [[start s, text]] for the current shot
+var hold_last := false             # the last shot does not end in black: the bars open and the camera drifts on
+var holding := false
 
 
 func _ready() -> void:
@@ -104,8 +107,31 @@ func play(list: Array) -> void:
 	set_process(true)
 
 
+## The flight is over but the view stays: the bars open, titles and captions go, and the camera drifts on.
+func _hold() -> void:
+	holding = true
+	caption.text = ""
+	cap_lines = []
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(bars[0], "offset_bottom", 0.0, 1.6).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(bars[1], "offset_top", 0.0, 1.6).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(hint, "modulate:a", 0.0, 0.8)
+	held.emit()
+
+
+## Ends a held view: fades to black and finishes (the game takes over behind the black).
+func release() -> void:
+	if not playing:
+		return
+	skipping = true
+	_end()
+
+
 func skip() -> void:
 	if not playing or skipping:
+		return
+	if holding:
+		release()
 		return
 	skipping = true
 	voice.stop()
@@ -176,17 +202,19 @@ func _process(delta: float) -> void:
 	t += delta
 	var s: Dictionary = shots[i]
 	var d: float = s["dur"]
-	_place(clampf(t / d, 0.0, 1.0))
+	_place(clampf(t / d, 0.0, 1.0) if not holding else 1.0)
 	var line := ""
 	for c in cap_lines:
 		if t >= float(c[0]): line = String(c[1])
 	caption.text = line
-	if not skipping and t >= d - FADE and black.color.a < 0.01 and i < shots.size() - 1:
+	if not skipping and not holding and t >= d - FADE and black.color.a < 0.01 and i < shots.size() - 1:
 		var tw := create_tween()
 		tw.tween_property(black, "color:a", 1.0, FADE)
-	if t >= d and not skipping:
+	if t >= d and not skipping and not holding:
 		if i < shots.size() - 1:
 			_start(i + 1)
+		elif hold_last:
+			_hold()
 		else:
 			skipping = true
 			_end()
@@ -200,9 +228,13 @@ func _place(u: float) -> void:
 	var tg: Vector3
 	if String(s["kind"]) == "orbit":
 		var a := lerpf(float(s["a0"]), float(s["a1"]), e)
+		if holding:                                     # past its end: keep turning at the shot's final pace
+			a = float(s["a1"]) + float(s.get("drift", 0.0)) * (t - float(s["dur"]))
 		var r := lerpf(float(s["r0"]), float(s["r1"]), e)
 		var c: Vector3 = s["c"]
 		p = c + Vector3(sin(a) * r, lerpf(float(s["h0"]), float(s["h1"]), e), cos(a) * r)
+		if s.get("above_ground", false) and ground_fn.is_valid():     # the height is over the ground beneath the eye
+			p.y = maxf(p.y, float(ground_fn.call(p.x, p.z)) + lerpf(float(s["h0"]), float(s["h1"]), e))
 		tg = c
 	else:
 		p = (s["p0"] as Vector3).lerp(s["p1"], e)
@@ -216,6 +248,7 @@ func _place(u: float) -> void:
 
 func _end() -> void:
 	playing = false
+	holding = false
 	set_process(false)
 	voice.stop()
 	caption.text = ""
