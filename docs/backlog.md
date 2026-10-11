@@ -48,8 +48,8 @@ Things deliberately left out of the MVP, to deep-dive once the core loop is lock
 Found while building or reviewing; not urgent, but not to be forgotten. Remove a line when it is fixed.
 
 ### Intro cinematic, narration and music (2026-10-11)
-- Three Napa Plot clips are not recorded in the Mentor's voice yet (Carneros, Valley Floor, Mountain: the free ElevenLabs quota ran out); they show captions only. When the quota resets, run `python3 tools/voice/narrate.py render` (it renders only what is missing).
-- Done 2026-10-11: the neighbours' vineyards out to ~600 m as hedge rows (`hedge_row.gdshader`, shadows on), a 10 m grass headland round the Plot and a golden boundary line in the intro, softened river banks, dissolving LOD hand-overs, quieter ambience under the voice. Open: the far hills beyond ~600 m are still the vertex-colour terrain; Napa's dry hills read sandy.
+- All 17 narration clips are recorded (Brian, eleven_multilingual_v2). Eleven v4 is on the account: `narrate.py compare region_mosel eleven_multilingual_v2 eleven_v4` made a side-by-side in `game/shots/voice_samples/`; switching means setting "model" in intro.json and `render --force` (~4,400 credits).
+- Done 2026-10-11: the neighbours' vineyards out to ~600 m as hedge rows (`hedge_row.gdshader`, shadows on), a 10 m grass headland round the Plot (a traced boundary line was tried and dropped: it looked out of place), softened river banks, dissolving LOD hand-overs, quieter ambience under the voice. 2026-10-11 later: the Plot's vines keep their detailed levels further out and cross-dissolve during the intro (no popping over the Blocks); no neighbour vines straight below a Mosel Plot down to the river; Napa hills got oak woodland. Open: the far hills beyond ~600 m are still vertex-colour terrain; Napa's golden grass still reads a little sandy in the low sun; the walk-in shot ends with a leaf or two close to the lens.
 - Music: only theme and spring tracks exist so far (`docs/music.md` lists the rest). A music volume slider in a settings screen; today N turns it on or off.
 - The intro could also be replayed from the Estate screen ("Watch the intro again").
 

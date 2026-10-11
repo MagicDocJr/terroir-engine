@@ -7,6 +7,7 @@ repo, never printed). The game only plays the rendered files; it never calls the
   python3 tools/voice/narrate.py voices                 # the voices on the account (name, id, labels)
   python3 tools/voice/narrate.py library "deep narrator"  # search the shared voice library
   python3 tools/voice/narrate.py samples ID [ID …]       # one test line per voice → game/shots/voice_samples/
+  python3 tools/voice/narrate.py compare CLIP MODEL [MODEL …]   # one clip in each model (e.g. eleven_v4)
   python3 tools/voice/narrate.py render [--voice ID] [--only CLIP] [--force]
                                                          # every clip; unchanged text/voice/settings are skipped
 Clips: region_<mosel|cote-dor|napa>, plot_<plot id>, winery, welcome (view3d.gd play_intro).
@@ -77,6 +78,15 @@ def main() -> None:
         for vid in a[1:]:
             audio = tts(SAMPLE_TEXT, vid, v)          # before opening the file: a failed call leaves no empty file
             path = os.path.join(SAMPLES, f"{names.get(vid, vid)}_{vid}.mp3")
+            open(path, "wb").write(audio)
+            print("sample", path)
+    elif a[0] == "compare":
+        # compare <clip> <model> [<model> …]: the clip in the intro's voice with each model → game/shots/voice_samples/
+        os.makedirs(SAMPLES, exist_ok=True)
+        text = clips(data)[a[1]]
+        for model in a[2:]:
+            audio = tts(text, v["voice_id"], dict(v, model=model))
+            path = os.path.join(SAMPLES, f"{a[1]}_{model}.mp3")
             open(path, "wb").write(audio)
             print("sample", path)
     elif a[0] == "render":

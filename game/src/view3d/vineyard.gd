@@ -276,6 +276,34 @@ func _swap_step() -> void:
 			(w[0] as MultiMeshInstance3D).multimesh.mesh = w[1]
 
 
+## The intro flies over the Blocks: each detail level of the Plot's vines reaches further and the hand-overs dissolve (a
+## per-pixel dither over a few metres) instead of switching, so rows never pop while the camera moves. Off in play.
+# (LOD 2 starts 9 m early: its 18 m cells are measured from their centres, the near levels from 3 m cells, so without the
+# overlap a vine could fall between the two and vanish for a moment)
+const CINE_LOD := {0: [0.0, 8.0], 1: [8.0, 42.0], 2: [33.0, 130.0], 3: [0.0, 42.0], 4: [130.0, 0.0]}   # [begin, end], 0 = none
+func set_cinematic_lod(on: bool) -> void:
+	for blk in blocks:
+		for e in blk["mm"]:
+			var mmi: MultiMeshInstance3D = e["mmi"]
+			var lod := int(e["lod"])
+			if on:
+				if not e.has("vr"):
+					e["vr"] = [mmi.visibility_range_begin, mmi.visibility_range_end]
+				var r: Array = CINE_LOD[lod]
+				mmi.visibility_range_begin = r[0]
+				mmi.visibility_range_end = r[1]
+				var m := maxf(2.0, float(r[1]) * 0.18) if float(r[1]) > 0.0 else 0.0
+				mmi.visibility_range_end_margin = m
+				mmi.visibility_range_begin_margin = maxf(2.0, float(r[0]) * 0.18) if float(r[0]) > 0.0 else 0.0
+				mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF if lod != 3 else GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
+			elif e.has("vr"):
+				mmi.visibility_range_begin = e["vr"][0]
+				mmi.visibility_range_end = e["vr"][1]
+				mmi.visibility_range_begin_margin = 0.0
+				mmi.visibility_range_end_margin = 0.0
+				mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
+
+
 ## Prepares every pending vine mesh and stage swap now (the intro does this behind its black card, so nothing is built
 ## during the flight).
 func finish_warm() -> void:
@@ -529,7 +557,6 @@ func _build_world() -> void:
 	grass_job = {}
 	grass_centre = Vector2i(99999, 99999)
 	_build_neighbours()
-	_build_outline()
 	var th := Time.get_ticks_msec()
 	_build_hedges()
 	print("view3d vineyard: %d hedge rows in %d ms" % [hedge_count, Time.get_ticks_msec() - th])
@@ -1220,7 +1247,11 @@ func _neighbour_planted(x: float, z: float) -> bool:
 	var p := _parcel(x, z)
 	match region:
 		"mosel":
-			return (z > -hz - 190.0 and z < hz + clampf(sv * 70.0, 6.0, 55.0)) and p > (0.1 if sv >= 0.3 else 0.22)   # steep slopes: nearly all vineyard
+			# steep slopes: nearly all vineyard, except straight below the Plot, which stays open down to the river (the view
+			# from the water shows your land, not a neighbour's patch)
+			if z > hz and x > band_x0 - 170.0 and x < band_x1 + 170.0:
+				return false
+			return (z > -hz - 190.0 and z < hz + clampf(sv * 70.0, 6.0, 55.0)) and p > (0.1 if sv >= 0.3 else 0.22)
 		"cote-dor":
 			return z > -hz - 300.0 and z < hz + 90.0 and p > 0.1
 		_:
@@ -1258,10 +1289,16 @@ func _far_color(x: float, z: float, y: float, slope: float) -> Color:
 		_:
 			if y < 45.0 and n > -0.3:
 				return Color(0.0, 0.0, 0.0, 1.0)
-			var oak := noise.get_noise_2d(x * 2.5, z * 2.5)
-			if y > 320.0:
+			# summer hills: golden dry grass broken by dark oak woodland, which thickens in the folds, on the steeper
+			# (shadier) slopes and up the Mayacamas (look only)
+			var oak := noise.get_noise_2d(x * 2.5, z * 2.5) + 0.35 * noise.get_noise_2d(x * 0.7 + 90.0, z * 0.7)
+			var wood := 0.32 - 0.35 * clampf(slope, 0.0, 1.0) - clampf((y - 120.0) / 600.0, 0.0, 0.3)
+			if y > 320.0 and oak > -0.1:
 				return Color(forest.r, forest.g * 1.1, forest.b, 0.0)
-			return Color(0.05, 0.07, 0.03, 0.0) if oak > 0.25 else Color(0.36, 0.30, 0.14, 0.0)    # oak clumps in golden grass
+			if oak > wood:
+				return Color(0.045, 0.06, 0.028, 0.0)
+			var straw := noise.get_noise_2d(x * 0.9 + 30.0, z * 0.9)
+			return Color(0.30 + 0.05 * straw, 0.25 + 0.035 * straw, 0.12, 0.0)
 	return Color(scrub.r, scrub.g, scrub.b, 0.0)
 
 
@@ -1971,59 +2008,6 @@ func _build_hedges() -> void:
 		hedge_count += list.size()
 
 
-var outline: MeshInstance3D                # the intro's golden line round the Plot (hidden in play)
-
-## A ribbon round the Plot in the middle of its headland, following the ground (plot_outline.gdshader). The intro draws it.
-func _build_outline() -> void:
-	var off := HEADLAND * 0.45
-	var x0 := band_x0 - off; var x1 := band_x1 + off
-	var z0 := -hz - off; var z1 := hz + off
-	var corners := [Vector2(x0, z1), Vector2(x1, z1), Vector2(x1, z0), Vector2(x0, z0), Vector2(x0, z1)]
-	var pts := []
-	for i in 4:
-		var a: Vector2 = corners[i]
-		var b: Vector2 = corners[i + 1]
-		var n := maxi(2, int(a.distance_to(b) / 0.6))
-		for k in n:
-			pts.append(a.lerp(b, float(k) / n))
-	pts.append(corners[4])
-	var total := 0.0
-	var dist := [0.0]
-	for i in range(1, pts.size()):
-		total += (pts[i] as Vector2).distance_to(pts[i - 1]); dist.append(total)
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
-	var w := 0.7
-	for i in pts.size():
-		var p: Vector2 = pts[i]
-		var prev: Vector2 = pts[maxi(i - 1, 0)]
-		var nxt: Vector2 = pts[mini(i + 1, pts.size() - 1)]
-		var d := (nxt - prev).normalized()
-		var side := Vector2(-d.y, d.x)
-		for sgn in [-1.0, 1.0]:
-			var q: Vector2 = p + side * sgn * w * 0.5
-			st.set_uv(Vector2(float(dist[i]) / total, 0.5 + 0.5 * sgn))
-			st.set_normal(Vector3.UP)
-			st.add_vertex(Vector3(q.x, H(q.x, q.y) + 0.25, q.y))
-	outline = MeshInstance3D.new()
-	outline.mesh = st.commit()
-	var sm := ShaderMaterial.new()
-	sm.shader = load(SH + "plot_outline.gdshader")
-	outline.material_override = sm
-	outline.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	outline.visible = false
-	world.add_child(outline)
-
-
-## Shows the line round the Plot drawn to reveal (0..1) at opacity fade; hidden at fade 0.
-func set_outline(reveal: float, fade: float) -> void:
-	if outline == null:
-		return
-	outline.visible = fade > 0.001
-	(outline.material_override as ShaderMaterial).set_shader_parameter("reveal", reveal)
-	(outline.material_override as ShaderMaterial).set_shader_parameter("fade", fade)
-
-
 ## A unit hedge: a prism with a rounded top, x -0.5..0.5, y 0..1, z 0..1, 4 lengthwise segments.
 static func _hedge_mesh() -> ArrayMesh:
 	var prof := [Vector2(-0.38, 0.0), Vector2(-0.5, 0.35), Vector2(-0.46, 0.8), Vector2(-0.22, 1.0), Vector2(0.22, 1.0), Vector2(0.46, 0.8), Vector2(0.5, 0.35), Vector2(0.38, 0.0)]
@@ -2128,7 +2112,7 @@ func _build_trees() -> void:
 			var is_forest := c.a < 0.5 and c.g < 0.075 and c.r < 0.06
 			if not is_forest or noise.get_noise_2d(px * 0.9, pz * 0.9) < -0.35:
 				continue
-			if region == "napa" and rng.randf() < 0.55:
+			if region == "napa" and rng.randf() < 0.25:
 				continue
 			var v := 3 if rng.randf() < (0.35 if region == "napa" and y > 320.0 else 0.18) else rng.randi() % 3
 			var hgt := rng.randf_range(15, 25) if v != 3 else rng.randf_range(18, 28)

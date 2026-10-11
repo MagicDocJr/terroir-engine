@@ -421,6 +421,7 @@ func play_intro(real: Dictionary) -> void:
 	var show := _summer_copy(real)
 	apply_snapshot(show)
 	vineyard.call("finish_warm")
+	vineyard.call("set_cinematic_lod", true)
 	for f in 3: await get_tree().process_frame             # shaders and the first shadow maps compile behind the black
 	var doy := 203
 	vineyard.call("set_daytime", float(vineyard.call("golden_hour", doy)))
@@ -451,7 +452,7 @@ func play_intro(real: Dictionary) -> void:
 	cinema.call("play", shots)
 	await cinema.finished
 	cinematic = false
-	vineyard.call("set_outline", 0.0, 0.0)
+	vineyard.call("set_cinematic_lod", false)
 	ambience.set("master_db", sound_volume_db)
 	drone_cam.fov = 60.0
 	sunl.directional_shadow_split_1 = 0.05             # vineyard.gd _setup_sun's splits; the distance comes back with _update_zone
@@ -647,13 +648,7 @@ func _process(delta: float) -> void:
 		var talk: bool = (cinema.get("voice") as AudioStreamPlayer).playing
 		var want := sound_volume_db - 13.0 - (6.0 if talk else 0.0)
 		ambience.set("master_db", lerpf(float(ambience.get("master_db")), want, clampf(delta * 2.0, 0.0, 1.0)))
-		# your land: a golden line traces the Plot's boundary in the opening shot, stays over the Blocks, fades at the winery
-		var si: int = cinema.get("i")
-		var st: float = cinema.get("t")
-		match si:
-			0: vineyard.call("set_outline", clampf((st - 2.5) / 7.0, 0.0, 1.0), 1.0)
-			1: vineyard.call("set_outline", 1.0, 1.0 - clampf((st - 6.0) / 3.0, 0.0, 1.0))
-			_: vineyard.call("set_outline", 0.0, 0.0)
+
 	_timelapse_step(delta)
 	if drone:
 		_drone_step(delta)
@@ -665,10 +660,10 @@ func _process(delta: float) -> void:
 		var at_work := String(workers.get("summary"))
 		if at_work != "":
 			hud_label.text += "\nAt work: " + at_work
-	hud_label.visible = show_hud
-	hint_label.visible = show_hud
+	hud_label.visible = show_hud and not cinematic
+	hint_label.visible = show_hud and not cinematic
 	near_task = {} if drone or closeup_id >= 0 else tasks3d.call("nearest", player.global_position, TASK_REACH)
-	prompt_label.visible = not near_task.is_empty()
+	prompt_label.visible = not near_task.is_empty() and not cinematic
 	if not near_task.is_empty():
 		var place := ("Lot %s" % near_task["lot"]) if String(near_task["kind"]) == "CapManagement" else ("Block %s" % near_task["block"])
 		var verb := String(near_task["verb"])

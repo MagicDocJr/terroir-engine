@@ -1371,6 +1371,7 @@ func _intro_shots() -> void:
 		playing_seen = playing_seen or flying
 		if flying and Time.get_ticks_msec() - last_shot > 300:
 			frames.append(ms)
+			if ms > 33.3: print("INTRO slow frame %.1f ms in shot %d at %.1f s" % [ms, int(view3d.get("cinema").get("i")), float(view3d.get("cinema").get("t"))])
 		if flying and Time.get_ticks_msec() - last_shot > 2500:
 			last_shot = Time.get_ticks_msec()
 			await _shot("intro_%s_%02d" % [plot.split("-")[0], n]); n += 1
